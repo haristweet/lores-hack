@@ -63,10 +63,6 @@
 <div id="lobby">
   <h1>ESCAPE / DEPTH</h1>
   <p class="sub">DEPTH 100 の底に眠る「1本のネジ」を回収せよ</p>
-  <div class="row"><span class="lbl">PLAYERS</span>
-    <button class="chip" data-p="1">1</button><button class="chip" data-p="2">2</button>
-    <button class="chip" data-p="3">3</button><button class="chip" data-p="4">4</button>
-  </div>
   <div class="row"><span class="lbl">CPU ALLIES</span>
     <button class="chip" data-c="0">0</button><button class="chip" data-c="1">1</button>
     <button class="chip" data-c="2">2</button><button class="chip" data-c="3">3</button>
@@ -80,6 +76,8 @@
     <div style="color:#f88;margin-top:3px">仲間が死ぬと <span class="k">ゾンビ化</span> — 装備そのままで反旗を翻す。<br>各フロア、仲間の <span class="k">性格はランダム</span>。観察して戦略を練れ。</div>
   </div>
   <button id="startBtn" disabled>START</button>
+  <button id="contBtn" style="display:none;margin-top:6px;background:#0a2a1a;border-color:#0f6">CONTINUE</button>
+  <p id="saveInfo" style="font-size:11px;color:#6fb;margin:4px 0 0"></p>
 </div>
 
 <!-- Bullet time overlay -->
@@ -718,7 +716,7 @@ function damagePlayer(p,d){
 }
 
 function nextStage(){
-  stage++;PSG.play(stage);
+  stage++;PSG.play(stage);saveGame();
   // Reshuffle personalities for living CPUs
   const msgs=[];
   for(const p of players){if(!p.alive||p.isHuman)continue;const np=randPers();p.controller=new CPUController(np);msgs.push(p.pal.name+':'+PERS_LABEL[np]);}
@@ -734,13 +732,13 @@ function nextStage(){
 }
 
 function gameOver(){
-  PSG.stop();
+  PSG.stop();clearSave();
   ovTitle.textContent='YOU DIED';
   ovSub.textContent='DEPTH '+stage+' / KILLS '+totalKills;
   overEl.style.display='flex';
 }
 function gameCleared(){
-  PSG.stop();running=false;gameWon=true;
+  PSG.stop();clearSave();running=false;gameWon=true;
   winStat.textContent='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
   winEl.style.display='flex';
 }
@@ -992,38 +990,109 @@ function pixText(str,x,y,c='#fff'){
 }
 
 // ═══════════════════════════════════════════════
+//  SAVE / LOAD  (localStorage)
+// ═══════════════════════════════════════════════
+const SAVE_KEY='lores-hack-v1';
+
+function hasSave(){return!!localStorage.getItem(SAVE_KEY);}
+
+function getSaveLabel(){
+  try{
+    const d=JSON.parse(localStorage.getItem(SAVE_KEY));
+    const hp=d.players.find(p=>p.isHuman);
+    return'↩ DEPTH '+d.stage+' / LV'+( hp?hp.level:1)+' / KILLS '+d.totalKills;
+  }catch(e){return'';}
+}
+
+function saveGame(){
+  const data={
+    v:1,stage,totalKills,
+    cfg:{cpus:cfg.cpus,slots:[...cfg.slots]},
+    players:players.map(p=>({
+      idx:p.idx,hp:p.hp,maxHp:p.maxHp,
+      level:p.level,xp:p.xp,
+      ammo:p.ammo,mag:p.mag,
+      weapon:{...p.weapon},
+      mode:p.mode,isHuman:p.isHuman,alive:p.alive,
+      ctrlType:p.isHuman?cfg.slots[0]:'CPU',
+      personality:p.isHuman?null:p.controller.personality,
+      accXp:p.accXp,kills:p.kills
+    }))
+  };
+  localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+}
+
+function clearSave(){localStorage.removeItem(SAVE_KEY);}
+
+function loadGame(){
+  const raw=localStorage.getItem(SAVE_KEY);
+  if(!raw)return false;
+  let data;
+  try{data=JSON.parse(raw);}catch(e){clearSave();return false;}
+  if(data.v!==1){clearSave();return false;}
+
+  // Restore cfg
+  cfg.cpus=data.cfg.cpus;cfg.slots=data.cfg.slots;
+  renderLobby();
+
+  // Rebuild players from saved snapshot
+  players=[];
+  for(const pd of data.players){
+    const ctrl=pd.isHuman
+      ?(pd.ctrlType==='KB+M'?new KMController():new PadController(+pd.ctrlType.substring(3)))
+      :new CPUController(pd.personality);
+    const p=makePlayer(pd.idx,ctrl,pd.isHuman,pd.mode);
+    p.hp=pd.hp;p.maxHp=pd.maxHp;
+    p.level=pd.level;p.xp=pd.xp;
+    p.ammo=pd.ammo;p.mag=pd.mag;
+    p.weapon={...pd.weapon};
+    p.alive=pd.alive;p.accXp=pd.accXp;p.kills=pd.kills;
+    players.push(p);
+  }
+
+  stage=data.stage;totalKills=data.totalKills;gameWon=false;
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
+  bulletTime=null;btOv.style.display='none';
+  running=true;PSG.play(stage);
+  cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
+  genMap();spawnT=.5;
+  let cx=0,cy=0,n=0;for(const p of players){if(!p.alive)continue;cx+=p.x;cy+=p.y;n++;}
+  if(n){camX=cx/n;camY=cy/n;}
+  lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
+  flash('DEPTH '+stage+' — RESUMED','#0f8');
+  return true;
+}
+
+// ═══════════════════════════════════════════════
 //  LOBBY
 // ═══════════════════════════════════════════════
-let cfg={humans:1,cpus:0,slots:[]};
+let cfg={humans:1,cpus:0,slots:['KB+M']};
 
 function renderLobby(){
-  // Player chips
-  document.querySelectorAll('.chip[data-p]').forEach(c=>c.classList.toggle('on',+c.dataset.p===cfg.humans));
   // CPU chips
   document.querySelectorAll('.chip[data-c]').forEach(c=>{
     const v=+c.dataset.c;c.classList.toggle('on',v===cfg.cpus);
-    c.disabled=v+cfg.humans>4;
   });
-  // Slots
+  // Slots: P1 = human (input+mode), P2-P4 = CPU badge only
   const el=document.getElementById('slots');el.innerHTML='';
-  const total=cfg.humans+cfg.cpus;cfg.slots.length=total;
+  const total=1+cfg.cpus;
   for(let i=0;i<total;i++){
     const row=document.createElement('div');row.className='slot';
     const nm=document.createElement('span');nm.className='sname p'+(i+1);nm.textContent='P'+(i+1);row.appendChild(nm);
-    if(i<cfg.humans){
-      if(!['KB+M','PAD0','PAD1','PAD2','PAD3'].includes(cfg.slots[i]))cfg.slots[i]=i===0?'KB+M':'PAD'+(i-1);
-      for(const o of['KB+M','PAD0','PAD1','PAD2','PAD3']){const b=document.createElement('button');b.className='chip'+(cfg.slots[i]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[i]=o;renderLobby();};row.appendChild(b);}
-      // Weapon mode
-      for(const m of['SEMI','AUTO']){const b=document.createElement('button');b.className='chip'+((cfg.slots[i+'_mode']||'AUTO')===m?' on':'');b.textContent=m;b.style.background=m==='AUTO'?'':'';b.onclick=()=>{cfg.slots[i+'_mode']=m;renderLobby();};row.appendChild(b);}
+    if(i===0){
+      if(!['KB+M','PAD0','PAD1','PAD2','PAD3'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
+      for(const o of['KB+M','PAD0','PAD1','PAD2','PAD3']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
+      for(const m of['SEMI','AUTO']){const b=document.createElement('button');b.className='chip'+((cfg.slots['0_mode']||'AUTO')===m?' on':'');b.textContent=m;b.onclick=()=>{cfg.slots['0_mode']=m;renderLobby();};row.appendChild(b);}
     }else{
-      cfg.slots[i]='CPU';const b=document.createElement('button');b.className='chip on';b.textContent='CPU AUTO';b.disabled=true;row.appendChild(b);
+      const b=document.createElement('span');b.style.cssText='color:#888;font-size:10px;padding:2px 6px';b.textContent='CPU';row.appendChild(b);
     }
     el.appendChild(row);
   }
-  // Conflict check
-  const seen={};let conflict=false;
-  for(let i=0;i<cfg.humans;i++){const d=cfg.slots[i];if(seen[d]){conflict=true;break;}seen[d]=true;}
-  const btn=document.getElementById('startBtn');btn.disabled=conflict;btn.textContent=conflict?'DUPLICATE INPUT!':'START';
+  document.getElementById('startBtn').disabled=false;
+  // Save info
+  const sv=hasSave();
+  document.getElementById('contBtn').style.display=sv?'block':'none';
+  document.getElementById('saveInfo').textContent=sv?getSaveLabel():'';
 }
 
 function pollPads(){
@@ -1032,9 +1101,8 @@ function pollPads(){
   document.getElementById('padSt').textContent=ns.length?'🎮 '+ns.join(' / '):'🎮 ゲームパッド: (ボタンを押すと認識)';
 }
 
-document.querySelectorAll('.chip[data-p]').forEach(c=>c.addEventListener('click',()=>{cfg.humans=+c.dataset.p;if(cfg.humans+cfg.cpus>4)cfg.cpus=4-cfg.humans;renderLobby();}));
-document.querySelectorAll('.chip[data-c]').forEach(c=>c.addEventListener('click',()=>{const v=+c.dataset.c;if(v+cfg.humans>4)return;cfg.cpus=v;renderLobby();}));
-cfg.humans=1;cfg.cpus=0;cfg.slots=['KB+M'];renderLobby();
+document.querySelectorAll('.chip[data-c]').forEach(c=>c.addEventListener('click',()=>{cfg.cpus=+c.dataset.c;renderLobby();}));
+cfg.humans=1;cfg.cpus=0;renderLobby();
 addEventListener('gamepadconnected',pollPads);addEventListener('gamepaddisconnected',pollPads);
 setInterval(pollPads,500);
 
@@ -1158,11 +1226,11 @@ const PSG=(()=>{
 function startGame(){
   // Build players
   players=[];
-  const total=cfg.humans+cfg.cpus;
+  const total=1+cfg.cpus; // always 1 human + N CPU
   for(let i=0;i<total;i++){
-    let ctrl,isHuman=i<cfg.humans,mode='AUTO';
+    let ctrl,isHuman=i===0,mode='AUTO';
     if(isHuman){
-      const slot=cfg.slots[i];mode=cfg.slots[i+'_mode']||'AUTO';
+      const slot=cfg.slots[0]||'KB+M';mode=cfg.slots['0_mode']||'AUTO';
       ctrl=slot==='KB+M'?new KMController():new PadController(+slot.substring(3));
     }else ctrl=new CPUController(randPers());
     players.push(makePlayer(i,ctrl,isHuman,mode));
@@ -1181,8 +1249,9 @@ function startGame(){
 }
 
 document.getElementById('startBtn').addEventListener('click',startGame);
-document.getElementById('retryBtn').addEventListener('click',()=>{overEl.style.display='none';lobbyEl.style.display='flex';});
-document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.display='none';lobbyEl.style.display='flex';});
+document.getElementById('contBtn').addEventListener('click',()=>{loadGame();});
+document.getElementById('retryBtn').addEventListener('click',()=>{overEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
+document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 
 // ═══════════════════════════════════════════════
 //  LOOP
