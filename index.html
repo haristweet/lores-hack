@@ -371,47 +371,53 @@ function revealFog(wx,wy){
   }
 }
 
+// Offscreen canvas for minimap (putImageData ignores globalAlpha — use drawImage instead)
+const _mmCv=document.createElement('canvas');
+_mmCv.width=MAPW;_mmCv.height=MAPH;
+const _mmCtx=_mmCv.getContext('2d');
+
 function drawMinimap(){
   if(!map||!fog)return;
   const MW=MAPW,MH=MAPH; // 64×64
   const mx=(W-MW)>>1,my=(H-MH)>>1; // center on canvas
 
-  // Semi-transparent background
-  ctx.globalAlpha=0.52;ctx.fillStyle='#000';
-  ctx.fillRect(mx-1,my-1,MW+2,MH+2);
-
-  // Terrain pixels via ImageData (fast)
-  const id=ctx.createImageData(MW,MH);const d=id.data;
+  // Draw terrain into offscreen canvas
+  const id=_mmCtx.createImageData(MW,MH);const d=id.data;
   for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++){
     if(!fog[y*MAPW+x])continue;
     const t=map[y*MAPW+x],i=(y*MW+x)*4;
-    if(t===1){d[i]=55;d[i+1]=42;d[i+2]=85;d[i+3]=210;}  // wall
-    else     {d[i]=38;d[i+1]=33;d[i+2]=55;d[i+3]=185;}  // floor
+    if(t===1){d[i]=80;d[i+1]=60;d[i+2]=120;d[i+3]=255;}  // wall — mid purple
+    else     {d[i]=55;d[i+1]=48;d[i+2]=80;d[i+3]=255;}  // floor — lighter purple
   }
-  ctx.globalAlpha=1;ctx.putImageData(id,mx,my);
+  _mmCtx.putImageData(id,0,0);
 
-  // Exit marker
+  // Markers on offscreen canvas (exit, cores, players — full opacity here)
   if(exits[0]){
     const ex=(exits[0].x/TILE)|0,ey=(exits[0].y/TILE)|0;
     if(fog[ey*MAPW+ex]){
-      ctx.fillStyle=exitOpen?'#0ff':'#f80';
-      ctx.globalAlpha=.95;ctx.fillRect(mx+ex-1,my+ey-1,3,3);
+      _mmCtx.fillStyle=exitOpen?'#0ff':'#f80';
+      _mmCtx.fillRect(ex-1,ey-1,3,3);
     }
   }
-  // Core markers (yellow dots)
-  ctx.fillStyle='#fd0';ctx.globalAlpha=.85;
+  _mmCtx.fillStyle='#fd0';
   for(const c of cores){
     const cx_=(c.x/TILE)|0,cy_=(c.y/TILE)|0;
-    if(fog[cy_*MAPW+cx_])ctx.fillRect(mx+cx_,my+cy_,2,2);
+    if(fog[cy_*MAPW+cx_])_mmCtx.fillRect(cx_,cy_,2,2);
   }
-  // Player dots (3×3, full color)
-  ctx.globalAlpha=1;
   for(const p of players){
     if(!p.alive)continue;
     const px=(p.x/TILE)|0,py=(p.y/TILE)|0;
-    ctx.fillStyle=p.pal.body;
-    ctx.fillRect(mx+px-1,my+py-1,3,3);
+    _mmCtx.fillStyle=p.pal.body;
+    _mmCtx.fillRect(px-1,py-1,3,3);
   }
+
+  // Dark background so minimap area is always visible
+  ctx.globalAlpha=0.45;
+  ctx.fillStyle='#000';
+  ctx.fillRect(mx-1,my-1,MW+2,MH+2);
+  // Composite terrain + markers at 60% opacity
+  ctx.globalAlpha=0.60;
+  ctx.drawImage(_mmCv,mx,my);
   ctx.globalAlpha=1;
 }
 
