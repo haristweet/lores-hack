@@ -318,7 +318,7 @@ class CPUController{
 // ═══════════════════════════════════════════════
 //  WORLD
 // ═══════════════════════════════════════════════
-let map,rooms_=[];
+let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
 
@@ -357,6 +357,62 @@ function genMap(){
   // DEPTH 100: screw
   screwObj=null;
   if(stage===MAX_DEPTH){screwObj={x:best.cx*TILE+8,y:best.cy*TILE+8-12,t:0};}
+  // Fog of war — reveal spawn area
+  fog=new Uint8Array(MAPW*MAPH);
+  revealFog(r0.cx*TILE+8,r0.cy*TILE+8);
+}
+
+function revealFog(wx,wy){
+  const tx=(wx/TILE)|0,ty=(wy/TILE)|0,R=7;
+  for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){
+    if(dx*dx+dy*dy>R*R)continue;
+    const x=tx+dx,y=ty+dy;
+    if(x>=0&&x<MAPW&&y>=0&&y<MAPH)fog[y*MAPW+x]=1;
+  }
+}
+
+function drawMinimap(){
+  if(!map||!fog)return;
+  const MW=MAPW,MH=MAPH; // 64×64
+  const mx=(W-MW)>>1,my=(H-MH)>>1; // center on canvas
+
+  // Semi-transparent background
+  ctx.globalAlpha=0.52;ctx.fillStyle='#000';
+  ctx.fillRect(mx-1,my-1,MW+2,MH+2);
+
+  // Terrain pixels via ImageData (fast)
+  const id=ctx.createImageData(MW,MH);const d=id.data;
+  for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++){
+    if(!fog[y*MAPW+x])continue;
+    const t=map[y*MAPW+x],i=(y*MW+x)*4;
+    if(t===1){d[i]=55;d[i+1]=42;d[i+2]=85;d[i+3]=210;}  // wall
+    else     {d[i]=38;d[i+1]=33;d[i+2]=55;d[i+3]=185;}  // floor
+  }
+  ctx.globalAlpha=1;ctx.putImageData(id,mx,my);
+
+  // Exit marker
+  if(exits[0]){
+    const ex=(exits[0].x/TILE)|0,ey=(exits[0].y/TILE)|0;
+    if(fog[ey*MAPW+ex]){
+      ctx.fillStyle=exitOpen?'#0ff':'#f80';
+      ctx.globalAlpha=.95;ctx.fillRect(mx+ex-1,my+ey-1,3,3);
+    }
+  }
+  // Core markers (yellow dots)
+  ctx.fillStyle='#fd0';ctx.globalAlpha=.85;
+  for(const c of cores){
+    const cx_=(c.x/TILE)|0,cy_=(c.y/TILE)|0;
+    if(fog[cy_*MAPW+cx_])ctx.fillRect(mx+cx_,my+cy_,2,2);
+  }
+  // Player dots (3×3, full color)
+  ctx.globalAlpha=1;
+  for(const p of players){
+    if(!p.alive)continue;
+    const px=(p.x/TILE)|0,py=(p.y/TILE)|0;
+    ctx.fillStyle=p.pal.body;
+    ctx.fillRect(mx+px-1,my+py-1,3,3);
+  }
+  ctx.globalAlpha=1;
 }
 
 function tileAt(x,y){const tx=(x/TILE)|0,ty=(y/TILE)|0;if(tx<0||ty<0||tx>=MAPW||ty>=MAPH)return 1;return map[ty*MAPW+tx];}
@@ -508,7 +564,7 @@ function update(dt){
   }
 
   // ── Players ──
-  for(const p of players)updatePlayer(p,eff);
+  for(const p of players){updatePlayer(p,eff);if(p.alive)revealFog(p.x,p.y);}
   // soft player-player separation
   for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
     const a=players[i],b=players[j];if(!a.alive||!b.alive)continue;
@@ -847,6 +903,7 @@ function draw(){
 
   ctx.restore();
 
+  drawMinimap();
   drawHUD();
 
   // Bullet time colour grading
