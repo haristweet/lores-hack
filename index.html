@@ -192,6 +192,8 @@ addEventListener('keydown',e=>{
     if(e.code==='Backslash'){if(fog)fog.fill(1);return;}   // \ reveal all
     if(e.code==='Equal'){coresCollected=coresNeeded;exitOpen=true;flash('ALL CORES','#ff0');return;} // = give cores
     if(e.code==='Semicolon'){enemies.length=0;flash('ENEMIES CLEARED','#f80');return;} // ; kill enemies
+    if(e.code==='KeyM'){for(const p of players){p.hp=p.maxHp=9999;p.iframe=.5;}flash('GOD MODE','#f0f');return;} // M max HP
+    if(e.code==='KeyB'){const b=makeBoss();const h=humanPlayer();if(h){b.x=h.x+80;b.y=h.y;}enemies.push(b);flash('★ BOSS SPAWNED','#f44');return;} // B spawn boss
   }
   keys[e.code]=true;
 });
@@ -553,6 +555,24 @@ function makeZombie(p){
   };
 }
 
+function makeBoss(){
+  const sc=eScale();
+  const hp=Math.round(90*(1+stage*.09)*sc);
+  let bx,by;
+  for(let t=0;t<300;t++){
+    const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
+    if(!map||map[ty*MAPW+tx]!==0)continue;
+    const wx=tx*TILE+8,wy=ty*TILE+8;
+    let minD=Infinity;
+    for(const p of players){if(!p.alive)continue;const d=Math.hypot(p.x-wx,p.y-wy);if(d<minD)minD=d;}
+    if(minD>180){bx=wx;by=wy;break;}
+  }
+  if(bx===undefined){bx=MAPW*TILE*.5;by=16;}
+  return{type:'boss',x:bx,y:by,vx:0,vy:0,
+    hp,_maxHp:hp,r:9,spd:18+stage*.22,
+    dmg:Math.round(28*sc),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0};
+}
+
 // ═══════════════════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════════════════
@@ -688,6 +708,15 @@ function update(dt){
           if(chance(.35))pickups.push({type:'core',x:e.x,y:e.y,t:0});
           if(chance(healRate))pickups.push({type:'health',x:e.x,y:e.y,t:0});
           if(chance(.22))pickups.push({type:'ammo',x:e.x,y:e.y,t:0});
+          // boss drops
+          if(e.type==='boss'){
+            for(let k=0;k<4;k++)pickups.push({type:'ammo',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
+            for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
+            flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
+            // restore any devoured cores (partial refund)
+            const refund=Math.min(coresNeeded-coresCollected,2);
+            if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
+          }
           // zombie drops bonus
           if(e.type==='zombie'){
             const xpDrop=e.dropXp||0;
@@ -698,7 +727,7 @@ function update(dt){
             pickups.push({type:'ammo',x:e.x+4,y:e.y,t:0});
           }
           if(b.owner){
-            const xpg=e.type==='brute'?6:e.type==='zombie'?8:e.type==='shooter'?3:2;
+            const xpg=e.type==='boss'?50:e.type==='brute'?6:e.type==='zombie'?8:e.type==='shooter'?3:2;
             b.owner.xp+=xpg;b.owner.accXp+=xpg;
             while(b.owner.xp>=b.owner.level*10){
               b.owner.xp-=b.owner.level*10;b.owner.level++;
@@ -752,6 +781,30 @@ function update(dt){
         e.fireCd=e.weapon.fireCd;spark(e.x,e.y,'#f44',2,30);
       }
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;e.vx-=Math.cos(e.ang)*40;e.vy-=Math.sin(e.ang)*40;}
+    } else if(e.type==='boss'){
+      // Unstoppable charge — smash through walls
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      // Break surrounding wall tiles
+      e.breakCd=Math.max(0,(e.breakCd||0)-eff);
+      const btx=(e.x/TILE)|0,bty=(e.y/TILE)|0;
+      for(let dy2=-1;dy2<=1;dy2++)for(let dx2=-1;dx2<=1;dx2++){
+        const nx=btx+dx2,ny=bty+dy2;
+        if(nx<1||ny<1||nx>=MAPW-1||ny>=MAPH-1)continue;
+        if(map[ny*MAPW+nx]===1){
+          map[ny*MAPW+nx]=0;fog[ny*MAPW+nx]=1;
+          if(e.breakCd<=0){spark(nx*TILE+8,ny*TILE+8,'#c84',6,65);e.breakCd=.1;shake=Math.max(shake,1.5);}
+        }
+      }
+      // Devour cores and pickups on contact
+      for(let i=cores.length-1;i>=0;i--){const c=cores[i];if(Math.hypot(c.x-e.x,c.y-e.y)<e.r+8){spark(c.x,c.y,'#f80',4,40);cores.splice(i,1);}}
+      for(let i=pickups.length-1;i>=0;i--){const pk=pickups[i];if(Math.hypot(pk.x-e.x,pk.y-e.y)<e.r+8){spark(pk.x,pk.y,'#622',3,30);pickups.splice(i,1);}}
+      // Smash attack
+      if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=1.1;shake=Math.max(shake,3);e.vx-=Math.cos(e.ang)*45;e.vy-=Math.sin(e.ang)*45;}
+      // Direct position update (no wall check)
+      e.x+=e.vx*eff;e.y+=e.vy*eff;
+      e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
+      e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
+      continue; // skip standard moveObj + enemy separation
     } else {
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
       if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
@@ -872,6 +925,16 @@ function nextStage(){
   if(stage===MAX_DEPTH)flash('THE SCREW AWAITS','#ff0');
   // Show personality reshuffle after brief delay via messages
   setTimeout(()=>{for(const m of msgs)flash(m,'#fa0');},600);
+  // Spawn boss on multiples of 10 and D99
+  if(stage%10===0||stage===99){
+    setTimeout(()=>{
+      if(!running)return;
+      const b=makeBoss();enemies.push(b);
+      flash('★ BOSS APPROACHES ★','#f44');
+      flash('WALL-BREAKER INCOMING','#f88');
+      shake=Math.max(shake,3);
+    },1200);
+  }
 }
 
 function gameOver(){
@@ -1030,6 +1093,34 @@ function drawPlayer(p){
 
 function drawEnemy(e){
   const x=Math.round(e.x),y=Math.round(e.y);
+  // ── Boss ────────────────────────────────────
+  if(e.type==='boss'){
+    const pulse=Math.abs(Math.sin(time*5));
+    const bc=e.hit>0?'#fff':'#622',hc=e.hit>0?'#fff':'#411';
+    // Shadow
+    ctx.fillStyle='#000';ctx.globalAlpha=.45;ctx.fillRect(x-10,y+8,20,4);ctx.globalAlpha=1;
+    // Fists
+    ctx.fillStyle=bc;ctx.fillRect(x-13,y-4,5,5);ctx.fillRect(x+8,y-4,5,5);
+    // Body
+    ctx.fillStyle=bc;ctx.fillRect(x-6,y-6,12,14);
+    // Belt stripe
+    ctx.fillStyle=e.hit>0?'#fff':'#833';ctx.fillRect(x-6,y+1,12,2);
+    // Head
+    ctx.fillStyle=hc;ctx.fillRect(x-5,y-11,10,6);
+    // Eyes glow
+    ctx.fillStyle='#f00';ctx.globalAlpha=.6+pulse*.4;
+    ctx.fillRect(x-4,y-9,3,2);ctx.fillRect(x+1,y-9,3,2);
+    ctx.globalAlpha=1;
+    // Legs animate
+    const lb=((time*7)|0)%2;
+    ctx.fillStyle=e.hit>0?'#fff':'#400';
+    ctx.fillRect(x-5,y+8,4,4-lb);ctx.fillRect(x+1,y+8,4,3+lb);
+    // Name + HP bar
+    ctx.globalAlpha=.9;pixText('BOSS',x-8,y-18,'#f44');ctx.globalAlpha=1;
+    const bpw=28;ctx.fillStyle='#400';ctx.fillRect(x-(bpw>>1),y-21,bpw,2);
+    ctx.fillStyle=e.hit>0?'#ff0':'#f44';ctx.fillRect(x-(bpw>>1),y-21,(bpw*e.hp/e._maxHp)|0,2);
+    return;
+  }
   ctx.fillStyle='#000';ctx.globalAlpha=.4;ctx.fillRect(x-e.r,y+e.r-1,e.r*2,2);ctx.globalAlpha=1;
   let body,head;
   if(e.type==='grunt'){body='#494';head='#7a7';}
@@ -1066,6 +1157,16 @@ function drawHUD(){
   ctx.fillStyle=stage===MAX_DEPTH?'#ff0':'#0af';
   ctx.fillRect(0,0,(W*stage/MAX_DEPTH)|0,4);
   ctx.fillStyle='#0ff';ctx.fillRect((W*stage/MAX_DEPTH)|0,1,1,2);
+  // Boss HP bar (when boss alive)
+  const _boss=running?enemies.find(e=>e.type==='boss'):null;
+  if(_boss){
+    const bw=100;const bx2=(W-bw)>>1;
+    ctx.fillStyle='#300';ctx.fillRect(bx2,5,bw,4);
+    ctx.fillStyle=_boss.hit>0?'#ff0':'#f44';ctx.fillRect(bx2,5,(bw*_boss.hp/_boss._maxHp)|0,4);
+    pixText('★BOSS',bx2-22,5,'#f44');
+    const pct=Math.round(100*_boss.hp/_boss._maxHp);
+    pixText(pct+'%',bx2+bw+2,5,'#f88');
+  }
 
   // Bottom bar
   ctx.fillStyle='#000c';ctx.fillRect(0,H-22,W,22);
