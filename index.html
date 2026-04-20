@@ -87,6 +87,15 @@
   <div id="btSub">BRACE FOR ZOMBIE</div>
 </div>
 
+<!-- Pause -->
+<div id="pause" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:'Courier New',monospace;color:#0ff;">
+  <div style="font-size:22px;letter-spacing:4px;text-shadow:0 0 12px #0ff">PAUSED</div>
+  <button id="resumeBtn" style="margin-top:8px;padding:8px 28px;background:#001a1a;border:2px solid #0ff;color:#0ff;font-family:inherit;font-size:13px;letter-spacing:2px;cursor:pointer">RESUME</button>
+  <button id="saveQuitBtn" style="padding:8px 28px;background:#001a00;border:2px solid #0f6;color:#0f6;font-family:inherit;font-size:13px;letter-spacing:2px;cursor:pointer">SAVE &amp; QUIT</button>
+  <button id="quitBtn" style="padding:8px 28px;background:#1a0000;border:2px solid #f44;color:#f44;font-family:inherit;font-size:13px;letter-spacing:2px;cursor:pointer">QUIT (NO SAVE)</button>
+  <div style="font-size:9px;color:#555;margin-top:4px">ESC to resume</div>
+</div>
+
 <!-- Game over -->
 <div id="over">
   <h2 id="ovTitle">YOU DIED</h2>
@@ -156,7 +165,17 @@ window.addEventListener('resize',fit); fit();
 //  RAW INPUT
 // ═══════════════════════════════════════════════
 const keys={};
-addEventListener('keydown',e=>keys[e.code]=true);
+let paused=false;
+const pauseEl=document.getElementById('pause');
+function setPause(v){
+  paused=v;
+  pauseEl.style.display=v?'flex':'none';
+  if(!v)PSG.resume();
+}
+addEventListener('keydown',e=>{
+  if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
+  keys[e.code]=true;
+});
 addEventListener('keyup',e=>keys[e.code]=false);
 const mouse={x:W/2,y:H/2,down:false};
 function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*(W/r.width);mouse.y=(e.clientY-r.top)*(H/r.height);}
@@ -951,6 +970,9 @@ function draw(){
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   }
 
+  // Pause dim
+  if(paused){ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(0,0,W,H);}
+
   // Scanlines
   ctx.fillStyle='#000';ctx.globalAlpha=.18;
   for(let y=0;y<H;y+=2)ctx.fillRect(0,y,W,1);
@@ -1336,6 +1358,7 @@ function startGame(){
   stage=1;totalKills=0;gameWon=false;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
+  paused=false;pauseEl.style.display='none';
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
   genMap();spawnT=.5;
@@ -1345,6 +1368,15 @@ function startGame(){
 
 document.getElementById('startBtn').addEventListener('click',startGame);
 document.getElementById('contBtn').addEventListener('click',()=>{loadGame();});
+document.getElementById('resumeBtn').addEventListener('click',()=>setPause(false));
+document.getElementById('saveQuitBtn').addEventListener('click',()=>{
+  saveGame();setPause(false);running=false;PSG.stop();
+  lobbyEl.style.display='flex';renderLobby();
+});
+document.getElementById('quitBtn').addEventListener('click',()=>{
+  setPause(false);running=false;PSG.stop();
+  lobbyEl.style.display='flex';renderLobby();
+});
 document.getElementById('retryBtn').addEventListener('click',()=>{overEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 
@@ -1354,7 +1386,8 @@ document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.disp
 let last=performance.now();
 (function loop(now){
   let dt=Math.min(.05,(now-last)/1000);last=now;
-  update(dt);draw();
+  if(!paused)update(dt);
+  draw();
   requestAnimationFrame(loop);
 })(last);
 
