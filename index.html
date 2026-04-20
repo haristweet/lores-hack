@@ -74,7 +74,7 @@
   <div id="padSt">🎮 ゲームパッド: (接続後ボタンを押して認識)</div>
   <div class="help">
     <div><span class="k">KB+M</span>: WASD移動 / マウス照準 / CLICK射撃 / SHIFT ダッシュ</div>
-    <div><span class="k">PAD0</span>: 左スティック移動 / 右スティック照準+自動射撃 / RT射撃 / LB ダッシュ</div>
+    <div><span class="k">GAMEPAD</span>: 左スティック移動 / 右スティック照準+自動射撃 / RT射撃 / LB ダッシュ</div>
     <div><span class="k">CHARGE</span>: 右クリック / E / LT を長押し→離すと強力な巨大弾（最大1.5秒、押中は移動速度低下）</div>
     <div style="color:#f88;margin-top:3px">仲間が死ぬと <span class="k">ゾンビ化</span> — 装備そのままで反旗を翻す。<br>各フロア、仲間の <span class="k">性格はランダム</span>。観察して戦略を練れ。</div>
   </div>
@@ -239,8 +239,12 @@ class KMController{
   dash(){return!!(keys.ShiftLeft||keys.ShiftRight);}
 }
 class PadController{
-  constructor(i){this.idx=i;this.type='PAD';this.label='PAD'+i;this._a=0;}
-  _gp(){return(navigator.getGamepads?navigator.getGamepads():[])[this.idx];}
+  constructor(){this.type='PAD';this.label='GAMEPAD';this._a=0;}
+  _gp(){
+    const gps=navigator.getGamepads?navigator.getGamepads():[];
+    for(let i=0;i<gps.length;i++)if(gps[i]&&gps[i].axes.length>=2)return gps[i];
+    return null;
+  }
   move(){const g=this._gp();if(!g)return{x:0,y:0};const x=g.axes[0]||0,y=g.axes[1]||0;if(Math.hypot(x,y)<.18)return{x:0,y:0};return{x,y};}
   aim(p){const g=this._gp();if(!g)return this._a;const x=g.axes[2]||0,y=g.axes[3]||0;if(Math.hypot(x,y)>.3)this._a=Math.atan2(y,x);return this._a;}
   fire(){const g=this._gp();if(!g)return false;if(Math.hypot(g.axes[2]||0,g.axes[3]||0)>.6)return true;if(g.buttons[7]?.value>.5)return true;return!!g.buttons[0]?.pressed;}
@@ -1436,7 +1440,7 @@ function saveGame(){
       level:p.level,xp:p.xp,
       weapon:{...p.weapon},
       isHuman:p.isHuman,alive:p.alive,hasRevive:p.hasRevive,
-      ctrlType:p.isHuman?cfg.slots[0]:'CPU',
+      ctrlType:p.isHuman?(cfg.slots[0]||'KB+M'):'CPU',
       personality:p.isHuman?null:p.controller.personality,
       accXp:p.accXp,kills:p.kills
     }))
@@ -1461,7 +1465,7 @@ function loadGame(){
   players=[];
   for(const pd of data.players){
     const ctrl=pd.isHuman
-      ?(pd.ctrlType==='PAD0'?new PadController(0):new KMController())
+      ?(pd.ctrlType==='GAMEPAD'?new PadController():new KMController())
       :new CPUController(pd.personality);
     const p=makePlayer(pd.idx,ctrl,pd.isHuman);
     p.hp=pd.hp;p.maxHp=pd.maxHp;
@@ -1554,7 +1558,7 @@ function renderLobby(){
     const nm=document.createElement('span');nm.className='sname p'+(i+1);nm.textContent='P'+(i+1);row.appendChild(nm);
     if(i===0){
       if(!['KB+M','PAD0','PAD1','PAD2','PAD3'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-      for(const o of['KB+M','PAD0']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
+      for(const o of['KB+M','GAMEPAD']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
     }else{
       const b=document.createElement('span');b.style.cssText='color:#888;font-size:10px;padding:2px 6px';b.textContent='CPU';row.appendChild(b);
     }
@@ -1781,8 +1785,8 @@ function startGame(){
   for(let i=0;i<total;i++){
     let ctrl,isHuman=i===0;
     if(isHuman){
-      const slot=(cfg.slots[0]==='PAD0')?'PAD0':'KB+M';
-      ctrl=slot==='KB+M'?new KMController():new PadController(0);
+      const slot=cfg.slots[0]||'KB+M';
+      ctrl=slot==='GAMEPAD'?new PadController():new KMController();
     }else ctrl=new CPUController(randPers());
     players.push(makePlayer(i,ctrl,isHuman));
   }
