@@ -723,6 +723,7 @@ function update(dt){
             for(let k=0;k<4;k++)pickups.push({type:'ammo',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
+            PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
             const refund=Math.min(coresNeeded-coresCollected,2);
             if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
@@ -943,6 +944,7 @@ function nextStage(){
       flash('★ BOSS APPROACHES ★','#f44');
       flash('WALL-BREAKER INCOMING','#f88');
       shake=Math.max(shake,3);
+      PSG.boss(stage);
     },1200);
   }
 }
@@ -1474,6 +1476,25 @@ const PSG=(()=>{
   function zone(st){return ZONES[Math.min(4,Math.floor((st-1)/20))];}
 
   // Generate 8 or 16-step pattern seeded from stage
+  // Boss pattern — aggressive, 16-step, diminished-dominant flavour
+  function genBossPat(st){
+    const r=rng(st*3571+99991);
+    // Double harmonic / diminished feel: root, b2, 3, b5, 5, b7
+    const sc=[0,1,4,6,7,10];
+    // Root drops deeper with each boss floor
+    const rt=36+((st/10)|0)%4*(-2);
+    const mel=[],bass=[],arp=[];
+    for(let i=0;i<16;i++){
+      // Punchy melody: mostly on-beat, occasional rests
+      mel.push(r()<0.18?null:rt+sc[Math.floor(r()*sc.length)]+(r()<0.35?12:0)+24);
+      // Driving bass on every beat (every 4 8th-steps), occasional 5th
+      bass.push(i%4===0?rt+12:i%4===2?rt+7+12:null);
+      // Fast frantic arpeggio always on (16th-note feel)
+      arp.push(rt+sc[i%sc.length]+(i%3===0?24:12));
+    }
+    return{mel,bass,arp,len:16};
+  }
+
   function genPat(st){
     const r=rng(st*7919+31337);
     const z=zone(st);
@@ -1552,6 +1573,26 @@ const PSG=(()=>{
     },
     stop(){if(seqId){clearInterval(seqId);seqId=null;}},
     resume(){if(AC&&AC.state==='suspended')AC.resume();},
+    boss(st){
+      this.stop();init();
+      if(AC.state==='suspended')AC.resume();
+      bpm=172+(st%10)*.8; // fast & slightly varies per boss floor
+      pat=genBossPat(st);step=0;nextT=AC.currentTime+.06;
+      seqId=setInterval(()=>{
+        const sd=60/bpm/2;
+        while(nextT<AC.currentTime+.18){
+          const i=step%pat.len;
+          if(pat.mel[i]!==null) noteOn(midi(pat.mel[i]),'square',.18,nextT,sd*.55);
+          if(pat.bass[i]!==null) noteOn(midi(pat.bass[i]),'sawtooth',.26,nextT,sd*1.1);
+          if(pat.arp[i]!==null) noteOn(midi(pat.arp[i]),'square',.09,nextT,sd*.25);
+          // Heavy beat: kick every beat, snare every off-beat, hi-hat every step
+          if(i%4===0) noiseOn(80,.18,nextT,.12);   // heavy kick
+          if(i%4===2) noiseOn(900,.12,nextT,.06);  // snare
+          noiseOn(6000,.04,nextT,.015);             // hi-hat every 8th
+          step++;nextT+=sd;
+        }
+      },22);
+    },
     // Offline render — returns Promise<AudioBuffer>
     async render(stage,duration=62){
       const SR=44100;
