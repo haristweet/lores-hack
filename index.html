@@ -379,7 +379,7 @@ const _mmCtx=_mmCv.getContext('2d');
 function drawMinimap(){
   if(!map||!fog)return;
   const MW=MAPW,MH=MAPH; // 64×64
-  const mx=(W-MW)>>1,my=(H-MH)>>1; // center on canvas
+  const mx=W-MW-4,my=20; // top-right corner (below depth counter)
 
   // Draw terrain into offscreen canvas
   const id=_mmCtx.createImageData(MW,MH);const d=id.data;
