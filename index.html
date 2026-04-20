@@ -421,6 +421,35 @@ function drawMinimap(){
   ctx.globalAlpha=1;
 }
 
+// Draw edge arrows for off-screen CPU allies
+function drawOffscreenIndicators(){
+  const PAD=10,CX=W/2,CY=H/2;
+  for(const p of players){
+    if(!p.alive||p.isHuman)continue;
+    const sx=p.x-camX+CX,sy=p.y-camY+CY;
+    if(sx>=PAD&&sx<=W-PAD&&sy>=PAD&&sy<=H-PAD)continue; // on-screen, skip
+    const ang=Math.atan2(sy-CY,sx-CX);
+    const c=Math.cos(ang),s=Math.sin(ang);
+    // Intersect ray with screen rect to find edge point
+    let ex,ey;
+    const xr=(c>0?CX-PAD:-(CX-PAD)),yr=(s>0?CY-PAD:-(CY-PAD));
+    if(s!==0&&Math.abs(xr*s/c)>=Math.abs(yr)){ex=CX+yr*c/s;ey=CY+yr;}
+    else{ex=CX+xr;ey=CY+xr*s/c;}
+    ex=Math.max(PAD,Math.min(W-PAD,ex));
+    ey=Math.max(PAD,Math.min(H-PAD,ey));
+    // Arrow triangle pointing toward the CPU
+    ctx.save();
+    ctx.translate(ex,ey);ctx.rotate(ang);
+    ctx.globalAlpha=0.88;
+    ctx.fillStyle=p.pal.body;
+    ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-4,-3.5);ctx.lineTo(-4,3.5);ctx.closePath();ctx.fill();
+    // Tiny player color dot at arrow base
+    ctx.fillStyle=p.pal.dark||p.pal.body;
+    ctx.fillRect(-5,-1,3,2);
+    ctx.globalAlpha=1;ctx.restore();
+  }
+}
+
 function tileAt(x,y){const tx=(x/TILE)|0,ty=(y/TILE)|0;if(tx<0||ty<0||tx>=MAPW||ty>=MAPH)return 1;return map[ty*MAPW+tx];}
 function solid(x,y){return tileAt(x,y)===1;}
 function hitsWall(x,y,r){for(let a=0;a<8;a++){const t=a*Math.PI/4;if(solid(x+Math.cos(t)*r,y+Math.sin(t)*r))return true;}return solid(x,y);}
@@ -750,10 +779,12 @@ function update(dt){
   for(let i=messages.length-1;i>=0;i--){messages[i].t+=dt;if(messages[i].t>2.2)messages.splice(i,1);}
   shake*=Math.pow(.001,dt);
 
-  // ── Camera ──
-  let cx=0,cy=0,n=0;
-  for(const p of players){if(!p.alive)continue;cx+=p.x;cy+=p.y;n++;}
-  if(n>0){cx/=n;cy/=n;const fp=players.find(p=>p.alive&&p.isHuman)||players.find(p=>p.alive);if(fp){cx+=Math.cos(fp.aim)*12;cy+=Math.sin(fp.aim)*12;}camX+=(cx-camX)*Math.min(1,dt*6);camY+=(cy-camY)*Math.min(1,dt*6);}
+  // ── Camera: follow human player only, with aim look-ahead ──
+  const _fp=players.find(p=>p.alive&&p.isHuman)||players.find(p=>p.alive);
+  if(_fp){
+    const tx=_fp.x+Math.cos(_fp.aim)*14,ty=_fp.y+Math.sin(_fp.aim)*14;
+    camX+=(tx-camX)*Math.min(1,dt*6);camY+=(ty-camY)*Math.min(1,dt*6);
+  }
 
   // ── Game over ──
   if(!players.some(p=>p.alive&&p.isHuman)){running=false;gameOver();}
@@ -909,6 +940,7 @@ function draw(){
 
   ctx.restore();
 
+  drawOffscreenIndicators();
   drawMinimap();
   drawHUD();
 
