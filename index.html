@@ -1557,7 +1557,7 @@ function renderLobby(){
     const row=document.createElement('div');row.className='slot';
     const nm=document.createElement('span');nm.className='sname p'+(i+1);nm.textContent='P'+(i+1);row.appendChild(nm);
     if(i===0){
-      if(!['KB+M','PAD0','PAD1','PAD2','PAD3'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
+      if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
       for(const o of['KB+M','GAMEPAD']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
     }else{
       const b=document.createElement('span');b.style.cssText='color:#888;font-size:10px;padding:2px 6px';b.textContent='CPU';row.appendChild(b);
