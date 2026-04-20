@@ -73,9 +73,9 @@
   <div id="slots"></div>
   <div id="padSt">🎮 ゲームパッド: (接続後ボタンを押して認識)</div>
   <div class="help">
-    <div><span class="k">KB+M</span>: WASD移動 / マウス照準 / CLICK射撃 / SHIFT ダッシュ / R リロード</div>
-    <div><span class="k">PAD</span>: 左スティック移動 / 右スティック照準+自動射撃 / RT射撃 / LB ダッシュ / X リロード</div>
-    <div><span class="k">SEMI</span>: 1発ごと入力・威力100% ／ <span class="k">AUTO</span>: 押しっぱなし・威力25%</div>
+    <div><span class="k">KB+M</span>: WASD移動 / マウス照準 / CLICK射撃 / SHIFT ダッシュ</div>
+    <div><span class="k">PAD0</span>: 左スティック移動 / 右スティック照準+自動射撃 / RT射撃 / LB ダッシュ</div>
+    <div><span class="k">CHARGE</span>: 右クリック / E / LT を長押し→離すと強力な巨大弾（最大1.5秒、押中は移動速度低下）</div>
     <div style="color:#f88;margin-top:3px">仲間が死ぬと <span class="k">ゾンビ化</span> — 装備そのままで反旗を翻す。<br>各フロア、仲間の <span class="k">性格はランダム</span>。観察して戦略を練れ。</div>
   </div>
   <button id="startBtn" disabled>START</button>
@@ -211,8 +211,8 @@ addEventListener('keyup',e=>keys[e.code]=false);
 const mouse={x:W/2,y:H/2,down:false};
 function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*(W/r.width);mouse.y=(e.clientY-r.top)*(H/r.height);}
 cv.addEventListener('mousemove',updMouse);
-cv.addEventListener('mousedown',e=>{updMouse(e);mouse.down=true;});
-addEventListener('mouseup',()=>mouse.down=false);
+cv.addEventListener('mousedown',e=>{updMouse(e);if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
+addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('click',e=>{
   if(!introActive)return;
@@ -235,8 +235,8 @@ class KMController{
   move(){return{x:(keys.KeyD?1:0)-(keys.KeyA?1:0),y:(keys.KeyS?1:0)-(keys.KeyW?1:0)};}
   aim(p){return Math.atan2(mouse.y+camY-H/2-p.y,mouse.x+camX-W/2-p.x);}
   fire(){return mouse.down;}
+  charge(){return!!(mouse.right||keys.KeyE);}
   dash(){return!!(keys.ShiftLeft||keys.ShiftRight);}
-  reload(){return!!keys.KeyR;}
 }
 class PadController{
   constructor(i){this.idx=i;this.type='PAD';this.label='PAD'+i;this._a=0;}
@@ -244,8 +244,8 @@ class PadController{
   move(){const g=this._gp();if(!g)return{x:0,y:0};const x=g.axes[0]||0,y=g.axes[1]||0;if(Math.hypot(x,y)<.18)return{x:0,y:0};return{x,y};}
   aim(p){const g=this._gp();if(!g)return this._a;const x=g.axes[2]||0,y=g.axes[3]||0;if(Math.hypot(x,y)>.3)this._a=Math.atan2(y,x);return this._a;}
   fire(){const g=this._gp();if(!g)return false;if(Math.hypot(g.axes[2]||0,g.axes[3]||0)>.6)return true;if(g.buttons[7]?.value>.5)return true;return!!g.buttons[0]?.pressed;}
+  charge(){const g=this._gp();if(!g)return false;return!!(g.buttons[6]?.value>.5);}
   dash(){const g=this._gp();if(!g)return false;return!!(g.buttons[4]?.pressed||g.buttons[1]?.pressed);}
-  reload(){const g=this._gp();if(!g)return false;return!!(g.buttons[2]?.pressed||g.buttons[3]?.pressed);}
 }
 
 // ── CPU helper fns (use live arrays) ─────────
@@ -264,6 +264,7 @@ class CPUController{
     this._sub=randPers(true);this._moodyT=8+Math.random()*4;
     this._target=null;this._rT=0;this._strT=Math.random()*10;
     this._mx=0;this._my=0;this._aim=0;this._fire=false;this._dash=false;
+    this._charging=false;this._chargeDur=0;this._chargeEl=0;
     this._dCd=0;this._dodgeT=0;this._dodgeDir=1;this._panicT=0;
   }
   get effPers(){return this.personality==='moody'?this._sub:this.personality;}
@@ -289,6 +290,14 @@ class CPUController{
     const los=hasLoS(p.x,p.y,this._target.x,this._target.y);
     this._fire=(ps==='triggerhappy'||d<this._fireRange(ps))&&los;
     this._dash=this._wantDash(p,ps,d);
+    // Charging AI: occasionally charge up a shot
+    if(this._charging){
+      this._chargeEl+=dt;
+      if(this._chargeEl>=this._chargeDur){this._charging=false;this._chargeEl=0;}
+      this._fire=false;
+    } else if(this._fire&&Math.random()<dt*0.25&&enemies.length>0){
+      this._charging=true;this._chargeDur=0.8+Math.random()*0.7;this._chargeEl=0;
+    }
   }
   _pick(p,ps,hp){
     if(!enemies.length)return null;
@@ -374,6 +383,7 @@ class CPUController{
   aim(){return this._aim;}
   fire(){return this._fire;}
   dash(){return this._dash;}
+  charge(){return!!this._charging;}
   reload(){return false;}
 }
 
@@ -528,15 +538,15 @@ let bulletTime=null; // {timer,victimName,victimPal}
 // ═══════════════════════════════════════════════
 //  ENTITY FACTORIES
 // ═══════════════════════════════════════════════
-function makePlayer(idx,ctrl,isHuman,mode='AUTO'){
+function makePlayer(idx,ctrl,isHuman){
   return{idx,isHuman,x:0,y:0,r:3,vx:0,vy:0,
     hp:100,maxHp:100,spd:48,dashCd:0,dashT:0,
-    ammo:12,mag:12,reloadT:0,fireCd:0,
+    fireCd:0,
     xp:0,level:1,iframe:0,aim:0,alive:true,
     controller:ctrl,pal:P_PAL[idx],muzzle:0,
     weapon:{fireCd:.12,dmg:1,spread:.07,range:.55,spd:220},
-    mode, // 'SEMI' or 'AUTO'
-    edge:{dash:false,reload:false,fire:false},
+    chargeT:0,
+    edge:{dash:false,fire:false},
     kills:0,accXp:0};
 }
 
@@ -557,7 +567,7 @@ function makeZombie(p){
     r:3,atkCd:0,hit:0,ang:0,anim:0,_dead:false,
     spd:32+p.level*2,dmg:14+p.level*3,
     weapon:{fireCd:.35,dmg:Math.max(2,p.weapon.dmg*1.3),spread:.22,range:1.3,spd:145},
-    fireCd:0,ammo:Infinity, // infinite ammo
+    fireCd:0,
     pal:p.pal,level:p.level,fromName:p.pal.name,
     // for drops
     dropXp:p.accXp,
@@ -623,37 +633,50 @@ function updatePlayer(p,dt){
   if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
   p.edge.dash=db;
   if(p.dashT>0)spd*=3.2;
+  // Charge button (need early peek to apply speed penalty)
+  const chB=p.controller.charge(p);
+  if(chB&&p.dashT<=0)spd*=0.35;
   p.vx=mx*spd;p.vy=my*spd;
   moveObj(p,dt);
   p.aim=p.controller.aim(p);
-  // reload
-  const rb=p.controller.reload(p);
-  if(rb&&!p.edge.reload&&p.reloadT<=0&&p.ammo<p.mag)p.reloadT=1;
-  p.edge.reload=rb;
+  // Charge accumulation / release
+  if(chB&&p.dashT<=0){p.chargeT+=dt;}
+  else if(p.chargeT>0&&!chB){fireChargeShot(p,p.chargeT);p.chargeT=0;}
   p.fireCd=Math.max(0,p.fireCd-dt);
-  const prev=p.reloadT;
-  p.reloadT=Math.max(0,p.reloadT-dt);
-  if(prev>0&&p.reloadT<=0){p.ammo=p.mag;flash(p.pal.name+' RELOADED',p.pal.body);}
-  // fire
+  // Normal fire: auto (hold), disabled while charging
   const fb=p.controller.fire(p);
-  const fireNow=(p.mode==='SEMI')?(fb&&!p.edge.fire):fb;
   p.edge.fire=fb;
-  if(fireNow&&p.fireCd<=0&&p.reloadT<=0){
-    if(p.ammo>0){
-      const w=p.weapon;
-      const dmgMul=(p.mode==='AUTO'?.25:1);
-      const spread=p.level>=3?w.spread*.6:w.spread;
-      const a=p.aim+rnd(-spread,spread);
-      const ox=Math.cos(p.aim)*5,oy=Math.sin(p.aim)*5;
-      bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,
-        life:w.range,dmg:(w.dmg+p.level*.4)*dmgMul,owner:p,trail:[]});
-      p.ammo--;p.fireCd=w.fireCd;p.muzzle=.08;
-      shake=Math.max(shake,.8);
-      p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
-    }else if(p.reloadT<=0)p.reloadT=1;
+  if(!chB&&fb&&p.fireCd<=0){
+    const w=p.weapon;
+    const spread=p.level>=3?w.spread*.6:w.spread;
+    const a=p.aim+rnd(-spread,spread);
+    const ox=Math.cos(p.aim)*5,oy=Math.sin(p.aim)*5;
+    bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,
+      life:w.range,dmg:(w.dmg+p.level*.4)*.25,owner:p,trail:[]});
+    p.fireCd=w.fireCd;p.muzzle=.08;
+    shake=Math.max(shake,.8);
+    p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
   }
   p.iframe=Math.max(0,p.iframe-dt);
   p.muzzle=Math.max(0,p.muzzle-dt);
+}
+
+function fireChargeShot(p,t){
+  const MAX_CHARGE=1.5;
+  const power=Math.min(1,t/MAX_CHARGE);
+  const w=p.weapon;
+  const r=1.5+power*12.5;        // bullet radius 1.5→14
+  const dmg=(w.dmg+p.level*.4)*(1+power*10);  // 1x to 11x
+  const spd=w.spd*(.65+power*.2);
+  const range=w.range*(1.5+power*.8);
+  const ox=Math.cos(p.aim)*5,oy=Math.sin(p.aim)*5;
+  bullets.push({x:p.x+ox,y:p.y+oy,
+    vx:Math.cos(p.aim)*spd,vy:Math.sin(p.aim)*spd,
+    life:range,dmg,owner:p,trail:[],r,charge:true,power});
+  p.muzzle=.2+power*.25;
+  shake=Math.max(shake,2+power*5);
+  spark(p.x+Math.cos(p.aim)*10,p.y+Math.sin(p.aim)*10,'#ff0',Math.round(6+power*12),110+power*130);
+  spark(p.x+Math.cos(p.aim)*10,p.y+Math.sin(p.aim)*10,p.pal.trail,Math.round(4+power*6),80+power*80);
 }
 
 function update(dt){
@@ -706,7 +729,7 @@ function update(dt){
     let hit=false;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
-      if(dx*dx+dy*dy<(e.r+1.5)**2){
+      if(dx*dx+dy*dy<(e.r+(b.r||1.5))**2){
         e.hp-=b.dmg;e.hit=.1;e.vx+=b.vx*.05;e.vy+=b.vy*.05;
         blood(b.x,b.y);
         if(e.hp<=0){
@@ -714,14 +737,12 @@ function update(dt){
           totalKills++;if(b.owner)b.owner.kills++;
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
-          const healRate=stage>50?Math.max(.02,.18-(stage-50)*.003):.18;
+          const healRate=stage>50?Math.max(.04,.25-(stage-50)*.003):.25;
           if(chance(.35))pickups.push({type:'core',x:e.x,y:e.y,t:0});
           if(chance(healRate))pickups.push({type:'health',x:e.x,y:e.y,t:0});
-          if(chance(.22))pickups.push({type:'ammo',x:e.x,y:e.y,t:0});
           // boss drops
           if(e.type==='boss'){
-            for(let k=0;k<4;k++)pickups.push({type:'ammo',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
-            for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
+            for(let k=0;k<5;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
             PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
@@ -733,9 +754,7 @@ function update(dt){
             const xpDrop=e.dropXp||0;
             if(xpDrop>0&&b.owner){b.owner.xp+=xpDrop;flash('VENGEANCE +'+xpDrop+'XP','#ff0');}
             if(e.dropCores>0){coresCollected+=e.dropCores;flash('RECLAIMED +'+e.dropCores+' CORE','#0ff');}
-            // extra drops from zombie
             pickups.push({type:'health',x:e.x,y:e.y,t:0});
-            pickups.push({type:'ammo',x:e.x+4,y:e.y,t:0});
           }
           if(b.owner){
             const xpg=e.type==='boss'?50:e.type==='brute'?6:e.type==='zombie'?8:e.type==='shooter'?3:2;
@@ -743,7 +762,7 @@ function update(dt){
             while(b.owner.xp>=b.owner.level*10){
               b.owner.xp-=b.owner.level*10;b.owner.level++;
               b.owner.maxHp+=10;b.owner.hp=Math.min(b.owner.maxHp,b.owner.hp+20);
-              b.owner.mag+=2;b.owner.weapon.dmg+=.5;
+              b.owner.weapon.dmg+=.5;
               flash(b.owner.pal.name+' LV.'+b.owner.level,b.owner.pal.body);
             }
           }
@@ -833,7 +852,6 @@ function update(dt){
       if(dx*dx+dy*dy<36){
         if(p.type==='core'){coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');}
         else if(p.type==='health'){pl.hp=Math.min(pl.maxHp,pl.hp+25);flash(pl.pal.name+' +25HP',pl.pal.body);}
-        else if(p.type==='ammo'){pl.ammo=pl.mag;pl.reloadT=0;flash(pl.pal.name+' AMMO',pl.pal.body);}
         pickups.splice(i,1);break;
       }
     }
@@ -856,7 +874,7 @@ function update(dt){
         const dead=players.find(p=>!p.alive&&!p.isHuman);
         if(dead){
           pod.used=true;
-          dead.alive=true;dead.hp=dead.maxHp*.5;dead.ammo=dead.mag;dead.iframe=1;
+          dead.alive=true;dead.hp=dead.maxHp*.5;dead.iframe=1;
           dead.x=pod.x+rnd(-10,10);dead.y=pod.y+rnd(-10,10);
           const newPers=randPers();
           dead.controller=new CPUController(newPers);
@@ -929,7 +947,7 @@ function nextStage(){
   for(const p of players){if(!p.alive||p.isHuman)continue;const np=randPers();p.controller=new CPUController(np);msgs.push(p.pal.name+':'+PERS_LABEL[np]);}
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   genMap();spawnT=.5;
-  for(const p of players){if(!p.alive)continue;p.fireCd=0;p.reloadT=0;p.ammo=p.mag;p.iframe=1;}
+  for(const p of players){if(!p.alive)continue;p.fireCd=0;p.iframe=1;}
   let cx=0,cy=0,n=0;for(const p of players){if(!p.alive)continue;cx+=p.x;cy+=p.y;n++;}
   if(n){camX=cx/n;camY=cy/n;}
   flash('DEPTH '+stage,stage===MAX_DEPTH?'#ff0':'#0ff');
@@ -1036,7 +1054,6 @@ function draw(){
     const yo=Math.sin(p.t*5+p.x)*1;
     if(p.type==='core'){ctx.fillStyle='#0ff';ctx.fillRect(p.x-2,p.y-2+yo,4,4);ctx.fillStyle='#fff';ctx.fillRect(p.x-1,p.y-1+yo,1,1);}
     else if(p.type==='health'){ctx.fillStyle='#0f4';ctx.fillRect(p.x-2,p.y-1+yo,4,2);ctx.fillRect(p.x-1,p.y-2+yo,2,4);}
-    else if(p.type==='ammo'){ctx.fillStyle='#fa0';ctx.fillRect(p.x-2,p.y-2+yo,4,4);ctx.fillStyle='#fd6';ctx.fillRect(p.x-2,p.y-2+yo,1,1);}
   }
 
   // Smoke
@@ -1046,8 +1063,18 @@ function draw(){
   // Player bullets
   for(const b of bullets){
     const trC=b.owner?b.owner.pal.trail:'#fb4';
-    for(let i=0;i<b.trail.length;i++){ctx.globalAlpha=(i+1)/b.trail.length*.7;ctx.fillStyle=trC;ctx.fillRect(b.trail[i].x|0,b.trail[i].y|0,1,1);}
-    ctx.globalAlpha=1;ctx.fillStyle='#ffe';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+    const trW=b.charge?Math.max(2,Math.ceil((b.r||1.5)*.6)):1;
+    for(let i=0;i<b.trail.length;i++){ctx.globalAlpha=(i+1)/b.trail.length*.7;ctx.fillStyle=trC;ctx.fillRect(b.trail[i].x|0,b.trail[i].y|0,trW,trW);}
+    ctx.globalAlpha=1;
+    if(b.charge){
+      const sz=Math.max(2,Math.ceil(b.r||1.5)),bx2=(b.x|0)-sz,by2=(b.y|0)-sz,bs=sz*2;
+      const pw=b.power||0;
+      ctx.globalAlpha=0.35;ctx.fillStyle='#ff0';ctx.fillRect(bx2-1,by2-1,bs+2,bs+2);
+      ctx.globalAlpha=1;ctx.fillStyle=pw<0.5?'#ff8':'#f80';ctx.fillRect(bx2,by2,bs,bs);
+      ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+    } else {
+      ctx.fillStyle='#ffe';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+    }
   }
   // Enemy bullets
   for(const b of ebullets){ctx.fillStyle='#f44';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);ctx.fillStyle='#fa6';ctx.fillRect(b.x|0,b.y|0,1,1);}
@@ -1099,6 +1126,19 @@ function drawPlayer(p){
   ctx.fillStyle='#aaa';
   for(let i=0;i<5;i++){ctx.fillRect(Math.round(gx+Math.cos(a)*i),Math.round(gy+Math.sin(a)*i),1,1);}
   if(p.muzzle>0){const mx=gx+Math.cos(a)*5,my=gy+Math.sin(a)*5;ctx.fillStyle='#ffb';ctx.fillRect(Math.round(mx)-1,Math.round(my)-1,3,3);ctx.fillStyle='#fff';ctx.fillRect(Math.round(mx),Math.round(my),1,1);}
+  // Charge aura
+  if(p.chargeT>0.05){
+    const pw=Math.min(1,p.chargeT/1.5);
+    const rad=Math.round(3+pw*8);
+    const cc=pw<0.4?'#ff8':pw<0.8?'#f80':'#f44';
+    ctx.fillStyle=cc;ctx.globalAlpha=0.35+pw*0.55;
+    ctx.fillRect(x-rad-1,y-1,2,2);ctx.fillRect(x+rad,y-1,2,2);
+    ctx.fillRect(x-1,y-rad-1,2,2);ctx.fillRect(x-1,y+rad,2,2);
+    if(rad>=5){const d=Math.round(rad*.7);
+      ctx.fillRect(x-d-1,y-d-1,2,2);ctx.fillRect(x+d,y-d-1,2,2);
+      ctx.fillRect(x-d-1,y+d,2,2);ctx.fillRect(x+d,y+d,2,2);}
+    ctx.globalAlpha=1;
+  }
   // Name tag (MP only)
   if(players.length>1)pixText(p.pal.name,x-4,y-12,p.pal.body);
 }
@@ -1189,14 +1229,12 @@ function drawHUD(){
     const p=players[i],sx=i*sw+2;
     const nc=p.alive?p.pal.body:'#555';
     const cpuLabel=p.isHuman?p.controller.label.slice(0,4):(p.controller.personality==='moody'?'MOODY':PERS_LABEL[p.controller.effPers||p.controller.personality]||'CPU');
-    pixText(p.pal.name+(p.isHuman?' '+p.mode:''),sx,H-22+2,nc);
+    pixText(p.pal.name,sx,H-22+2,nc);
     if(!p.alive){pixText('ZOMBIE',sx,H-22+10,'#f44');continue;}
     // HP bar
     const hw=sw-6;ctx.fillStyle='#400';ctx.fillRect(sx,H-22+8,hw,3);
     ctx.fillStyle=p.hp<p.maxHp*.3?'#f44':'#4c4';ctx.fillRect(sx,H-22+8,(hw*p.hp/p.maxHp)|0,3);
-    // LV + ammo
-    const ams=p.reloadT>0?'RLD':p.ammo+'/'+p.mag;
-    pixText('LV'+p.level+' '+ams,sx,H-22+13,'#cfc');
+    pixText('LV'+p.level,sx,H-22+13,'#cfc');
     // CPU personality
     if(!p.isHuman){
       const persStr=cpuLabel.slice(0,7);
@@ -1298,9 +1336,8 @@ function saveGame(){
     players:players.map(p=>({
       idx:p.idx,hp:p.hp,maxHp:p.maxHp,
       level:p.level,xp:p.xp,
-      ammo:p.ammo,mag:p.mag,
       weapon:{...p.weapon},
-      mode:p.mode,isHuman:p.isHuman,alive:p.alive,
+      isHuman:p.isHuman,alive:p.alive,
       ctrlType:p.isHuman?cfg.slots[0]:'CPU',
       personality:p.isHuman?null:p.controller.personality,
       accXp:p.accXp,kills:p.kills
@@ -1326,12 +1363,11 @@ function loadGame(){
   players=[];
   for(const pd of data.players){
     const ctrl=pd.isHuman
-      ?(pd.ctrlType==='KB+M'?new KMController():new PadController(+pd.ctrlType.substring(3)))
+      ?(pd.ctrlType==='PAD0'?new PadController(0):new KMController())
       :new CPUController(pd.personality);
-    const p=makePlayer(pd.idx,ctrl,pd.isHuman,pd.mode);
+    const p=makePlayer(pd.idx,ctrl,pd.isHuman);
     p.hp=pd.hp;p.maxHp=pd.maxHp;
     p.level=pd.level;p.xp=pd.xp;
-    p.ammo=pd.ammo;p.mag=pd.mag;
     p.weapon={...pd.weapon};
     p.alive=pd.alive;p.accXp=pd.accXp;p.kills=pd.kills;
     players.push(p);
@@ -1418,8 +1454,7 @@ function renderLobby(){
     const nm=document.createElement('span');nm.className='sname p'+(i+1);nm.textContent='P'+(i+1);row.appendChild(nm);
     if(i===0){
       if(!['KB+M','PAD0','PAD1','PAD2','PAD3'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-      for(const o of['KB+M','PAD0','PAD1','PAD2','PAD3']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
-      for(const m of['SEMI','AUTO']){const b=document.createElement('button');b.className='chip'+((cfg.slots['0_mode']||'AUTO')===m?' on':'');b.textContent=m;b.onclick=()=>{cfg.slots['0_mode']=m;renderLobby();};row.appendChild(b);}
+      for(const o of['KB+M','PAD0']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
     }else{
       const b=document.createElement('span');b.style.cssText='color:#888;font-size:10px;padding:2px 6px';b.textContent='CPU';row.appendChild(b);
     }
@@ -1644,12 +1679,12 @@ function startGame(){
   players=[];
   const total=1+cfg.cpus; // always 1 human + N CPU
   for(let i=0;i<total;i++){
-    let ctrl,isHuman=i===0,mode='AUTO';
+    let ctrl,isHuman=i===0;
     if(isHuman){
-      const slot=cfg.slots[0]||'KB+M';mode=cfg.slots['0_mode']||'AUTO';
-      ctrl=slot==='KB+M'?new KMController():new PadController(+slot.substring(3));
+      const slot=(cfg.slots[0]==='PAD0')?'PAD0':'KB+M';
+      ctrl=slot==='KB+M'?new KMController():new PadController(0);
     }else ctrl=new CPUController(randPers());
-    players.push(makePlayer(i,ctrl,isHuman,mode));
+    players.push(makePlayer(i,ctrl,isHuman));
   }
   // Show CPU personalities briefly
   setTimeout(()=>{for(const p of players){if(!p.isHuman)flash(p.pal.name+': '+PERS_LABEL[p.controller.personality],p.pal.body);}},300);
@@ -1832,29 +1867,29 @@ function drawIntro(){
       ['MOVE','WASD'],
       ['AIM', 'MOUSE'],
       ['FIRE','CLICK / HOLD'],
+      ['CHARGE','R-CLICK / E'],
       ['DASH','SHIFT'],
-      ['RELOAD','R'],
       ['PAUSE','ESC'],
     ];
     const PAD=[
       ['','L-STICK'],
       ['','R-STICK'],
       ['','RT TRIGGER'],
+      ['','LT (HOLD)'],
       ['','LB'],
-      ['','X BUTTON'],
-      ['','ESC / START'],
+      ['','START'],
     ];
     pixText('KB+M',10,32,'#fc4');pixText('GAMEPAD',W/2+4,32,'#fc4');
     ctx.fillStyle='#234';ctx.fillRect(8,38,W-16,1);
     KB.forEach(([k,v],i)=>{
-      const y=43+i*12;
+      const y=43+i*10;
       pixText(k,10,y,'#89a');
       pixText(v,50,y,'#cde');
       pixText(PAD[i][1],W/2+4,y,'#cde');
     });
-    ctx.fillStyle='#234';ctx.fillRect(8,117,W-16,1);
-    pixText('SEMI: 1 SHOT  FULL DMG',10,122,'#fa8');
-    pixText('AUTO: HOLD   25% DMG ',10,131,'#fa8');
+    ctx.fillStyle='#234';ctx.fillRect(8,113,W-16,1);
+    pixText('CHARGE: HOLD→RELEASE=BIG SHOT',10,117,'#fa8');
+    pixText('MAX 1.5 SEC  SLOW WHILE CHARGING',10,126,'#fa8');
 
     // BACK TO TITLE button
     const bx=W/2-22,by=H-28,bw=44,bh=12;
