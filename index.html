@@ -16,9 +16,10 @@
   #lobby{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;background:radial-gradient(ellipse at center,#102 0%,#000 85%);
     z-index:10;text-align:center;padding:8px;box-sizing:border-box;overflow-y:auto;}
-  #lobby h1{font-size:36px;margin:0 0 2px;letter-spacing:8px;color:#0ff;
-    text-shadow:0 0 18px #08f,3px 3px 0 #305;}
-  #lobby .sub{font-size:11px;color:#7ad;margin:0 0 12px;letter-spacing:3px;}
+  #lobby h1{font-size:48px;margin:0 0 4px;letter-spacing:8px;color:#0ff;line-height:1.15;
+    text-shadow:0 0 28px #0ff,0 0 56px #08f,3px 3px 0 #205;}
+  #lobby h1 .slash{color:#f84;text-shadow:0 0 20px #f60;letter-spacing:0;}
+  #lobby .sub{font-size:11px;color:#7ad;margin:0 0 16px;letter-spacing:3px;}
   #lobby .row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;}
   #lobby .lbl{color:#9cf;letter-spacing:2px;font-size:11px;min-width:90px;text-align:right;}
   .chip{background:#0a1828;color:#7ad;border:1px solid #345;padding:5px 10px;
@@ -40,6 +41,10 @@
   #howToBtn{margin-top:6px;background:#0a1020;color:#fa8;border:2px solid #f84;padding:6px 18px;
     font-family:inherit;font-size:11px;letter-spacing:3px;cursor:pointer;}
   #howToBtn:hover{background:#f84;color:#000;}
+  #bgmToggle{margin-top:14px;background:none;border:none;color:#456;font-family:inherit;
+    font-size:10px;letter-spacing:2px;cursor:pointer;padding:4px 0;}
+  #bgmToggle:hover{color:#7ab;}
+  #bgmBtns{display:none;margin-top:6px;}
 
   /* ── Bullet time overlay ─────────────── */
   #btOv{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
@@ -64,7 +69,7 @@
 
 <!-- Lobby -->
 <div id="lobby">
-  <h1>ESCAPE / DEPTH</h1>
+  <h1>ESCAPE <span class="slash">/</span><br>DEPTH</h1>
   <p class="sub">DEPTH 100 の底に眠る「1本のネジ」を回収せよ</p>
   <div class="row"><span class="lbl">CPU ALLIES</span>
     <button class="chip" data-c="0">0</button><button class="chip" data-c="1">1</button>
@@ -72,18 +77,13 @@
   </div>
   <div id="slots"></div>
   <div id="padSt">🎮 ゲームパッド: (接続後ボタンを押して認識)</div>
-  <div class="help">
-    <div><span class="k">KB+M</span>: WASD移動 / マウス照準 / CLICK射撃 / SHIFT ダッシュ</div>
-    <div><span class="k">GAMEPAD</span>: 左スティック移動 / 右スティック照準+自動射撃 / RT射撃 / LB ダッシュ</div>
-    <div><span class="k">CHARGE</span>: 右クリック / E / LT を長押し→離すと強力な巨大弾（最大1.5秒、押中は移動速度低下）</div>
-    <div style="color:#f88;margin-top:3px">仲間が死ぬと <span class="k">ゾンビ化</span> — 装備そのままで反旗を翻す。<br>各フロア、仲間の <span class="k">性格はランダム</span>。観察して戦略を練れ。</div>
-  </div>
   <button id="startBtn" disabled>START</button>
   <button id="contBtn" style="display:none;margin-top:6px;background:#0a2a1a;border-color:#0f6">CONTINUE</button>
   <p id="saveInfo" style="font-size:11px;color:#6fb;margin:4px 0 0"></p>
   <button id="howToBtn">HOW TO PLAY</button>
-  <div style="margin-top:10px;border-top:1px solid #234;padding-top:8px;width:100%">
-    <div style="font-size:10px;color:#567;letter-spacing:2px;margin-bottom:4px">♪ BGM DOWNLOAD (WAV · 62sec)</div>
+  <button id="bgmToggle">♪ BGM DOWNLOAD ▼</button>
+  <div id="bgmBtns">
+    <div style="font-size:10px;color:#567;letter-spacing:2px;margin-bottom:6px">WAV · 62sec per zone</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center">
       <button class="bgmBtn chip" data-zi="0" onclick="window._dlBGM(1)">D01-20</button>
       <button class="bgmBtn chip" data-zi="1" onclick="window._dlBGM(21)">D21-40</button>
@@ -1808,6 +1808,12 @@ function startGame(){
 document.getElementById('startBtn').addEventListener('click',startGame);
 document.getElementById('contBtn').addEventListener('click',()=>{loadGame();});
 document.getElementById('howToBtn').addEventListener('click',startIntro);
+document.getElementById('bgmToggle').addEventListener('click',()=>{
+  const d=document.getElementById('bgmBtns');
+  const open=d.style.display==='block';
+  d.style.display=open?'none':'block';
+  document.getElementById('bgmToggle').textContent=open?'♪ BGM DOWNLOAD ▼':'♪ BGM DOWNLOAD ▲';
+});
 window._dlBGM=downloadBGM; // expose for HTML onclick
 document.getElementById('resumeBtn').addEventListener('click',()=>setPause(false));
 document.getElementById('saveQuitBtn').addEventListener('click',()=>{
