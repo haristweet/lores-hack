@@ -396,6 +396,33 @@ let exitOpen=false,coresNeeded=0,coresCollected=0;
 
 function genMap(){
   map=new Uint8Array(MAPW*MAPH); map.fill(1);
+
+  // ── Monster House: open arena ──────────────
+  if(monsterHouse){
+    map.fill(0);
+    // outer border walls
+    for(let x=0;x<MAPW;x++){map[x]=1;map[(MAPH-1)*MAPW+x]=1;}
+    for(let y=0;y<MAPH;y++){map[y*MAPW]=1;map[y*MAPW+MAPW-1]=1;}
+    // random 2×2 pillars (avoid center 6×6)
+    const mcx=MAPW>>1,mcy=MAPH>>1;
+    for(let i=0;i<14+rndi(0,8);i++){
+      const px=rndi(3,MAPW-5),py=rndi(3,MAPH-5);
+      if(Math.abs(px-mcx)<5&&Math.abs(py-mcy)<5)continue;
+      map[py*MAPW+px]=1;map[py*MAPW+px+1]=1;
+      map[(py+1)*MAPW+px]=1;map[(py+1)*MAPW+px+1]=1;
+    }
+    // floor variation
+    for(let i=0;i<map.length;i++){if(map[i]===0&&Math.random()<.06)map[i]=2;}
+    rooms_=[{x:1,y:1,w:MAPW-2,h:MAPH-2,cx:mcx,cy:mcy}];
+    const wcx=mcx*TILE+8,wcy=mcy*TILE+8;
+    for(let i=0;i<players.length;i++){const a=(i/Math.max(1,players.length))*Math.PI*2;players[i].x=wcx+Math.cos(a)*10;players[i].y=wcy+Math.sin(a)*10;}
+    exits=[{x:wcx,y:wcy}];
+    // no cores — exit opens on enemy clear
+    coresNeeded=0;coresCollected=0;exitOpen=false;cores=[];pods=[];screwObj=null;
+    fog=new Uint8Array(MAPW*MAPH);fog.fill(1); // fully revealed
+    return;
+  }
+
   const rs=[];
   for(let i=0;i<24;i++){
     const w=rndi(6,12),h=rndi(5,10),x=rndi(1,MAPW-w-1),y=rndi(1,MAPH-h-1);
@@ -533,6 +560,7 @@ function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,d
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
 let stage=1,totalKills=0,running=false,gameWon=false;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
+let monsterHouse=false,monsterHouseCleared=false;
 let bulletTime=null; // {timer,victimName,victimPal}
 
 // ═══════════════════════════════════════════════
@@ -545,7 +573,7 @@ function makePlayer(idx,ctrl,isHuman){
     xp:0,level:1,iframe:0,aim:0,alive:true,
     controller:ctrl,pal:P_PAL[idx],muzzle:0,
     weapon:{fireCd:.12,dmg:1,spread:.07,range:.55,spd:220},
-    chargeT:0,
+    chargeT:0,hasRevive:false,
     edge:{dash:false,fire:false},
     kills:0,accXp:0};
 }
@@ -714,10 +742,19 @@ function update(dt){
   spawnT-=eff;
   const maxE=Math.min(40,Math.floor(8+stage*.32));
   const spawnInterval=Math.max(.3,1.4-stage*.011);
-  if(spawnT<=0&&enemies.length<maxE){
+  if(!monsterHouse&&spawnT<=0&&enemies.length<maxE){
     spawnT=spawnInterval;
     const r=Math.random();
     spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
+  }
+  // ── Monster House clear check ──
+  if(monsterHouse&&!monsterHouseCleared&&time>2&&enemies.length===0){
+    monsterHouseCleared=true;exitOpen=true;
+    const cx=(MAPW>>1)*TILE+8,cy=(MAPH>>1)*TILE+8;
+    pickups.push({type:'revive',x:cx,y:cy,t:0});
+    flash('!! CLEARED !!','#ff0');flash('★ REVIVE ITEM DROPPED ★','#fa0');
+    shake=Math.max(shake,5);
+    spark(cx,cy,'#ff0',24,160);spark(cx,cy,'#fff',12,100);
   }
 
   // ── Player bullets ──
@@ -852,6 +889,7 @@ function update(dt){
       if(dx*dx+dy*dy<36){
         if(p.type==='core'){coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');}
         else if(p.type==='health'){pl.hp=Math.min(pl.maxHp,pl.hp+25);flash(pl.pal.name+' +25HP',pl.pal.body);}
+        else if(p.type==='revive'){pl.hasRevive=true;flash(pl.pal.name+' GOT REVIVE!','#ff0');spark(pl.x,pl.y,'#ff0',12,100);}
         pickups.splice(i,1);break;
       }
     }
@@ -926,6 +964,13 @@ function damagePlayer(p,d){
   if(p.iframe>0)return;
   p.hp-=d;p.iframe=.4;shake=Math.max(shake,2);blood(p.x,p.y);
   if(p.hp<=0){
+    // Revive item auto-activates
+    if(p.hasRevive){
+      p.hp=Math.ceil(p.maxHp*.5);p.hasRevive=false;p.iframe=1.5;
+      flash(p.pal.name+' REVIVED!','#ff0');
+      spark(p.x,p.y,'#ff0',20,150);spark(p.x,p.y,'#fff',8,80);
+      shake=Math.max(shake,3);return;
+    }
     p.hp=0;p.alive=false;
     if(!p.isHuman){
       // trigger bullet time
@@ -940,8 +985,32 @@ function damagePlayer(p,d){
   }
 }
 
+function mhEnemyType(){
+  const r=Math.random();
+  if(stage>=60)return r<.25?'brute':r<.6?'shooter':'runner';
+  if(stage>=30)return r<.3?'runner':r<.65?'shooter':'grunt';
+  return r<.5?'grunt':r<.8?'runner':'shooter';
+}
+function spawnMH(){
+  // Spawn enemy anywhere in open arena, away from center
+  const cx=(MAPW>>1)*TILE+8,cy=(MAPH>>1)*TILE+8;
+  for(let t=0;t<200;t++){
+    const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
+    if(map[ty*MAPW+tx]!==0&&map[ty*MAPW+tx]!==2)continue;
+    const wx=tx*TILE+8,wy=ty*TILE+8;
+    if(Math.hypot(wx-cx,wy-cy)<60)continue;
+    enemies.push(makeEnemy(mhEnemyType(),wx,wy));return;
+  }
+}
+
 function nextStage(){
-  stage++;PSG.play(stage);saveGame();
+  const wasMH=monsterHouse;
+  stage++;
+  // Determine monster house for new stage
+  const isBoss=stage%10===0||stage===99;
+  monsterHouse=!isBoss&&stage>1&&!wasMH&&Math.random()<0.2;
+  monsterHouseCleared=false;
+  PSG.play(stage);saveGame();
   // Reshuffle personalities for living CPUs
   const msgs=[];
   for(const p of players){if(!p.alive||p.isHuman)continue;const np=randPers();p.controller=new CPUController(np);msgs.push(p.pal.name+':'+PERS_LABEL[np]);}
@@ -952,8 +1021,18 @@ function nextStage(){
   if(n){camX=cx/n;camY=cy/n;}
   flash('DEPTH '+stage,stage===MAX_DEPTH?'#ff0':'#0ff');
   if(stage===MAX_DEPTH)flash('THE SCREW AWAITS','#ff0');
-  // Show personality reshuffle after brief delay via messages
   setTimeout(()=>{for(const m of msgs)flash(m,'#fa0');},600);
+  // Monster house: wave of enemies
+  if(monsterHouse){
+    setTimeout(()=>{
+      if(!running)return;
+      flash('!! MONSTER HOUSE !!','#f44');
+      flash('EXTERMINATE ALL','#f88');
+      shake=Math.max(shake,4);
+      const count=Math.min(40,Math.round(20+stage*.2));
+      for(let i=0;i<count;i++)setTimeout(()=>{if(running&&!monsterHouseCleared)spawnMH();},300+i*120);
+    },800);
+  }
   // Spawn boss on multiples of 10 and D99
   if(stage%10===0||stage===99){
     setTimeout(()=>{
@@ -1054,6 +1133,15 @@ function draw(){
     const yo=Math.sin(p.t*5+p.x)*1;
     if(p.type==='core'){ctx.fillStyle='#0ff';ctx.fillRect(p.x-2,p.y-2+yo,4,4);ctx.fillStyle='#fff';ctx.fillRect(p.x-1,p.y-1+yo,1,1);}
     else if(p.type==='health'){ctx.fillStyle='#0f4';ctx.fillRect(p.x-2,p.y-1+yo,4,2);ctx.fillRect(p.x-1,p.y-2+yo,2,4);}
+    else if(p.type==='revive'){
+      const pulse=Math.abs(Math.sin(time*4));
+      ctx.fillStyle='#ff0';ctx.globalAlpha=0.5+pulse*0.5;
+      // star shape
+      ctx.fillRect(p.x-3,p.y-1+yo,6,2);ctx.fillRect(p.x-1,p.y-3+yo,2,6);
+      ctx.fillRect(p.x-2,p.y-2+yo,1,1);ctx.fillRect(p.x+1,p.y-2+yo,1,1);
+      ctx.fillRect(p.x-2,p.y+1+yo,1,1);ctx.fillRect(p.x+1,p.y+1+yo,1,1);
+      ctx.globalAlpha=1;ctx.fillStyle='#fff';ctx.fillRect(p.x-1,p.y-1+yo,2,2);
+    }
   }
 
   // Smoke
@@ -1209,6 +1297,14 @@ function drawHUD(){
   ctx.fillStyle=stage===MAX_DEPTH?'#ff0':'#0af';
   ctx.fillRect(0,0,(W*stage/MAX_DEPTH)|0,4);
   ctx.fillStyle='#0ff';ctx.fillRect((W*stage/MAX_DEPTH)|0,1,1,2);
+  // Monster house banner
+  if(monsterHouse&&!monsterHouseCleared){
+    const rem=enemies.length;
+    const pulse=Math.abs(Math.sin(time*4))*.3;
+    ctx.fillStyle='#f00';ctx.globalAlpha=0.12+pulse;ctx.fillRect(0,4,W,10);ctx.globalAlpha=1;
+    const mhStr='!! MONSTER HOUSE !!  REMAIN: '+rem;
+    pixText(mhStr,(W-mhStr.length*4)>>1,6,'#f44');
+  }
   // Boss HP bar (when boss alive)
   const _boss=running?enemies.find(e=>e.type==='boss'):null;
   if(_boss){
@@ -1242,6 +1338,8 @@ function drawHUD(){
     }
     // Dash cd dot
     ctx.fillStyle=p.dashCd<=0?'#0ff':'#334';ctx.fillRect(sx+sw-8,H-22+2,2,2);
+    // Revive star
+    if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
   }
 
   // Stage / cores (top-right, below progress bar)
@@ -1337,7 +1435,7 @@ function saveGame(){
       idx:p.idx,hp:p.hp,maxHp:p.maxHp,
       level:p.level,xp:p.xp,
       weapon:{...p.weapon},
-      isHuman:p.isHuman,alive:p.alive,
+      isHuman:p.isHuman,alive:p.alive,hasRevive:p.hasRevive,
       ctrlType:p.isHuman?cfg.slots[0]:'CPU',
       personality:p.isHuman?null:p.controller.personality,
       accXp:p.accXp,kills:p.kills
@@ -1368,12 +1466,14 @@ function loadGame(){
     const p=makePlayer(pd.idx,ctrl,pd.isHuman);
     p.hp=pd.hp;p.maxHp=pd.maxHp;
     p.level=pd.level;p.xp=pd.xp;
+    p.hasRevive=pd.hasRevive||false;
     p.weapon={...pd.weapon};
     p.alive=pd.alive;p.accXp=pd.accXp;p.kills=pd.kills;
     players.push(p);
   }
 
   stage=data.stage;totalKills=data.totalKills;gameWon=false;
+  monsterHouse=false;monsterHouseCleared=false;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
   running=true;PSG.play(stage);
@@ -1690,6 +1790,7 @@ function startGame(){
   setTimeout(()=>{for(const p of players){if(!p.isHuman)flash(p.pal.name+': '+PERS_LABEL[p.controller.personality],p.pal.body);}},300);
 
   stage=1;totalKills=0;gameWon=false;
+  monsterHouse=false;monsterHouseCleared=false;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
   paused=false;pauseEl.style.display='none';
