@@ -12,35 +12,8 @@
     box-shadow:0 0 60px #0ff3,inset 0 0 0 2px #111;}
   canvas.cur{cursor:default;}
 
-  /* ── Lobby ─────────────────────────── */
-  #lobby{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:flex-end;background:linear-gradient(to bottom,transparent 52%,rgba(4,0,16,0.94) 72%);
-    z-index:10;text-align:center;padding:8px 8px 24px;box-sizing:border-box;overflow-y:auto;}
-  #lobby .row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;}
-  #lobby .lbl{color:#9cf;letter-spacing:2px;font-size:11px;min-width:90px;text-align:right;}
-  .chip{background:#0a1828;color:#7ad;border:1px solid #345;padding:5px 10px;
-    font-family:inherit;font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .1s;}
-  .chip.on{background:#0ff;color:#000;border-color:#0ff;box-shadow:0 0 6px #0ff;}
-  .chip:hover:not(:disabled){border-color:#0ff;}
-  .chip:disabled{opacity:.35;cursor:not-allowed;}
-  #slots{margin:6px 0;}
-  .slot{display:flex;gap:5px;align-items:center;margin:3px 0;flex-wrap:wrap;justify-content:center;}
-  .sname{width:22px;font-size:12px;letter-spacing:1px;}
-  .p1{color:#3cf}.p2{color:#f66}.p3{color:#6c6}.p4{color:#fc4}
-  .help{font-size:10px;color:#568;margin:4px 0;letter-spacing:.5px;max-width:480px;line-height:1.5;}
-  .help .k{color:#fc4;}
-  #padSt{font-size:10px;color:#7a9;letter-spacing:.5px;margin:4px 0;}
-  #startBtn{margin-top:14px;background:#102030;color:#0ff;border:2px solid #0ff;padding:9px 30px;
-    font-family:inherit;font-size:14px;letter-spacing:4px;cursor:pointer;}
-  #startBtn:hover:not(:disabled){background:#0ff;color:#000;}
-  #startBtn:disabled{opacity:.3;cursor:not-allowed;}
-  #howToBtn{margin-top:6px;background:#0a1020;color:#fa8;border:2px solid #f84;padding:6px 18px;
-    font-family:inherit;font-size:11px;letter-spacing:3px;cursor:pointer;}
-  #howToBtn:hover{background:#f84;color:#000;}
-  #bgmToggle{margin-top:14px;background:none;border:none;color:#456;font-family:inherit;
-    font-size:10px;letter-spacing:2px;cursor:pointer;padding:4px 0;}
-  #bgmToggle:hover{color:#7ab;}
-  #bgmBtns{display:none;margin-top:6px;}
+  /* ── Lobby (canvas-rendered, div is show/hide flag only) ── */
+  #lobby{position:fixed;inset:0;pointer-events:none;z-index:10;}
 
   /* ── Bullet time overlay ─────────────── */
   #btOv{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
@@ -64,29 +37,7 @@
 <div id="wrap"><canvas id="cv" width="320" height="180"></canvas></div>
 
 <!-- Lobby -->
-<div id="lobby">
-  <div class="row"><span class="lbl">CPU ALLIES</span>
-    <button class="chip" data-c="0">0</button><button class="chip" data-c="1">1</button>
-    <button class="chip" data-c="2">2</button><button class="chip" data-c="3">3</button>
-  </div>
-  <div id="slots"></div>
-  <div id="padSt">🎮 ゲームパッド: (接続後ボタンを押して認識)</div>
-  <button id="startBtn" disabled>START</button>
-  <button id="contBtn" style="display:none;margin-top:6px;background:#0a2a1a;border-color:#0f6">CONTINUE</button>
-  <p id="saveInfo" style="font-size:11px;color:#6fb;margin:4px 0 0"></p>
-  <button id="howToBtn">HOW TO PLAY</button>
-  <button id="bgmToggle">♪ BGM DOWNLOAD ▼</button>
-  <div id="bgmBtns">
-    <div style="font-size:10px;color:#567;letter-spacing:2px;margin-bottom:6px">WAV · 62sec per zone</div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center">
-      <button class="bgmBtn chip" data-zi="0" onclick="window._dlBGM(1)">D01-20</button>
-      <button class="bgmBtn chip" data-zi="1" onclick="window._dlBGM(21)">D21-40</button>
-      <button class="bgmBtn chip" data-zi="2" onclick="window._dlBGM(41)">D41-60</button>
-      <button class="bgmBtn chip" data-zi="3" onclick="window._dlBGM(61)">D61-80</button>
-      <button class="bgmBtn chip" data-zi="4" onclick="window._dlBGM(81)">D81-100</button>
-    </div>
-  </div>
-</div>
+<div id="lobby"></div>
 
 <!-- Bullet time overlay -->
 <div id="btOv">
@@ -206,16 +157,18 @@ cv.addEventListener('mousedown',e=>{updMouse(e);if(e.button===0)mouse.down=true;
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('click',e=>{
-  if(!introActive)return;
-  // Page 3: BACK TO TITLE button hit test
-  if(introPage===3){
-    const bx=W/2-22,by=H-28,bw=44,bh=12;
-    if(mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh){endIntro();return;}
+  if(introActive){
+    // Page 3: BACK TO TITLE button hit test
+    if(introPage===3){
+      const bx=W/2-22,by=H-28,bw=44,bh=12;
+      if(mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh){endIntro();return;}
+    }
+    introPage++;
+    if(introPage>=INTRO_PAGES){introPage=INTRO_PAGES-1;}
+    introT=0;
+    return;
   }
-  // Advance page or end intro on last page
-  introPage++;
-  if(introPage>=INTRO_PAGES){introPage=INTRO_PAGES-1;}
-  introT=0;
+  if(lobbyEl.style.display!=='none'){lobbyHandleClick();return;}
 });
 
 // ═══════════════════════════════════════════════
@@ -1670,33 +1623,15 @@ async function downloadBGM(stageForZone){
 let cfg={humans:1,cpus:0,slots:['KB+M']};
 
 function renderLobby(){
-  // CPU chips
-  document.querySelectorAll('.chip[data-c]').forEach(c=>{
-    const v=+c.dataset.c;c.classList.toggle('on',v===cfg.cpus);
-  });
-  // Slots: P1 = human (input+mode), P2-P4 = CPU badge only
-  const el=document.getElementById('slots');el.innerHTML='';
-  const total=1+cfg.cpus;
-  // P1 row only (CPU allies shown as count, no individual rows needed)
-  const row=document.createElement('div');row.className='slot';
-  const nm=document.createElement('span');nm.className='sname p1';nm.textContent='P1';row.appendChild(nm);
   if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-  for(const o of['KB+M','GAMEPAD']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
-  el.appendChild(row);
-  document.getElementById('startBtn').disabled=false;
-  // Save info
-  const sv=hasSave();
-  document.getElementById('contBtn').style.display=sv?'block':'none';
-  document.getElementById('saveInfo').textContent=sv?getSaveLabel():'';
 }
 
 function pollPads(){
   const gps=navigator.getGamepads?navigator.getGamepads():[];
-  const ns=[];for(let i=0;i<gps.length;i++)if(gps[i])ns.push(i+':'+(gps[i].id.split('(')[0].trim().slice(0,18)));
-  document.getElementById('padSt').textContent=ns.length?'🎮 '+ns.join(' / '):'🎮 ゲームパッド: (ボタンを押すと認識)';
+  const ns=[];for(let i=0;i<gps.length;i++)if(gps[i])ns.push(gps[i].id.split('(')[0].trim().slice(0,16));
+  padStatus=ns.length?ns.join(' / '):'NO GAMEPAD DETECTED';
 }
 
-document.querySelectorAll('.chip[data-c]').forEach(c=>c.addEventListener('click',()=>{cfg.cpus=+c.dataset.c;renderLobby();}));
 cfg.humans=1;cfg.cpus=0;renderLobby();
 addEventListener('gamepadconnected',pollPads);addEventListener('gamepaddisconnected',pollPads);
 setInterval(pollPads,500);
@@ -1978,16 +1913,6 @@ function startGame(){
   lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
 }
 
-document.getElementById('startBtn').addEventListener('click',startGame);
-document.getElementById('contBtn').addEventListener('click',()=>{loadGame();});
-document.getElementById('howToBtn').addEventListener('click',startIntro);
-document.getElementById('bgmToggle').addEventListener('click',()=>{
-  const d=document.getElementById('bgmBtns');
-  const open=d.style.display==='block';
-  d.style.display=open?'none':'block';
-  document.getElementById('bgmToggle').textContent=open?'♪ BGM DOWNLOAD ▼':'♪ BGM DOWNLOAD ▲';
-});
-window._dlBGM=downloadBGM; // expose for HTML onclick
 document.getElementById('resumeBtn').addEventListener('click',()=>setPause(false));
 document.getElementById('saveQuitBtn').addEventListener('click',()=>{
   saveGame();setPause(false);running=false;PSG.stop();
@@ -2046,29 +1971,105 @@ function pixHuge(str,x,y,c){
   ctx.save();ctx.translate(x,y);ctx.scale(4,4);pixText(str,0,0,c);ctx.restore();
 }
 
-// ── Lobby canvas title ────────────────────────
-let lobbyT=0;
+// ── Lobby canvas UI ───────────────────────────
+let lobbyT=0,lobbyBgmOpen=false,padStatus='NO GAMEPAD DETECTED';
+const lobbyBtns={};
+
+// standard chip button (active=selected state)
+function lbBtn(key,label,x,y,w,h,active){
+  lobbyBtns[key]={x,y,w,h};
+  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  ctx.fillStyle=hov?'#0ff':active?'#0a2535':'#07101a';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=hov?'#5ff':active?'#0ff':'#1c3c5c';
+  ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
+  pixText(label,x+Math.round((w-label.length*4)/2),y+Math.round((h-6)/2),hov?'#000':active?'#0ff':'#5a8');
+}
+// primary action button (START / CONTINUE)
+function lbBtnPri(key,label,x,y,w,h,col){
+  lobbyBtns[key]={x,y,w,h};
+  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=col;
+  ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
+  pixText(label,x+Math.round((w-label.length*4)/2),y+Math.round((h-6)/2),hov?'#000':col);
+}
+
 function drawLobbyCanvas(dt){
   lobbyT+=dt;
-  // background
+  cv.classList.add('cur');
+  Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);
+
+  // — background —
   ctx.fillStyle='#040010';ctx.fillRect(0,0,W,H);
-  // scanlines
-  for(let y=0;y<H;y+=4){ctx.fillStyle='rgba(0,0,0,0.20)';ctx.fillRect(0,y,W,2);}
-  // glow behind title
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,0,0.20)';ctx.fillRect(0,sy,W,2);}
   const gr=ctx.createRadialGradient(W/2,50,0,W/2,50,90);
   gr.addColorStop(0,'rgba(0,180,255,0.12)');gr.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
-  // flicker: dim cyan channels
+
+  // — title (flicker) —
   const f=0.86+Math.sin(lobbyT*13.1)*0.08+Math.sin(lobbyT*7.3)*0.05;
-  const ch=Math.round(255*Math.min(1,f)).toString(16).padStart(2,'0');
-  pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${ch}${ch}`);
-  // subtitle
+  const fch=Math.round(255*Math.min(1,f)).toString(16).padStart(2,'0');
+  pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${fch}${fch}`);
   const sub='THE SCREW AWAITS AT THE BOTTOM';
   pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
-  // separator line  (fades in and out gently)
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
-  ctx.fillStyle=`rgba(0,200,255,${la})`;
-  ctx.fillRect(W/2-58,75,116,1);
+  ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,75,116,1);
+
+  // — CPU ALLIES row (centered: label40 + gap8 + 4×chip14 + 3×gap2 = 110) —
+  const rh=11,cw=14;
+  const cpuX=Math.round((W-110)/2);
+  pixText('CPU ALLIES',cpuX,85,'#7ab');
+  for(let i=0;i<4;i++)lbBtn('cpu'+i,String(i),cpuX+48+i*16,82,cw,rh,cfg.cpus===i);
+
+  // — CONTROL row (centered: label28 + gap8 + 24 + gap2 + 32 = 94) —
+  const ctX=Math.round((W-94)/2);
+  pixText('CONTROL',ctX,98,'#7ab');
+  lbBtn('kbm','KB+M',ctX+36,95,24,rh,cfg.slots[0]==='KB+M');
+  lbBtn('pad','GAMEPAD',ctX+62,95,32,rh,cfg.slots[0]==='GAMEPAD');
+
+  // — pad status —
+  const ps=padStatus.slice(0,36);
+  pixText(ps,Math.round((W-ps.length*4)/2),110,'#2a4a3a');
+
+  // — primary buttons —
+  const bw=70,bx=Math.round((W-bw)/2);
+  let nY=119;
+  lbBtnPri('start','START',bx,nY,bw,13,'#0ff'); nY+=15;
+
+  const sv=hasSave();
+  if(sv){
+    lbBtnPri('cont','CONTINUE',bx,nY,bw,13,'#0c9'); nY+=15;
+    const sl=getSaveLabel().replace('\u21a9 ','');
+    pixText(sl,Math.round((W-sl.length*4)/2),nY+1,'#3a7'); nY+=9;
+  }
+
+  // — HOW TO PLAY + BGM toggle —
+  const botY=Math.min(nY+4,155);
+  lbBtn('how','HOW TO PLAY',Math.round(W/2)-55,botY,52,rh,false);
+  lbBtn('bgm','BGM '+(lobbyBgmOpen?'[^]':'[v]'),Math.round(W/2)+5,botY,38,rh,lobbyBgmOpen);
+
+  // — BGM zone chips (5×36 + 4×3 = 192, x=64) —
+  if(lobbyBgmOpen){
+    const bgY=botY+13;
+    ['D01-20','D21-40','D41-60','D61-80','D81-100'].forEach((l,i)=>{
+      lbBtn('bgm'+i,l,64+i*39,bgY,36,rh,false);
+    });
+  }
+}
+
+function lobbyHandleClick(){
+  for(const[k,b]of Object.entries(lobbyBtns)){
+    if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
+      if(k.startsWith('cpu')){cfg.cpus=+k[3];return;}
+      if(k==='kbm'){cfg.slots[0]='KB+M';return;}
+      if(k==='pad'){cfg.slots[0]='GAMEPAD';return;}
+      if(k==='start'){startGame();return;}
+      if(k==='cont'){loadGame();return;}
+      if(k==='how'){startIntro();return;}
+      if(k==='bgm'){lobbyBgmOpen=!lobbyBgmOpen;return;}
+      if(k.startsWith('bgm')){downloadBGM([1,21,41,61,81][+k[3]]);return;}
+    }
+  }
 }
 
 function drawIntro(){
