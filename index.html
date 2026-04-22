@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ESCAPE / DEPTH</title>
+<title>DEPTH 100</title>
 <style>
   html,body{margin:0;padding:0;background:#0a0a10;overflow:hidden;height:100%;
     font-family:"Courier New",monospace;user-select:none;-webkit-user-select:none;}
@@ -14,12 +14,8 @@
 
   /* ── Lobby ─────────────────────────── */
   #lobby{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;background:radial-gradient(ellipse at center,#102 0%,#000 85%);
-    z-index:10;text-align:center;padding:8px;box-sizing:border-box;overflow-y:auto;}
-  #lobby h1{font-size:48px;margin:0 0 4px;letter-spacing:8px;color:#0ff;line-height:1.15;
-    text-shadow:0 0 28px #0ff,0 0 56px #08f,3px 3px 0 #205;}
-  #lobby h1 .slash{color:#f84;text-shadow:0 0 20px #f60;letter-spacing:0;}
-  #lobby .sub{font-size:11px;color:#7ad;margin:0 0 16px;letter-spacing:3px;}
+    justify-content:flex-end;background:linear-gradient(to bottom,transparent 52%,rgba(4,0,16,0.94) 72%);
+    z-index:10;text-align:center;padding:8px 8px 24px;box-sizing:border-box;overflow-y:auto;}
   #lobby .row{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap;justify-content:center;}
   #lobby .lbl{color:#9cf;letter-spacing:2px;font-size:11px;min-width:90px;text-align:right;}
   .chip{background:#0a1828;color:#7ad;border:1px solid #345;padding:5px 10px;
@@ -69,8 +65,6 @@
 
 <!-- Lobby -->
 <div id="lobby">
-  <h1>ESCAPE <span class="slash">/</span><br>DEPTH</h1>
-  <p class="sub">DEPTH 100 の底に眠る「1本のネジ」を回収せよ</p>
   <div class="row"><span class="lbl">CPU ALLIES</span>
     <button class="chip" data-c="0">0</button><button class="chip" data-c="1">1</button>
     <button class="chip" data-c="2">2</button><button class="chip" data-c="3">3</button>
@@ -134,15 +128,12 @@
 // ═══════════════════════════════════════════════
 const W=320,H=180,TILE=16,MAPW=64,MAPH=64,MAX_DEPTH=100;
 
-const PERS_LIST=['bodyguard','berserker','sniper','triggerhappy','assist',
-                 'giantkiller','sweeper','lonewolf','escort','shadow',
-                 'dancer','coward','scavenger','panic','moody'];
+const PERS_LIST=['prospector','sniper','bodyguard','berserker','moody'];
 const PERS_LABEL={
-  bodyguard:'BODYGUARD',berserker:'BERSERKER',sniper:'SNIPER',
-  triggerhappy:'TRG HPPY',assist:'ASSIST',giantkiller:'GNT KILL',
-  sweeper:'SWEEPER',lonewolf:'LONE WLF',escort:'ESCORT',
-  shadow:'SHADOW',dancer:'DANCER',coward:'COWARD',
-  scavenger:'SCAVNGR',panic:'PANIC',moody:'MOODY'
+  prospector:'PROSP',sniper:'SNIPER',bodyguard:'BDYGRD',berserker:'BSRKR',moody:'MOODY'
+};
+const PERS_ABILITY={
+  prospector:'ITEM',sniper:'MAP',bodyguard:'EXIT',berserker:'ENEMY',moody:null
 };
 
 const P_PAL=[
@@ -232,11 +223,20 @@ cv.addEventListener('click',e=>{
 // ═══════════════════════════════════════════════
 class KMController{
   constructor(){this.type='KB+M';this.label='KB+M';}
-  move(){return{x:(keys.KeyD?1:0)-(keys.KeyA?1:0),y:(keys.KeyS?1:0)-(keys.KeyW?1:0)};}
+  move(p){
+    if((keys.ShiftLeft||keys.ShiftRight)&&p){
+      // Shift+mouse: move toward cursor
+      const dx=mouse.x+camX-W/2-p.x,dy=mouse.y+camY-H/2-p.y;
+      const d=Math.hypot(dx,dy);
+      if(d<14)return{x:0,y:0};
+      return{x:dx/d,y:dy/d};
+    }
+    return{x:(keys.KeyD?1:0)-(keys.KeyA?1:0),y:(keys.KeyS?1:0)-(keys.KeyW?1:0)};
+  }
   aim(p){return Math.atan2(mouse.y+camY-H/2-p.y,mouse.x+camX-W/2-p.x);}
   fire(){return mouse.down;}
   charge(){return!!(mouse.right||keys.KeyE);}
-  dash(){return!!(keys.ShiftLeft||keys.ShiftRight);}
+  dash(){return!!(keys.Space||keys.KeyF);}
 }
 class PadController{
   constructor(){this.type='PAD';this.label='GAMEPAD';this._a=0;}
@@ -265,88 +265,54 @@ class CPUController{
   constructor(pers){
     this.type='CPU';this.label='CPU';
     this.personality=pers||randPers();
-    this._sub=randPers(true);this._moodyT=8+Math.random()*4;
+    this._sub=randPers(true);
+    this._rouletteDisplay=null;
     this._target=null;this._rT=0;this._strT=Math.random()*10;
     this._mx=0;this._my=0;this._aim=0;this._fire=false;this._dash=false;
-    this._charging=false;this._chargeDur=0;this._chargeEl=0;
-    this._dCd=0;this._dodgeT=0;this._dodgeDir=1;this._panicT=0;
   }
   get effPers(){return this.personality==='moody'?this._sub:this.personality;}
+  get ability(){return PERS_ABILITY[this.effPers]||'?';}
+  rerollMoody(){
+    if(this.personality!=='moody')return;
+    this._sub=randPers(true);
+  }
   pre(p,dt){
-    this._strT+=dt; this._dCd=Math.max(0,this._dCd-dt);
-    if(this.personality==='moody'){
-      this._moodyT-=dt;
-      if(this._moodyT<=0){this._moodyT=8+Math.random()*4;this._sub=randPers(true);flash(p.pal.name+':'+PERS_LABEL[this._sub],p.pal.body);}
-    }
+    this._strT+=dt;
     const ps=this.effPers,hp=humanPlayer();
-    if(ps==='scavenger'){this._preScav(p,dt,hp);return;}
-    if(ps==='panic'){this._prePanic(p,dt);return;}
+    if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
     if(this._rT<=0||!this._target||this._target.hp<=0){
       this._rT=0.3+Math.random()*.2;
-      this._target=this._pick(p,ps,hp);
+      this._target=this._pickTarget(p,ps,hp);
     }
     if(!this._target){this._wander(p,hp);this._fire=false;return;}
     const dx=this._target.x-p.x,dy=this._target.y-p.y,d=Math.hypot(dx,dy)||1;
     this._aim=Math.atan2(dy,dx);
-    const wd=this._wantDist(ps);
-    this._move(p,ps,hp,d,wd,dt);
+    this._move(p,ps,hp,d,this._wantDist(ps));
     const los=hasLoS(p.x,p.y,this._target.x,this._target.y);
-    this._fire=(ps==='triggerhappy'||d<this._fireRange(ps))&&los;
+    this._fire=d<this._fireRange(ps)&&los;
     this._dash=this._wantDash(p,ps,d);
-    // Charging AI: occasionally charge up a shot
-    if(this._charging){
-      this._chargeEl+=dt;
-      if(this._chargeEl>=this._chargeDur){this._charging=false;this._chargeEl=0;}
-      this._fire=false;
-    } else if(this._fire&&Math.random()<dt*0.25&&enemies.length>0){
-      this._charging=true;this._chargeDur=0.8+Math.random()*0.7;this._chargeEl=0;
-    }
   }
-  _pick(p,ps,hp){
+  _pickTarget(p,ps,hp){
     if(!enemies.length)return null;
-    switch(ps){
-      case'bodyguard':return hp?nearEnemy(hp.x,hp.y):nearEnemy(p.x,p.y);
-      case'giantkiller':return highHPEnemy();
-      case'sweeper':return lowHPEnemy();
-      case'lonewolf':return farEnemy(p.x,p.y);
-      case'assist':{const t=hp?nearEnemy(hp.x,hp.y):null;return t||nearEnemy(p.x,p.y);}
-      default:return nearEnemy(p.x,p.y);
-    }
+    if(ps==='bodyguard')return hp?nearEnemy(hp.x,hp.y):nearEnemy(p.x,p.y);
+    return nearEnemy(p.x,p.y);
   }
-  _wantDist(ps){const m={berserker:15,sniper:115,coward:95,bodyguard:40,shadow:8,escort:50,lonewolf:50,dancer:60,triggerhappy:50};return m[ps]??55;}
-  _fireRange(ps){const m={sniper:140,coward:75,triggerhappy:150,berserker:80};return m[ps]??110;}
-  _move(p,ps,hp,d,wd,dt){
+  _wantDist(ps){return{berserker:15,sniper:120,bodyguard:40}[ps]??55;}
+  _fireRange(ps){return{sniper:160,berserker:80}[ps]??110;}
+  _move(p,ps,hp,d,wd){
     let mx=0,my=0,a=this._aim;
     if(d>wd+10){mx=Math.cos(a);my=Math.sin(a);}
     else if(d<wd-10){mx=-Math.cos(a);my=-Math.sin(a);}
-    // strafe
-    if(ps!=='shadow'&&ps!=='coward'){
-      const sa=a+Math.PI/2,sv=Math.sin(this._strT*(ps==='dancer'?4:2.3));
-      const sm=ps==='dancer'?.9:.45;
-      mx+=Math.cos(sa)*sv*sm; my+=Math.sin(sa)*sv*sm;
-    }
-    // personality overrides
-    if(ps==='coward'){
-      let rx=0,ry=0;
-      for(const e of enemies){const edx=p.x-e.x,edy=p.y-e.y,ed=Math.hypot(edx,edy)||1;if(ed<100){rx+=edx/ed;ry+=edy/ed;}}
-      const rm=Math.hypot(rx,ry);
-      if(rm>0){mx=rx/rm*.8;my=ry/rm*.8;}else{this._wander(p,hp);return;}
-    }
-    if(ps==='shadow'&&hp){const hdx=hp.x-p.x,hdy=hp.y-p.y,hd=Math.hypot(hdx,hdy);if(hd>8){mx=hdx/hd;my=hdy/hd;}else{mx=0;my=0;}}
-    if(ps==='escort'&&hp){const ahx=hp.x+Math.cos(hp.aim||0)*32,ahy=hp.y+Math.sin(hp.aim||0)*32;const adx=ahx-p.x,ady=ahy-p.y,ad=Math.hypot(adx,ady);if(ad>24){mx=(mx+adx/ad)/2;my=(my+ady/ad)/2;}}
+    const sa=a+Math.PI/2,sv=Math.sin(this._strT*2.3);
+    mx+=Math.cos(sa)*sv*.4;my+=Math.sin(sa)*sv*.4;
     if(ps==='bodyguard'&&hp){const hdx=hp.x-p.x,hdy=hp.y-p.y,hd=Math.hypot(hdx,hdy);if(hd>55){mx=(mx+hdx/hd)/2;my=(my+hdy/hd)/2;}}
-    if(ps==='dancer'){
-      this._dodgeT=Math.max(0,this._dodgeT-dt);
-      for(const b of ebullets){const bdx=b.x-p.x,bdy=b.y-p.y;if(bdx*bdx+bdy*bdy<38*38&&this._dodgeT<=0){const ba=Math.atan2(b.vy,b.vx);mx=Math.cos(ba+Math.PI/2)*this._dodgeDir;my=Math.sin(ba+Math.PI/2)*this._dodgeDir;this._dodgeT=.3;this._dodgeDir*=-1;this._dash=true;break;}}
-    }
     const ml=Math.hypot(mx,my);if(ml>1){mx/=ml;my/=ml;}
     this._mx=mx;this._my=my;
   }
   _wantDash(p,ps,d){
     if(p.dashCd>0)return false;
     if(ps==='berserker'&&d>40&&Math.random()<.03)return true;
-    if(ps==='escort'&&d>80&&Math.random()<.02)return true;
     return false;
   }
   _wander(p,hp){
@@ -354,42 +320,44 @@ class CPUController{
     this._mx*=.9;this._my*=.9;
   }
   _preScav(p,dt,hp){
-    this._rT-=dt;
     const item=nearItem(p.x,p.y);
     if(item){
       const dx=item.x-p.x,dy=item.y-p.y,d=Math.hypot(dx,dy)||1;
       this._aim=Math.atan2(dy,dx);
-      this._mx=d>20?dx/d:0; this._my=d>20?dy/d:0;
+      this._mx=d>20?dx/d:0;this._my=d>20?dy/d:0;
       const ne=nearEnemy(p.x,p.y);
       if(ne){const ed=Math.hypot(ne.x-p.x,ne.y-p.y);if(ed<50){this._aim=Math.atan2(ne.y-p.y,ne.x-p.x);this._fire=true;}else this._fire=false;}
-    } else {
+    }else{
       const t=nearEnemy(p.x,p.y);this._target=t;
       if(t){const dx=t.x-p.x,dy=t.y-p.y,d=Math.hypot(dx,dy)||1;this._aim=Math.atan2(dy,dx);if(d>65){this._mx=Math.cos(this._aim);this._my=Math.sin(this._aim);}else if(d<45){this._mx=-Math.cos(this._aim);this._my=-Math.sin(this._aim);}else{this._mx=0;this._my=0;}this._fire=d<110;}
       else{this._wander(p,hp);this._fire=false;}
     }
     this._dash=false;
   }
-  _prePanic(p,dt){
-    this._panicT-=dt;this._rT-=dt;
-    if(this._panicT<=0||this._rT<=0){
-      this._panicT=.3+Math.random()*.3;this._rT=.3;
-      if(enemies.length)this._target=enemies[Math.floor(Math.random()*enemies.length)];
-      this._dash=Math.random()<.3&&p.dashCd<=0;
-    }else this._dash=false;
-    if(this._target&&this._target.hp>0){
-      const dx=this._target.x-p.x,dy=this._target.y-p.y,d=Math.hypot(dx,dy)||1;
-      this._aim=Math.atan2(dy,dx);
-      const ra=Math.sin(this._strT*5)*Math.PI;this._mx=Math.cos(ra);this._my=Math.sin(ra);
-      this._fire=d<120&&Math.random()>.2;
-    }else{const ra=Math.sin(this._strT*5)*Math.PI;this._mx=Math.cos(ra);this._my=Math.sin(ra);this._fire=false;}
-  }
   move(){return{x:this._mx,y:this._my};}
   aim(){return this._aim;}
   fire(){return this._fire;}
   dash(){return this._dash;}
-  charge(){return!!this._charging;}
+  charge(){return false;}
   reload(){return false;}
 }
+
+// ═══════════════════════════════════════════════
+//  WALL PALETTES (10 tiers, every 10 depths)
+// ═══════════════════════════════════════════════
+const WALL_PALETTES=[
+  {base:'#3a3055',top:'#5a4a80',bot:'#1a1430',side:'#241c40',acc:'#7a64a8',f1:'#2a253a',f2:'#221d30',fd:'#3a3450'}, // 1-10  violet
+  {base:'#1a2a4a',top:'#2a4a7a',bot:'#0a1428',side:'#141c38',acc:'#4a74c8',f1:'#161e30',f2:'#101825',fd:'#1e2e48'}, // 11-20 blue
+  {base:'#0f3030',top:'#1a5050',bot:'#061a1a',side:'#0c2828',acc:'#2a9898',f1:'#0c2028',f2:'#081820',fd:'#103838'}, // 21-30 teal
+  {base:'#3a2010',top:'#6a3c18',bot:'#1a0c06',side:'#2a1610',acc:'#a06030',f1:'#281808',f2:'#1e1206',fd:'#3a2818'}, // 31-40 brown
+  {base:'#3a1a06',top:'#703010',bot:'#1a0800',side:'#2c1008',acc:'#d05820',f1:'#200c04',f2:'#280e04',fd:'#401804'}, // 41-50 volcanic
+  {base:'#3a0808',top:'#6a1010',bot:'#1a0404',side:'#280808',acc:'#e02020',f1:'#200404',f2:'#180404',fd:'#2a0606'}, // 51-60 deep red
+  {base:'#1a0a14',top:'#300a20',bot:'#0a0408',side:'#140810',acc:'#ff2060',f1:'#100408',f2:'#0c0306',fd:'#1c0812'}, // 61-70 hellfire
+  {base:'#200a30',top:'#400a60',bot:'#100418',side:'#180828',acc:'#9030e0',f1:'#140818',f2:'#100610',fd:'#280a38'}, // 71-80 void purple
+  {base:'#0a1e0a',top:'#103818',bot:'#040e04',side:'#081408',acc:'#30d030',f1:'#060e06',f2:'#040c04',fd:'#0c1e0c'}, // 81-90 bio
+  {base:'#080808',top:'#181818',bot:'#020202',side:'#0c0c0c',acc:'#e0e0ff',f1:'#0a0a0a',f2:'#060606',fd:'#101010'}, // 91-99 void
+];
+function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 
 // ═══════════════════════════════════════════════
 //  WORLD
@@ -397,6 +365,7 @@ class CPUController{
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
+let secretWallPos=null,secretWallHits=0,driverActive=false;
 
 function genMap(){
   map=new Uint8Array(MAPW*MAPH); map.fill(1);
@@ -460,6 +429,20 @@ function genMap(){
   // DEPTH 100: screw
   screwObj=null;
   if(stage===MAX_DEPTH){screwObj={x:best.cx*TILE+8,y:best.cy*TILE+8-12,t:0};}
+  // Secret wall (20% chance, not on boss/MH floors)
+  secretWallPos=null;secretWallHits=0;
+  const isBossFloor=stage%10===0||stage===99;
+  if(!isBossFloor&&!monsterHouse&&Math.random()<.20){
+    for(let t=0;t<400;t++){
+      const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
+      if(map[ty*MAPW+tx]!==1)continue;
+      // needs at least one floor neighbor
+      let hasFloor=false;
+      for(let dy=-1;dy<=1&&!hasFloor;dy++)for(let dx=-1;dx<=1;dx++){const n=map[(ty+dy)*MAPW+(tx+dx)];if(n===0||n===2)hasFloor=true;}
+      if(!hasFloor)continue;
+      map[ty*MAPW+tx]=4;secretWallPos={tx,ty};break;
+    }
+  }
   // Fog of war — reveal spawn area
   fog=new Uint8Array(MAPW*MAPH);
   revealFog(r0.cx*TILE+8,r0.cy*TILE+8);
@@ -479,34 +462,55 @@ const _mmCv=document.createElement('canvas');
 _mmCv.width=MAPW;_mmCv.height=MAPH;
 const _mmCtx=_mmCv.getContext('2d');
 
+function allyHasAbility(ab){
+  return players.some(p=>!p.isHuman&&p.alive&&!p.controller._rouletteDisplay&&p.controller.ability===ab);
+}
+
 function drawMinimap(){
   if(!map||!fog)return;
-  const MW=MAPW,MH=MAPH; // 64×64
-  const mx=W-MW-4,my=20; // top-right corner (below depth counter)
+  const MW=MAPW,MH=MAPH;
+  const mx=W-MW-4,my=20;
+  const hasMap=allyHasAbility('MAP');
+  const hasItem=allyHasAbility('ITEM');
+  const hasExit=allyHasAbility('EXIT');
+  const hasEnemy=allyHasAbility('ENEMY');
 
-  // Draw terrain into offscreen canvas
+  // Terrain — Sniper reveals full map
   const id=_mmCtx.createImageData(MW,MH);const d=id.data;
   for(let y=0;y<MAPH;y++)for(let x=0;x<MAPW;x++){
-    if(!fog[y*MAPW+x])continue;
+    if(!fog[y*MAPW+x]&&!hasMap)continue;
     const t=map[y*MAPW+x],i=(y*MW+x)*4;
-    if(t===1){d[i]=80;d[i+1]=60;d[i+2]=120;d[i+3]=255;}  // wall — mid purple
-    else     {d[i]=55;d[i+1]=48;d[i+2]=80;d[i+3]=255;}  // floor — lighter purple
+    if(t===1){d[i]=80;d[i+1]=60;d[i+2]=120;d[i+3]=255;}
+    else     {d[i]=55;d[i+1]=48;d[i+2]=80;d[i+3]=255;}
   }
   _mmCtx.putImageData(id,0,0);
 
-  // Markers on offscreen canvas (exit, cores, players — full opacity here)
+  // EXIT — Bodyguard always shows exit
   if(exits[0]){
     const ex=(exits[0].x/TILE)|0,ey=(exits[0].y/TILE)|0;
-    if(fog[ey*MAPW+ex]){
-      _mmCtx.fillStyle=exitOpen?'#0ff':'#f80';
+    if(fog[ey*MAPW+ex]||hasExit){
+      _mmCtx.fillStyle=exitOpen?'#ff0':'#665500';
       _mmCtx.fillRect(ex-1,ey-1,3,3);
     }
   }
-  _mmCtx.fillStyle='#fd0';
+
+  // CORES — Prospector always shows cores
+  _mmCtx.fillStyle='#0ff';
   for(const c of cores){
     const cx_=(c.x/TILE)|0,cy_=(c.y/TILE)|0;
-    if(fog[cy_*MAPW+cx_])_mmCtx.fillRect(cx_,cy_,2,2);
+    if(fog[cy_*MAPW+cx_]||hasItem)_mmCtx.fillRect(cx_,cy_,2,2);
   }
+
+  // ENEMIES — Berserker shows all enemy positions
+  if(hasEnemy){
+    _mmCtx.fillStyle='#f44';
+    for(const e of enemies){
+      const ex=(e.x/TILE)|0,ey=(e.y/TILE)|0;
+      _mmCtx.fillRect(ex,ey,2,2);
+    }
+  }
+
+  // Players
   for(const p of players){
     if(!p.alive)continue;
     const px=(p.x/TILE)|0,py=(p.y/TILE)|0;
@@ -514,11 +518,9 @@ function drawMinimap(){
     _mmCtx.fillRect(px-1,py-1,3,3);
   }
 
-  // Dark background so minimap area is always visible
   ctx.globalAlpha=0.45;
   ctx.fillStyle='#000';
   ctx.fillRect(mx-1,my-1,MW+2,MH+2);
-  // Composite terrain + markers at 60% opacity
   ctx.globalAlpha=0.60;
   ctx.drawImage(_mmCv,mx,my);
   ctx.globalAlpha=1;
@@ -554,7 +556,7 @@ function drawOffscreenIndicators(){
 }
 
 function tileAt(x,y){const tx=(x/TILE)|0,ty=(y/TILE)|0;if(tx<0||ty<0||tx>=MAPW||ty>=MAPH)return 1;return map[ty*MAPW+tx];}
-function solid(x,y){return tileAt(x,y)===1;}
+function solid(x,y){const t=tileAt(x,y);return t===1||t===4;}
 function hitsWall(x,y,r){for(let a=0;a<8;a++){const t=a*Math.PI/4;if(solid(x+Math.cos(t)*r,y+Math.sin(t)*r))return true;}return solid(x,y);}
 function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,dy)/4);for(let i=1;i<n;i++){const t=i/n;if(solid(x0+dx*t,y0+dy*t))return false;}return true;}
 
@@ -564,7 +566,7 @@ function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,d
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
 let stage=1,totalKills=0,running=false,gameWon=false;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
-let monsterHouse=false,monsterHouseCleared=false;
+let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
 let bulletTime=null; // {timer,victimName,victimPal}
 
 // ═══════════════════════════════════════════════
@@ -594,22 +596,29 @@ function makeEnemy(type,x,y){
 }
 function makeZombie(p){
   const mult=1.5+Math.random()*.5;
-  return{type:'zombie',x:p.x,y:p.y,vx:0,vy:0,
+  const basePers=p.controller?p.controller.effPers:null;
+  const zm={type:'zombie',x:p.x,y:p.y,vx:0,vy:0,
     hp:p.maxHp*mult,_maxHp:p.maxHp*mult,
     r:3,atkCd:0,hit:0,ang:0,anim:0,_dead:false,
     spd:32+p.level*2,dmg:14+p.level*3,
     weapon:{fireCd:.35,dmg:Math.max(2,p.weapon.dmg*1.3),spread:.22,range:1.3,spd:145},
     fireCd:0,
     pal:p.pal,level:p.level,fromName:p.pal.name,
-    // for drops
     dropXp:p.accXp,
-    dropCores: Math.floor(coresCollected*.15), // carries some of found cores
+    dropCores:Math.floor(coresCollected*.05),
+    zombiePers:basePers,
+    _zombieAbility:basePers==='moody'?randPers(true):basePers,
+    _chaosT:0,_gateReached:false,
   };
+  // Announce zombie ability
+  const ZOMBIE_TITLE={prospector:'CORE-EATER',sniper:'WALL-HACK',bodyguard:'GATEKEEPER',berserker:'BLOODHOUND',moody:'CHAOS'};
+  flash(p.pal.name+': '+( ZOMBIE_TITLE[basePers]||'ZOMBIE'),'#f44');
+  return zm;
 }
 
 function makeBoss(){
   const sc=eScale();
-  const hp=Math.round(90*(1+stage*.09)*sc);
+  const hp=Math.round(120*(1+stage*.09)*sc);
   let bx,by;
   for(let t=0;t<300;t++){
     const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
@@ -621,8 +630,9 @@ function makeBoss(){
   }
   if(bx===undefined){bx=MAPW*TILE*.5;by=16;}
   return{type:'boss',x:bx,y:by,vx:0,vy:0,
-    hp,_maxHp:hp,r:9,spd:18+stage*.22,
-    dmg:Math.round(28*sc),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0};
+    hp,_maxHp:hp,r:9,spd:22+stage*.25,
+    dmg:Math.round(35*sc),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
+    _phase2:false,_shootCd:0};
 }
 
 // ═══════════════════════════════════════════════
@@ -638,6 +648,10 @@ function flash(msg,c='#ff0'){messages.push({t:0,msg:(''+msg).toUpperCase(),c});}
 function moveObj(o,dt){
   const nx=o.x+o.vx*dt; if(!hitsWall(nx,o.y,o.r))o.x=nx;
   const ny=o.y+o.vy*dt; if(!hitsWall(o.x,ny,o.r))o.y=ny;
+  // Wall escape: if somehow embedded, push out
+  if(solid(o.x,o.y)){
+    for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.6,ey=o.y+Math.sin(t)*TILE*.6;if(!solid(ex,ey)){o.x=ex;o.y=ey;break;}}
+  }
 }
 function spawnEnemy(type){
   for(let t=0;t<200;t++){
@@ -681,11 +695,11 @@ function updatePlayer(p,dt){
   if(!chB&&fb&&p.fireCd<=0){
     const w=p.weapon;
     const spread=p.level>=3?w.spread*.6:w.spread;
-    const a=p.aim+rnd(-spread,spread);
     const ox=Math.cos(p.aim)*5,oy=Math.sin(p.aim)*5;
-    bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,
-      life:w.range,dmg:(w.dmg+p.level*.4)*.25,owner:p,trail:[]});
-    p.fireCd=w.fireCd;p.muzzle=.08;
+    const dmg=(w.dmg+p.level*.4)*.25;
+    const angles=driverActive?[p.aim-0.22,p.aim,p.aim+0.22]:[p.aim+rnd(-spread,spread)];
+    for(const a of angles)bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,life:w.range,dmg:dmg*(driverActive?.7:1),owner:p,trail:[]});
+    p.fireCd=w.fireCd*(driverActive?1.15:1);p.muzzle=.08;
     shake=Math.max(shake,.8);
     p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
   }
@@ -752,7 +766,7 @@ function update(dt){
     spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
   }
   // ── Monster House clear check ──
-  if(monsterHouse&&!monsterHouseCleared&&time>2&&enemies.length===0){
+  if(monsterHouse&&!monsterHouseCleared&&mhSpawnPending===0&&time>2&&enemies.length===0){
     monsterHouseCleared=true;exitOpen=true;
     const cx=(MAPW>>1)*TILE+8,cy=(MAPH>>1)*TILE+8;
     pickups.push({type:'revive',x:cx,y:cy,t:0});
@@ -766,7 +780,25 @@ function update(dt){
     const b=bullets[i];
     b.trail.push({x:b.x,y:b.y});if(b.trail.length>5)b.trail.shift();
     b.x+=b.vx*eff;b.y+=b.vy*eff;b.life-=eff;
-    if(b.life<=0||solid(b.x,b.y)){spark(b.x,b.y,'#ff8',4,80);bullets.splice(i,1);continue;}
+    if(b.life<=0||solid(b.x,b.y)){
+      // Secret wall hit?
+      const bTx=(b.x/TILE)|0,bTy=(b.y/TILE)|0;
+      if(secretWallPos&&bTx===secretWallPos.tx&&bTy===secretWallPos.ty){
+        secretWallHits++;
+        SE.clang();
+        spark(b.x,b.y,'#ffd700',6,70);
+        if(secretWallHits>=25){
+          // Destroy secret wall, drop driver
+          map[secretWallPos.ty*MAPW+secretWallPos.tx]=0;
+          pickups.push({type:'driver',x:bTx*TILE+8,y:bTy*TILE+8,t:0});
+          flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT UNLOCKED','#ffd700');
+          SE.driver();secretWallPos=null;
+        }else{
+          spark(b.x,b.y,'#ff8',2,50);
+        }
+      }else{spark(b.x,b.y,'#ff8',4,80);}
+      bullets.splice(i,1);continue;
+    }
     let hit=false;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
@@ -778,13 +810,14 @@ function update(dt){
           totalKills++;if(b.owner)b.owner.kills++;
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
-          const healRate=stage>50?Math.max(.04,.25-(stage-50)*.003):.25;
-          if(chance(.35))pickups.push({type:'core',x:e.x,y:e.y,t:0});
+          const healRate=stage>50?Math.max(.02,.12-(stage-50)*.002):.12;
+          if(chance(.08))pickups.push({type:'core',x:e.x,y:e.y,t:0});
           if(chance(healRate))pickups.push({type:'health',x:e.x,y:e.y,t:0});
           // boss drops
           if(e.type==='boss'){
-            for(let k=0;k<5;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
+            for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
+            if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
             PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
             const refund=Math.min(coresNeeded-coresCollected,2);
@@ -795,7 +828,6 @@ function update(dt){
             const xpDrop=e.dropXp||0;
             if(xpDrop>0&&b.owner){b.owner.xp+=xpDrop;flash('VENGEANCE +'+xpDrop+'XP','#ff0');}
             if(e.dropCores>0){coresCollected+=e.dropCores;flash('RECLAIMED +'+e.dropCores+' CORE','#0ff');}
-            pickups.push({type:'health',x:e.x,y:e.y,t:0});
           }
           if(b.owner){
             const xpg=e.type==='boss'?50:e.type==='brute'?6:e.type==='zombie'?8:e.type==='shooter'?3:2;
@@ -816,7 +848,7 @@ function update(dt){
   // ── Enemy bullets ──
   for(let i=ebullets.length-1;i>=0;i--){
     const b=ebullets[i];b.x+=b.vx*eff;b.y+=b.vy*eff;b.life-=eff;
-    if(b.life<=0||solid(b.x,b.y)){spark(b.x,b.y,'#f8a',4,60);ebullets.splice(i,1);continue;}
+    if(b.life<=0||(solid(b.x,b.y)&&!b.wallpass)){spark(b.x,b.y,'#f8a',4,60);ebullets.splice(i,1);continue;}
     for(const p of players){
       if(!p.alive)continue;
       const dx=p.x-b.x,dy=p.y-b.y;
@@ -841,20 +873,70 @@ function update(dt){
         e.atkCd=1.4;spark(e.x,e.y,'#f88',3,40);
       }
     } else if(e.type==='zombie'){
-      // Chase + shoot (infinite ammo, no reload, bigger spread)
-      const s=e.spd;
-      if(d>45){e.vx=Math.cos(e.ang)*s;e.vy=Math.sin(e.ang)*s;}
-      else{e.vx*=.7;e.vy*=.7;}
-      e.fireCd=Math.max(0,(e.fireCd||0)-eff);
-      if(d<135&&e.fireCd<=0&&hasLoS(e.x,e.y,tgt.x,tgt.y)){
-        const a=e.ang+rnd(-e.weapon.spread,e.weapon.spread);
-        ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*e.weapon.spd,vy:Math.sin(a)*e.weapon.spd,life:e.weapon.range,dmg:e.weapon.dmg});
-        e.fireCd=e.weapon.fireCd;spark(e.x,e.y,'#f44',2,30);
+      // ── CHAOS: switch ability periodically ──
+      if(e.zombiePers==='moody'){
+        e._chaosT=(e._chaosT||0)-eff;
+        if(e._chaosT<=0){e._chaosT=2.5+Math.random()*2;e._zombieAbility=randPers(true);flash(e.fromName+'! '+e._zombieAbility.toUpperCase(),'#f44');}
       }
-      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;e.vx-=Math.cos(e.ang)*40;e.vy-=Math.sin(e.ang)*40;}
+      const za=e._zombieAbility||'berserker';
+
+      // ── CORE-EATER (prospector): target cores, eat them ──
+      if(za==='prospector'){
+        const core=cores.length?cores.reduce((b,c)=>Math.hypot(c.x-e.x,c.y-e.y)<Math.hypot(b.x-e.x,b.y-e.y)?c:b,cores[0]):null;
+        if(core){
+          const ca=Math.atan2(core.y-e.y,core.x-e.x);
+          e.vx=Math.cos(ca)*e.spd;e.vy=Math.sin(ca)*e.spd;
+          if(Math.hypot(core.x-e.x,core.y-e.y)<e.r+8){spark(core.x,core.y,'#f80',6,60);cores.splice(cores.indexOf(core),1);flash('CORE EATEN!','#f44');}
+        } else {
+          if(d>45){e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;}else{e.vx*=.7;e.vy*=.7;}
+          if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;}
+        }
+      }
+      // ── GATEKEEPER (bodyguard): move to exit, block it ──
+      else if(za==='bodyguard'){
+        const ex=exits[0];
+        if(ex&&!e._gateReached){
+          const da=Math.atan2(ex.y-e.y,ex.x-e.x);const dd=Math.hypot(ex.x-e.x,ex.y-e.y);
+          if(dd>18){e.vx=Math.cos(da)*e.spd;e.vy=Math.sin(da)*e.spd;}
+          else{e.vx*=.2;e.vy*=.2;e._gateReached=true;flash(e.fromName+' BLOCKS EXIT!','#f44');}
+        } else if(e._gateReached){e.vx*=.1;e.vy*=.1;}
+        if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg*1.5);e.atkCd=.4;}
+      }
+      // ── WALL-HACK (sniper): wall-penetrating high-damage shots ──
+      else if(za==='sniper'){
+        if(d>80){e.vx=Math.cos(e.ang)*e.spd*.5;e.vy=Math.sin(e.ang)*e.spd*.5;}
+        else{e.vx*=.8;e.vy*=.8;}
+        e.fireCd=Math.max(0,(e.fireCd||0)-eff);
+        if(d<240&&e.fireCd<=0){
+          const a=Math.atan2(tgt.y-e.y,tgt.x-e.x);
+          // wall-piercing: no moveObj collision, wallpass flag
+          ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*180,vy:Math.sin(a)*180,life:2.2,dmg:e.weapon.dmg*2.8,wallpass:true});
+          e.fireCd=2.2;spark(e.x,e.y,'#f00',6,80);shake=Math.max(shake,1.5);
+        }
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;}
+      }
+      // ── BLOODHOUND (berserker): 1.5x speed constant chase ──
+      else {
+        const s=e.spd*1.5;
+        if(d>20){e.vx=Math.cos(e.ang)*s;e.vy=Math.sin(e.ang)*s;}
+        else{e.vx*=.7;e.vy*=.7;}
+        e.fireCd=Math.max(0,(e.fireCd||0)-eff);
+        if(d<120&&e.fireCd<=0&&hasLoS(e.x,e.y,tgt.x,tgt.y)){
+          const a=e.ang+rnd(-e.weapon.spread,e.weapon.spread);
+          ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*e.weapon.spd,vy:Math.sin(a)*e.weapon.spd,life:e.weapon.range,dmg:e.weapon.dmg});
+          e.fireCd=e.weapon.fireCd*.7;spark(e.x,e.y,'#f44',2,30);
+        }
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.4;e.vx-=Math.cos(e.ang)*40;e.vy-=Math.sin(e.ang)*40;}
+      }
     } else if(e.type==='boss'){
-      // Unstoppable charge — smash through walls
-      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      // ── Phase 2 trigger at 50% HP ──
+      if(!e._phase2&&e.hp<e._maxHp*.5){
+        e._phase2=true;
+        flash('★ PHASE 2 ★','#f44');flash('ENRAGED!','#f80');
+        shake=Math.max(shake,7);
+      }
+      const bSpd=e._phase2?e.spd*1.5:e.spd;
+      e.vx=Math.cos(e.ang)*bSpd;e.vy=Math.sin(e.ang)*bSpd;
       // Break surrounding wall tiles
       e.breakCd=Math.max(0,(e.breakCd||0)-eff);
       const btx=(e.x/TILE)|0,bty=(e.y/TILE)|0;
@@ -866,11 +948,20 @@ function update(dt){
           if(e.breakCd<=0){spark(nx*TILE+8,ny*TILE+8,'#c84',6,65);e.breakCd=.1;shake=Math.max(shake,1.5);}
         }
       }
-      // Devour cores and pickups on contact
-      for(let i=cores.length-1;i>=0;i--){const c=cores[i];if(Math.hypot(c.x-e.x,c.y-e.y)<e.r+8){spark(c.x,c.y,'#f80',4,40);cores.splice(i,1);}}
+      // Devour cores — wider range in phase 2
+      const coreEatR=e._phase2?e.r+28:e.r+8;
+      for(let i=cores.length-1;i>=0;i--){const c=cores[i];if(Math.hypot(c.x-e.x,c.y-e.y)<coreEatR){spark(c.x,c.y,'#f80',4,40);cores.splice(i,1);if(e._phase2)flash('CORE DEVOURED!','#f44');}}
       for(let i=pickups.length-1;i>=0;i--){const pk=pickups[i];if(Math.hypot(pk.x-e.x,pk.y-e.y)<e.r+8){spark(pk.x,pk.y,'#622',3,30);pickups.splice(i,1);}}
+      // Phase 2: spread shot burst
+      if(e._phase2){
+        e._shootCd=Math.max(0,(e._shootCd||0)-eff);
+        if(e._shootCd<=0){
+          for(let k=-2;k<=2;k++){const a=e.ang+k*.28;ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*115,vy:Math.sin(a)*115,life:1.6,dmg:e.dmg*.55});}
+          e._shootCd=2.2;spark(e.x,e.y,'#f80',8,80);
+        }
+      }
       // Smash attack
-      if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=1.1;shake=Math.max(shake,3);e.vx-=Math.cos(e.ang)*45;e.vy-=Math.sin(e.ang)*45;}
+      if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=1.0;shake=Math.max(shake,3);e.vx-=Math.cos(e.ang)*45;e.vy-=Math.sin(e.ang)*45;}
       // Direct position update (no wall check)
       e.x+=e.vx*eff;e.y+=e.vy*eff;
       e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
@@ -894,6 +985,7 @@ function update(dt){
         if(p.type==='core'){coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');}
         else if(p.type==='health'){pl.hp=Math.min(pl.maxHp,pl.hp+25);flash(pl.pal.name+' +25HP',pl.pal.body);}
         else if(p.type==='revive'){pl.hasRevive=true;flash(pl.pal.name+' GOT REVIVE!','#ff0');spark(pl.x,pl.y,'#ff0',12,100);}
+        else if(p.type==='driver'){driverActive=true;flash('DRIVER ACTIVE — 3-WAY','#ffd700');spark(pl.x,pl.y,'#ffd700',16,110);SE.driver();}
         pickups.splice(i,1);break;
       }
     }
@@ -1015,9 +1107,15 @@ function nextStage(){
   monsterHouse=!isBoss&&stage>1&&!wasMH&&Math.random()<0.2;
   monsterHouseCleared=false;
   PSG.play(stage);saveGame();
-  // Reshuffle personalities for living CPUs
+  // Re-roll moody sub-ability each floor
   const msgs=[];
-  for(const p of players){if(!p.alive||p.isHuman)continue;const np=randPers();p.controller=new CPUController(np);msgs.push(p.pal.name+':'+PERS_LABEL[np]);}
+  for(const p of players){
+    if(!p.alive||p.isHuman)continue;
+    if(p.controller.personality==='moody'){
+      p.controller.rerollMoody();
+      msgs.push(p.pal.name+' MOODY:'+p.controller.ability);
+    }
+  }
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   genMap();spawnT=.5;
   for(const p of players){if(!p.alive)continue;p.fireCd=0;p.iframe=1;}
@@ -1025,17 +1123,19 @@ function nextStage(){
   if(n){camX=cx/n;camY=cy/n;}
   flash('DEPTH '+stage,stage===MAX_DEPTH?'#ff0':'#0ff');
   if(stage===MAX_DEPTH)flash('THE SCREW AWAITS','#ff0');
+  if(secretWallPos)flash('DRIVER HIDDEN THIS FLOOR','#ffd700');
   setTimeout(()=>{for(const m of msgs)flash(m,'#fa0');},600);
-  // Monster house: wave of enemies
+  // Monster house: announce immediately, spawn after brief delay
   if(monsterHouse){
+    flash('!! MONSTER HOUSE !!','#f44');
+    flash('EXTERMINATE ALL','#f88');
+    shake=Math.max(shake,4);
     setTimeout(()=>{
       if(!running)return;
-      flash('!! MONSTER HOUSE !!','#f44');
-      flash('EXTERMINATE ALL','#f88');
-      shake=Math.max(shake,4);
       const count=Math.min(40,Math.round(20+stage*.2));
-      for(let i=0;i<count;i++)setTimeout(()=>{if(running&&!monsterHouseCleared)spawnMH();},300+i*120);
-    },800);
+      mhSpawnPending=count;
+      for(let i=0;i<count;i++)setTimeout(()=>{mhSpawnPending--;if(running&&!monsterHouseCleared)spawnMH();},200+i*120);
+    },400);
   }
   // Spawn boss on multiples of 10 and D99
   if(stage%10===0||stage===99){
@@ -1078,17 +1178,20 @@ function draw(){
 
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
     const t=map[y*MAPW+x],px=x*TILE,py=y*TILE;
-    if(t===1){
-      ctx.fillStyle='#3a3055';ctx.fillRect(px,py,TILE,TILE);
-      ctx.fillStyle='#5a4a80';ctx.fillRect(px,py,TILE,3);
-      ctx.fillStyle='#1a1430';ctx.fillRect(px,py+TILE-3,TILE,3);
-      ctx.fillStyle='#241c40';ctx.fillRect(px+TILE-2,py+3,2,TILE-6);
-      if(((x*7+y*13)&3)===0){ctx.fillStyle='#7a64a8';ctx.fillRect(px+3,py+5,2,2);}
+    const wp=wallPal();
+    if(t===1||t===4){
+      ctx.fillStyle=wp.base;ctx.fillRect(px,py,TILE,TILE);
+      ctx.fillStyle=wp.top;ctx.fillRect(px,py,TILE,3);
+      ctx.fillStyle=wp.bot;ctx.fillRect(px,py+TILE-3,TILE,3);
+      ctx.fillStyle=wp.side;ctx.fillRect(px+TILE-2,py+3,2,TILE-6);
+      if(((x*7+y*13)&3)===0){ctx.fillStyle=wp.acc;ctx.fillRect(px+3,py+5,2,2);}
+      // Secret wall: subtle gold glint that pulses
+      if(t===4){const g=(Math.sin(time*3+x*.7+y*.5)+1)*.5;if(g>.7){ctx.fillStyle='#b8860b';ctx.fillRect(px+5,py+6,2,2);}}
     }else{
-      ctx.fillStyle=((x+y)&1)?'#2a253a':'#221d30';ctx.fillRect(px,py,TILE,TILE);
-      if(t===2){ctx.fillStyle='#3a3450';ctx.fillRect(px+2,py+2,4,4);ctx.fillRect(px+10,py+9,3,3);}
-      else if(t===3){ctx.fillStyle='#181225';ctx.fillRect(px+4,py+7,8,1);ctx.fillRect(px+6,py+8,4,1);}
-      ctx.fillStyle='#15101e';ctx.fillRect(px,py,1,1);
+      ctx.fillStyle=((x+y)&1)?wp.f1:wp.f2;ctx.fillRect(px,py,TILE,TILE);
+      if(t===2){ctx.fillStyle=wp.fd;ctx.fillRect(px+2,py+2,4,4);ctx.fillRect(px+10,py+9,3,3);}
+      else if(t===3){ctx.fillStyle=wp.bot;ctx.fillRect(px+4,py+7,8,1);ctx.fillRect(px+6,py+8,4,1);}
+      ctx.fillStyle=wp.f2;ctx.fillRect(px,py,1,1);
     }
   }
 
@@ -1169,7 +1272,10 @@ function draw(){
     }
   }
   // Enemy bullets
-  for(const b of ebullets){ctx.fillStyle='#f44';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);ctx.fillStyle='#fa6';ctx.fillRect(b.x|0,b.y|0,1,1);}
+  for(const b of ebullets){
+    if(b.wallpass){ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-2,(b.y|0)-2,4,4);ctx.fillStyle='#f0f';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);}
+    else{ctx.fillStyle='#f44';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);ctx.fillStyle='#fa6';ctx.fillRect(b.x|0,b.y|0,1,1);}
+  }
 
   for(const e of enemies)drawEnemy(e);
   for(const p of players)if(p.alive)drawPlayer(p);
@@ -1328,22 +1434,25 @@ function drawHUD(){
   for(let i=0;i<players.length;i++){
     const p=players[i],sx=i*sw+2;
     const nc=p.alive?p.pal.body:'#555';
-    const cpuLabel=p.isHuman?p.controller.label.slice(0,4):(p.controller.personality==='moody'?'MOODY':PERS_LABEL[p.controller.effPers||p.controller.personality]||'CPU');
+    // Row 1: name + personality label side by side
+    const persLabel=p.isHuman?'':( p.controller._rouletteDisplay || PERS_LABEL[p.controller.personality] || '');
     pixText(p.pal.name,sx,H-22+2,nc);
+    if(persLabel)pixText(persLabel,sx+p.pal.name.length*4+2,H-22+2,p.alive?p.pal.body:'#555');
     if(!p.alive){pixText('ZOMBIE',sx,H-22+10,'#f44');continue;}
     // HP bar
     const hw=sw-6;ctx.fillStyle='#400';ctx.fillRect(sx,H-22+8,hw,3);
     ctx.fillStyle=p.hp<p.maxHp*.3?'#f44':'#4c4';ctx.fillRect(sx,H-22+8,(hw*p.hp/p.maxHp)|0,3);
+    // Row 2: LV + ability badge
     pixText('LV'+p.level,sx,H-22+13,'#cfc');
-    // CPU personality
-    if(!p.isHuman){
-      const persStr=cpuLabel.slice(0,7);
-      pixText(persStr,sx,H-22+13,p.pal.body);
+    if(!p.isHuman&&!p.controller._rouletteDisplay){
+      const abilBadge=p.controller.ability;
+      pixText(abilBadge,sx+('LV'+p.level).length*4+2,H-22+13,'#ff0');
     }
     // Dash cd dot
     ctx.fillStyle=p.dashCd<=0?'#0ff':'#334';ctx.fillRect(sx+sw-8,H-22+2,2,2);
     // Revive star
     if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
+    if(p.isHuman&&driverActive){pixText('DRV',sx,H-22+6,'#ffd700');}
   }
 
   // Stage / cores (top-right, below progress bar)
@@ -1477,7 +1586,7 @@ function loadGame(){
   }
 
   stage=data.stage;totalKills=data.totalKills;gameWon=false;
-  monsterHouse=false;monsterHouseCleared=false;
+  monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
   running=true;PSG.play(stage);
@@ -1485,6 +1594,21 @@ function loadGame(){
   genMap();spawnT=.5;
   let cx=0,cy=0,n=0;for(const p of players){if(!p.alive)continue;cx+=p.x;cy+=p.y;n++;}
   if(n){camX=cx/n;camY=cy/n;}
+  // Restore zombies for dead CPU players
+  for(const p of players){
+    if(!p.alive&&!p.isHuman){
+      const zm=makeZombie(p);
+      // Spawn near map center, away from living players
+      for(let t=0;t<200;t++){
+        const tx=rndi(3,MAPW-3),ty=rndi(3,MAPH-3);
+        if(map[ty*MAPW+tx]!==0&&map[ty*MAPW+tx]!==2)continue;
+        let minD=Infinity;
+        for(const lp of players){if(!lp.alive)continue;const d=Math.hypot(lp.x-(tx*TILE+8),lp.y-(ty*TILE+8));if(d<minD)minD=d;}
+        if(minD>80){zm.x=tx*TILE+8;zm.y=ty*TILE+8;break;}
+      }
+      enemies.push(zm);
+    }
+  }
   lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
   flash('DEPTH '+stage+' — RESUMED','#0f8');
   return true;
@@ -1553,17 +1677,12 @@ function renderLobby(){
   // Slots: P1 = human (input+mode), P2-P4 = CPU badge only
   const el=document.getElementById('slots');el.innerHTML='';
   const total=1+cfg.cpus;
-  for(let i=0;i<total;i++){
-    const row=document.createElement('div');row.className='slot';
-    const nm=document.createElement('span');nm.className='sname p'+(i+1);nm.textContent='P'+(i+1);row.appendChild(nm);
-    if(i===0){
-      if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-      for(const o of['KB+M','GAMEPAD']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
-    }else{
-      const b=document.createElement('span');b.style.cssText='color:#888;font-size:10px;padding:2px 6px';b.textContent='CPU';row.appendChild(b);
-    }
-    el.appendChild(row);
-  }
+  // P1 row only (CPU allies shown as count, no individual rows needed)
+  const row=document.createElement('div');row.className='slot';
+  const nm=document.createElement('span');nm.className='sname p1';nm.textContent='P1';row.appendChild(nm);
+  if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
+  for(const o of['KB+M','GAMEPAD']){const b=document.createElement('button');b.className='chip'+(cfg.slots[0]===o?' on':'');b.textContent=o;b.onclick=()=>{cfg.slots[0]=o;renderLobby();};row.appendChild(b);}
+  el.appendChild(row);
   document.getElementById('startBtn').disabled=false;
   // Save info
   const sv=hasSave();
@@ -1583,6 +1702,39 @@ addEventListener('gamepadconnected',pollPads);addEventListener('gamepaddisconnec
 setInterval(pollPads,500);
 
 // ═══════════════════════════════════════════════
+//  SE ENGINE
+// ═══════════════════════════════════════════════
+const SE=(()=>{
+  let ac;
+  function ctx(){return ac||(ac=new(window.AudioContext||window.webkitAudioContext)());}
+  function clang(){
+    // Metallic resonance — secret wall hit
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),gain=c.createGain();
+    osc.connect(gain);gain.connect(c.destination);
+    osc.type='triangle';
+    osc.frequency.setValueAtTime(1320,t);
+    osc.frequency.exponentialRampToValueAtTime(330,t+.35);
+    gain.gain.setValueAtTime(.25,t);gain.gain.exponentialRampToValueAtTime(.001,t+.4);
+    osc.start(t);osc.stop(t+.4);
+  }
+  function driver(){
+    // Pickup jingle — driver acquired
+    const c=ctx(),t=c.currentTime;
+    [440,550,660,880].forEach((hz,i)=>{
+      const osc=c.createOscillator(),gain=c.createGain();
+      osc.connect(gain);gain.connect(c.destination);
+      osc.type='square';
+      osc.frequency.value=hz;
+      const s=t+i*.07;
+      gain.gain.setValueAtTime(.12,s);gain.gain.exponentialRampToValueAtTime(.001,s+.18);
+      osc.start(s);osc.stop(s+.18);
+    });
+  }
+  return{clang,driver};
+})();
+
+// ═══════════════════════════════════════════════
 //  PSG MUSIC ENGINE  (Web Audio API / AY-3-8910 style)
 // ═══════════════════════════════════════════════
 const PSG=(()=>{
@@ -1600,17 +1752,17 @@ const PSG=(()=>{
   function midi(n){return pf(440*Math.pow(2,(n-69)/12));}
 
   // Depth zones — scale, root MIDI, base BPM
-  // D01-20: minor pentatonic  → cave ambient, sparse
-  // D21-40: natural minor     → tension building
-  // D41-60: phrygian          → darker
-  // D61-80: phrygian dominant → oppressive
-  // D81-100: locrian          → horror, frantic
+  // D01-20: major               → bright and clear
+  // D21-40: mixolydian          → major feel, slight edge (b7)
+  // D41-60: dorian              → minor but not oppressive (raised 6th)
+  // D61-80: natural minor       → tension building
+  // D81-100: phrygian           → dark, but not locrian-level horror
   const ZONES=[
-    {sc:[0,3,5,7,10],     root:45,bpmBase:78},
-    {sc:[0,2,3,5,7,8,10], root:43,bpmBase:95},
-    {sc:[0,1,3,5,7,8,10], root:41,bpmBase:114},
-    {sc:[0,1,4,5,7,8,10], root:40,bpmBase:136},
-    {sc:[0,1,3,4,6,8,10], root:38,bpmBase:158},
+    {sc:[0,2,4,5,7,9,11],root:50,bpmBase:82},
+    {sc:[0,2,4,5,7,9,10], root:48,bpmBase:98},
+    {sc:[0,2,3,5,7,9,10], root:46,bpmBase:116},
+    {sc:[0,2,3,5,7,8,10], root:44,bpmBase:136},
+    {sc:[0,1,3,5,7,8,10], root:42,bpmBase:156},
   ];
   function zone(st){return ZONES[Math.min(4,Math.floor((st-1)/20))];}
 
@@ -1643,7 +1795,7 @@ const PSG=(()=>{
     const mel=[],bass=[],arp=[];
     for(let i=0;i<len;i++){
       // Melody: ~25% rest, otherwise random scale degree, occasional +1 octave
-      mel.push(r()<0.25?null:rt+sc[Math.floor(r()*sc.length)]+(r()<0.22?12:0)+24);
+      mel.push(r()<0.30?null:rt+sc[Math.floor(r()*sc.length)]+(r()<0.40?12:0)+24);
       // Bass: root on beat1, 5th on beat3
       const fifth=sc[sc.length>4?4:sc.length-1];
       bass.push(i%len===0?rt+12:i%4===2?rt+fifth+12:null);
@@ -1790,11 +1942,32 @@ function startGame(){
     }else ctrl=new CPUController(randPers());
     players.push(makePlayer(i,ctrl,isHuman));
   }
-  // Show CPU personalities briefly
-  setTimeout(()=>{for(const p of players){if(!p.isHuman)flash(p.pal.name+': '+PERS_LABEL[p.controller.personality],p.pal.body);}},300);
+  // Roulette animation for Moody CPUs, instant reveal for others
+  for(const p of players){
+    if(p.isHuman)continue;
+    if(p.controller.personality==='moody'){
+      p.controller._rouletteDisplay='????';
+      const labels=PERS_LIST.filter(x=>x!=='moody').map(x=>PERS_LABEL[x]);
+      let tick=0,delay=60;
+      const totalTicks=18+Math.floor(Math.random()*8);
+      (function spin(){
+        p.controller._rouletteDisplay=labels[tick%labels.length];
+        tick++;
+        if(tick<totalTicks){
+          delay=Math.min(260,delay*1.18|0);
+          setTimeout(spin,delay);
+        }else{
+          p.controller._rouletteDisplay=null;
+          flash(p.pal.name+': MOODY→'+p.controller.ability,p.pal.body);
+        }
+      })();
+    }else{
+      flash(p.pal.name+': '+PERS_LABEL[p.controller.personality],p.pal.body);
+    }
+  }
 
   stage=1;totalKills=0;gameWon=false;
-  monsterHouse=false;monsterHouseCleared=false;
+  monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
   paused=false;pauseEl.style.display='none';
@@ -1868,6 +2041,35 @@ function iChar(sx,sy,pal,sc,dead=false,aim=0){
 function pixBig(str,x,y,c){
   ctx.save();ctx.translate(x,y);ctx.scale(2,2);pixText(str,0,0,c);ctx.restore();
 }
+// pixText scaled ×4 (for lobby title)
+function pixHuge(str,x,y,c){
+  ctx.save();ctx.translate(x,y);ctx.scale(4,4);pixText(str,0,0,c);ctx.restore();
+}
+
+// ── Lobby canvas title ────────────────────────
+let lobbyT=0;
+function drawLobbyCanvas(dt){
+  lobbyT+=dt;
+  // background
+  ctx.fillStyle='#040010';ctx.fillRect(0,0,W,H);
+  // scanlines
+  for(let y=0;y<H;y+=4){ctx.fillStyle='rgba(0,0,0,0.20)';ctx.fillRect(0,y,W,2);}
+  // glow behind title
+  const gr=ctx.createRadialGradient(W/2,50,0,W/2,50,90);
+  gr.addColorStop(0,'rgba(0,180,255,0.12)');gr.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+  // flicker: dim cyan channels
+  const f=0.86+Math.sin(lobbyT*13.1)*0.08+Math.sin(lobbyT*7.3)*0.05;
+  const ch=Math.round(255*Math.min(1,f)).toString(16).padStart(2,'0');
+  pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${ch}${ch}`);
+  // subtitle
+  const sub='THE SCREW AWAITS AT THE BOTTOM';
+  pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
+  // separator line  (fades in and out gently)
+  const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
+  ctx.fillStyle=`rgba(0,200,255,${la})`;
+  ctx.fillRect(W/2-58,75,116,1);
+}
 
 function drawIntro(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
@@ -1915,18 +2117,18 @@ function drawIntro(){
     pixText('P4',W-60,74,'#fc4');
     const L1=[
       'UP TO 3 CPU ALLIES JOIN YOU',
-      'EACH HAS A RANDOM PERSONALITY:',
+      'EACH ADDS MINIMAP INTEL:',
       '',
-      'BODYGUARD  STAYS BY YOUR SIDE',
-      'SNIPER     PICKS OFF DISTANT FOES',
-      'BERSERKER  CHARGES INTO THE FRAY',
-      'COWARD     HIDES  BUT STILL FIRES',
-      'MOODY      COMPLETELY UNPREDICTABLE',
+      'PROSPECTOR  ITEM RADAR',
+      'SNIPER      MAP REVEAL',
+      'BODY GUARD  EXIT RADAR',
+      'BERSERKER   ENEMY RADAR',
+      'MOODY       SHIFTS EACH FLOOR',
     ];
     L1.forEach((l,i)=>{
       if(!l)return;
       const x=Math.round((W-l.length*4)/2);
-      const c=i<2?'#ccc':i===7?'#f66':'#8a9';
+      const c=i<2?'#ccc':i===7?'#fa8':'#8a9';
       pixText(l,x,82+i*9,c);
     });
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
@@ -1959,15 +2161,19 @@ function drawIntro(){
 
     const L2=[
       'FALLEN ALLIES RISE AS ZOMBIES',
-      'THEY KEEP THEIR WEAPON AND LEVEL',
-      'AND WILL HUNT YOU DOWN',
+      'EACH ZOMBIE KEEPS THEIR ROLE:',
       '',
-      'KEEP YOUR CREW ALIVE AT ALL COSTS',
+      'CORE-EATER   DESTROYS YOUR CORES',
+      'WALL-HACK    SHOOTS THROUGH WALLS',
+      'GATEKEEPER   BLOCKS THE EXIT',
+      'BLOODHOUND   HUNTS YOU DOWN',
+      'CHAOS        TOTALLY UNPREDICTABLE',
     ];
     L2.forEach((l,i)=>{
       if(!l)return;
       const x=Math.round((W-l.length*4)/2);
-      pixText(l,x,84+i*9,i===4?'#ff0':'#9ab');
+      const c=i<2?'#9ab':i>=3?'#f88':'#9ab';
+      pixText(l,x,84+i*9,c);
     });
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 
@@ -1979,7 +2185,8 @@ function drawIntro(){
       ['AIM', 'MOUSE'],
       ['FIRE','CLICK / HOLD'],
       ['CHARGE','R-CLICK / E'],
-      ['DASH','SHIFT'],
+      ['DASH','SPACE / F'],
+      ['WALK','SHIFT+MOUSE'],
       ['PAUSE','ESC'],
     ];
     const PAD=[
@@ -1988,6 +2195,7 @@ function drawIntro(){
       ['','RT TRIGGER'],
       ['','LT (HOLD)'],
       ['','LB'],
+      ['','---'],
       ['','START'],
     ];
     pixText('KB+M',10,32,'#fc4');pixText('GAMEPAD',W/2+4,32,'#fc4');
@@ -2020,6 +2228,8 @@ let last=performance.now();
   if(introActive){
     introT+=dt;
     drawIntro();
+  }else if(lobbyEl.style.display!=='none'){
+    drawLobbyCanvas(dt);
   }else{
     if(!paused)update(dt);
     draw();
