@@ -6,7 +6,7 @@ let paused=false,debug=false,introActive=false,introPage=0,introT=0;
 const pauseEl=document.getElementById('pause');
 function setPause(v){
   paused=v;
-  pauseEl.style.display=v?'flex':'none';
+  cv.classList.toggle('cur',v); // show pointer cursor while paused
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
@@ -50,5 +50,6 @@ cv.addEventListener('click',e=>{
     return;
   }
   if(lobbyEl.style.display!=='none'){lobbyHandleClick();return;}
+  if(paused){pauseHandleClick();return;}
 });
 

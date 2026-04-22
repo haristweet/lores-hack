@@ -1,3 +1,43 @@
+// ── Pause overlay (canvas-rendered) ──────────
+const pauseBtns={};
+function pBtnPri(key,label,x,y,w,h,col){
+  pauseBtns[key]={x,y,w,h};
+  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=col;
+  ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
+  pixText(label,x+Math.round((w-label.length*4)/2),y+Math.round((h-6)/2),hov?'#000':col);
+}
+function drawPause(){
+  Object.keys(pauseBtns).forEach(k=>delete pauseBtns[k]);
+  // dark overlay + scanlines
+  ctx.fillStyle='rgba(0,0,0,0.74)';ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
+  // PAUSED title (slow pulse)
+  const t=performance.now()/1000;
+  const pulse=0.82+Math.sin(t*2.8)*0.14;
+  const pc=Math.round(255*pulse).toString(16).padStart(2,'0');
+  pixBig('PAUSED',(W-48)/2,52,`#00${pc}${pc}`);
+  // separator
+  ctx.fillStyle='rgba(0,200,255,0.28)';ctx.fillRect(W/2-36,67,72,1);
+  // buttons (72px wide, centered)
+  const bw=72,bx=Math.round((W-bw)/2);
+  pBtnPri('resume','RESUME',bx,75,bw,13,'#0ff');
+  pBtnPri('squit','SAVE & QUIT',bx,90,bw,13,'#0c9');
+  pBtnPri('quit','QUIT NO SAVE',bx,105,bw,13,'#f55');
+  // ESC hint
+  pixText('ESC = RESUME',(W-48)/2,122,'#334');
+}
+function pauseHandleClick(){
+  for(const[k,b]of Object.entries(pauseBtns)){
+    if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
+      if(k==='resume'){setPause(false);return;}
+      if(k==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();return;}
+      if(k==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();return;}
+    }
+  }
+}
+
 function iChar(sx,sy,pal,sc,dead=false,aim=0){
   ctx.save();ctx.translate(sx,sy);ctx.scale(sc,sc);
   ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-3,2,6,2);ctx.globalAlpha=1;

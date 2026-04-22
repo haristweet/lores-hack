@@ -41,7 +41,7 @@ function startGame(){
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
-  paused=false;pauseEl.style.display='none';
+  paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
   genMap();spawnT=.5;
@@ -49,15 +49,6 @@ function startGame(){
   lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
 }
 
-document.getElementById('resumeBtn').addEventListener('click',()=>setPause(false));
-document.getElementById('saveQuitBtn').addEventListener('click',()=>{
-  saveGame();setPause(false);running=false;PSG.stop();
-  lobbyEl.style.display='flex';renderLobby();
-});
-document.getElementById('quitBtn').addEventListener('click',()=>{
-  setPause(false);running=false;PSG.stop();
-  lobbyEl.style.display='flex';renderLobby();
-});
 document.getElementById('retryBtn').addEventListener('click',()=>{overEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 

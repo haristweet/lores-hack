@@ -12,6 +12,7 @@ let last=performance.now();
   }else{
     if(!paused)update(dt);
     draw();
+    if(paused)drawPause();
   }
   requestAnimationFrame(loop);
 })(last);
