@@ -68,7 +68,7 @@ function pixHuge(str,x,y,c){
 }
 
 // ── Lobby canvas UI ───────────────────────────
-let lobbyT=0,lobbyBgmOpen=false,padStatus='NO GAMEPAD DETECTED';
+let lobbyT=0,padStatus='NO GAMEPAD DETECTED';
 const lobbyBtns={};
 
 // standard chip button (active=selected state)
@@ -139,18 +139,9 @@ function drawLobbyCanvas(dt){
     pixText(sl,Math.round((W-sl.length*4)/2),nY+1,'#3a7'); nY+=9;
   }
 
-  // — HOW TO PLAY + BGM toggle —
+  // — HOW TO PLAY —
   const botY=Math.min(nY+4,155);
-  lbBtn('how','HOW TO PLAY',Math.round(W/2)-55,botY,52,rh,false);
-  lbBtn('bgm','BGM '+(lobbyBgmOpen?'[^]':'[v]'),Math.round(W/2)+5,botY,38,rh,lobbyBgmOpen);
-
-  // — BGM zone chips (5×36 + 4×3 = 192, x=64) —
-  if(lobbyBgmOpen){
-    const bgY=botY+13;
-    ['D01-20','D21-40','D41-60','D61-80','D81-100'].forEach((l,i)=>{
-      lbBtn('bgm'+i,l,64+i*39,bgY,36,rh,false);
-    });
-  }
+  lbBtn('how','HOW TO PLAY',Math.round(W/2)-26,botY,52,rh,false);
 }
 
 function lobbyHandleClick(){
@@ -162,8 +153,6 @@ function lobbyHandleClick(){
       if(k==='start'){startGame();return;}
       if(k==='cont'){loadGame();return;}
       if(k==='how'){startIntro();return;}
-      if(k==='bgm'){lobbyBgmOpen=!lobbyBgmOpen;return;}
-      if(k.startsWith('bgm')){downloadBGM([1,21,41,61,81][+k[3]]);return;}
     }
   }
 }

@@ -19,34 +19,6 @@ function _audioToWav(buffer){
 }
 
 const ZONE_NAMES=['D01-20','D21-40','D41-60','D61-80','D81-100'];
-let _bgmRendering=false;
-
-async function downloadBGM(stageForZone){
-  if(_bgmRendering)return;
-  _bgmRendering=true;
-  const zi=Math.min(4,Math.floor((stageForZone-1)/20));
-  const zn=ZONE_NAMES[zi];
-  // Update all 5 buttons
-  document.querySelectorAll('.bgmBtn').forEach(b=>{ b.disabled=true; });
-  const thisBtn=document.querySelector(`.bgmBtn[data-zi="${zi}"]`);
-  if(thisBtn)thisBtn.textContent='RENDERING...';
-  try{
-    const buf=await PSG.render(stageForZone,62);
-    const wav=_audioToWav(buf);
-    const blob=new Blob([wav],{type:'audio/wav'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`escape-depth-bgm-${zn}.wav`;
-    document.body.appendChild(a);a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
-  }catch(e){console.error('BGM render failed',e);}
-  finally{
-    _bgmRendering=false;
-    document.querySelectorAll('.bgmBtn').forEach((b,i)=>{
-      b.disabled=false;b.textContent=ZONE_NAMES[i];
-    });
-  }
-}
 
 // ═══════════════════════════════════════════════
 //  LOBBY
