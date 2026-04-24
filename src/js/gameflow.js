@@ -40,7 +40,7 @@ function startGame(){
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;btOv.style.display='none';
+  bulletTime=null;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));

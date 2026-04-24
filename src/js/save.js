@@ -62,7 +62,7 @@ function loadGame(){
   stage=data.stage;totalKills=data.totalKills;gameWon=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;btOv.style.display='none';
+  bulletTime=null;
   running=true;PSG.play(stage);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
   genMap();spawnT=.5;

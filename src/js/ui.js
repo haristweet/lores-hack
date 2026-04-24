@@ -316,6 +316,30 @@ function drawIntro(){
   }
 }
 
+// ── Bullet Time overlay (canvas-rendered) ─────────
+function drawBulletTime(){
+  if(!bulletTime)return;
+  // Dramatic vignette
+  const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.75);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,0.72)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,0,0.1)';ctx.fillRect(0,sy,W,2);}
+  // Victim name + DIED!
+  const col=bulletTime.victimPal.body;
+  const name=bulletTime.victimName+' DIED!';
+  pixBig(name,Math.floor((W-name.length*8)/2),52,col);
+  // Countdown (pixHuge = 4x)
+  const c=bulletTime.timer>.3?String(Math.max(0,Math.ceil(bulletTime.timer-.3))):'GO!';
+  const pulse=0.8+Math.sin(performance.now()/150)*0.2;
+  ctx.save();ctx.globalAlpha=pulse;
+  pixHuge(c,Math.floor((W-c.length*16)/2),72,'#fff');
+  ctx.restore();
+  // Subtitle
+  const sub='BRACE FOR ZOMBIE';
+  pixText(sub,Math.floor((W-sub.length*4)/2),108,'#f44');
+}
+
 // ── Game Over overlay (canvas-rendered) ──────────
 const goBtns={};
 function goBtnPri(key,label,x,y,w,h,col){

@@ -15,12 +15,6 @@
   /* ── Lobby (canvas-rendered, div is show/hide flag only) ── */
   #lobby{position:fixed;inset:0;pointer-events:none;z-index:10;}
 
-  /* ── Bullet time overlay ─────────────── */
-  #btOv{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-    flex-direction:column;z-index:8;pointer-events:none;}
-  #btName{font-size:36px;letter-spacing:6px;text-shadow:0 0 20px;margin-bottom:6px;}
-  #btCount{font-size:56px;letter-spacing:0;text-shadow:0 0 28px currentColor;}
-  #btSub{font-size:13px;letter-spacing:4px;color:#f44;margin-top:8px;}
 
 </style>
 </head>
@@ -31,11 +25,6 @@
 <div id="lobby"></div>
 
 <!-- Bullet time overlay -->
-<div id="btOv">
-  <div id="btName">P2 DIED!</div>
-  <div id="btCount">3</div>
-  <div id="btSub">BRACE FOR ZOMBIE</div>
-</div>
 
 <!-- Pause -->
 <div id="pause" style="display:none;position:fixed;inset:0;pointer-events:none;"></div>

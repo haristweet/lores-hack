@@ -12,6 +12,7 @@ let last=performance.now();
   }else{
     if(!paused)update(dt);
     draw();
+    if(bulletTime)drawBulletTime();
     if(paused)drawPause();
     else if(gameOverState)drawGameOver();
     else if(gameWon)drawWin();

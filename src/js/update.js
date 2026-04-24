@@ -67,16 +67,10 @@ function update(dt){
   if(bulletTime){
     eff=dt*.07;
     bulletTime.timer-=dt;
-    const c=Math.max(0,Math.ceil(bulletTime.timer-.3));
-    btCount.textContent=bulletTime.timer>.3?c:'GO!';
-    btName.textContent=bulletTime.victimName+' DIED!';
-    btName.style.color=bulletTime.victimPal.body;
-    btName.style.textShadow='0 0 18px '+bulletTime.victimPal.body;
     // Invincibility for all alive
     for(const p of players)if(p.alive)p.iframe=Math.max(p.iframe,.15);
     if(bulletTime.timer<=0){
       bulletTime=null;
-      btOv.style.display='none';
     }
   }
 
@@ -404,8 +398,6 @@ function damagePlayer(p,d){
     if(!p.isHuman){
       // trigger bullet time
       bulletTime={timer:3.5,victimName:p.pal.name,victimPal:p.pal};
-      btOv.style.display='flex';
-      btCount.textContent='3';
       setTimeout(()=>{if(bulletTime)flash('ZOMBIE RISING','#f44');},500);
     }
     enemies.push(makeZombie(p));

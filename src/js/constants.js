@@ -27,9 +27,6 @@ const ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 
 const lobbyEl=document.getElementById('lobby');
-const btOv=document.getElementById('btOv');
-const btName=document.getElementById('btName');
-const btCount=document.getElementById('btCount');
 
 function fit(){
   const s=Math.max(1,Math.floor(Math.min(window.innerWidth/W,window.innerHeight/H)));

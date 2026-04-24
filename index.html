@@ -15,12 +15,6 @@
   /* ── Lobby (canvas-rendered, div is show/hide flag only) ── */
   #lobby{position:fixed;inset:0;pointer-events:none;z-index:10;}
 
-  /* ── Bullet time overlay ─────────────── */
-  #btOv{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-    flex-direction:column;z-index:8;pointer-events:none;}
-  #btName{font-size:36px;letter-spacing:6px;text-shadow:0 0 20px;margin-bottom:6px;}
-  #btCount{font-size:56px;letter-spacing:0;text-shadow:0 0 28px currentColor;}
-  #btSub{font-size:13px;letter-spacing:4px;color:#f44;margin-top:8px;}
 
 </style>
 </head>
@@ -31,11 +25,6 @@
 <div id="lobby"></div>
 
 <!-- Bullet time overlay -->
-<div id="btOv">
-  <div id="btName">P2 DIED!</div>
-  <div id="btCount">3</div>
-  <div id="btSub">BRACE FOR ZOMBIE</div>
-</div>
 
 <!-- Pause -->
 <div id="pause" style="display:none;position:fixed;inset:0;pointer-events:none;"></div>
@@ -74,9 +63,6 @@ const ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 
 const lobbyEl=document.getElementById('lobby');
-const btOv=document.getElementById('btOv');
-const btName=document.getElementById('btName');
-const btCount=document.getElementById('btCount');
 
 function fit(){
   const s=Math.max(1,Math.floor(Math.min(window.innerWidth/W,window.innerHeight/H)));
@@ -664,16 +650,10 @@ function update(dt){
   if(bulletTime){
     eff=dt*.07;
     bulletTime.timer-=dt;
-    const c=Math.max(0,Math.ceil(bulletTime.timer-.3));
-    btCount.textContent=bulletTime.timer>.3?c:'GO!';
-    btName.textContent=bulletTime.victimName+' DIED!';
-    btName.style.color=bulletTime.victimPal.body;
-    btName.style.textShadow='0 0 18px '+bulletTime.victimPal.body;
     // Invincibility for all alive
     for(const p of players)if(p.alive)p.iframe=Math.max(p.iframe,.15);
     if(bulletTime.timer<=0){
       bulletTime=null;
-      btOv.style.display='none';
     }
   }
 
@@ -1001,8 +981,6 @@ function damagePlayer(p,d){
     if(!p.isHuman){
       // trigger bullet time
       bulletTime={timer:3.5,victimName:p.pal.name,victimPal:p.pal};
-      btOv.style.display='flex';
-      btCount.textContent='3';
       setTimeout(()=>{if(bulletTime)flash('ZOMBIE RISING','#f44');},500);
     }
     enemies.push(makeZombie(p));
@@ -1518,7 +1496,7 @@ function loadGame(){
   stage=data.stage;totalKills=data.totalKills;gameWon=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;btOv.style.display='none';
+  bulletTime=null;
   running=true;PSG.play(stage);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
   genMap();spawnT=.5;
@@ -1883,7 +1861,7 @@ function startGame(){
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;btOv.style.display='none';
+  bulletTime=null;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
@@ -2229,6 +2207,30 @@ function drawIntro(){
   }
 }
 
+// ── Bullet Time overlay (canvas-rendered) ─────────
+function drawBulletTime(){
+  if(!bulletTime)return;
+  // Dramatic vignette
+  const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.75);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,0.72)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,0,0.1)';ctx.fillRect(0,sy,W,2);}
+  // Victim name + DIED!
+  const col=bulletTime.victimPal.body;
+  const name=bulletTime.victimName+' DIED!';
+  pixBig(name,Math.floor((W-name.length*8)/2),52,col);
+  // Countdown (pixHuge = 4x)
+  const c=bulletTime.timer>.3?String(Math.max(0,Math.ceil(bulletTime.timer-.3))):'GO!';
+  const pulse=0.8+Math.sin(performance.now()/150)*0.2;
+  ctx.save();ctx.globalAlpha=pulse;
+  pixHuge(c,Math.floor((W-c.length*16)/2),72,'#fff');
+  ctx.restore();
+  // Subtitle
+  const sub='BRACE FOR ZOMBIE';
+  pixText(sub,Math.floor((W-sub.length*4)/2),108,'#f44');
+}
+
 // ── Game Over overlay (canvas-rendered) ──────────
 const goBtns={};
 function goBtnPri(key,label,x,y,w,h,col){
@@ -2305,6 +2307,7 @@ let last=performance.now();
   }else{
     if(!paused)update(dt);
     draw();
+    if(bulletTime)drawBulletTime();
     if(paused)drawPause();
     else if(gameOverState)drawGameOver();
     else if(gameWon)drawWin();
