@@ -83,7 +83,7 @@ function loadGame(){
       enemies.push(zm);
     }
   }
-  lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
+  lobbyEl.style.display='none';gameOverState=false;
   flash('DEPTH '+stage+' — RESUMED','#0f8');
   return true;
 }

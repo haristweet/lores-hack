@@ -37,7 +37,7 @@ function startGame(){
     }
   }
 
-  stage=1;totalKills=0;gameWon=false;
+  stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null;btOv.style.display='none';
@@ -46,11 +46,9 @@ function startGame(){
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
   genMap();spawnT=.5;
   let cx=0,cy=0,n=0;for(const p of players){cx+=p.x;cy+=p.y;n++;}camX=cx/n;camY=cy/n;
-  lobbyEl.style.display='none';overEl.style.display='none';winEl.style.display='none';
+  lobbyEl.style.display='none';
 }
 
-document.getElementById('retryBtn').addEventListener('click',()=>{overEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
-document.getElementById('winBtn').addEventListener('click',()=>{winEl.style.display='none';lobbyEl.style.display='flex';renderLobby();});
 
 // ═══════════════════════════════════════════════
 //  INTRODUCTION SCREEN

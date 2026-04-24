@@ -27,14 +27,9 @@ const ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 
 const lobbyEl=document.getElementById('lobby');
-const overEl=document.getElementById('over');
-const winEl=document.getElementById('win');
 const btOv=document.getElementById('btOv');
 const btName=document.getElementById('btName');
 const btCount=document.getElementById('btCount');
-const ovTitle=document.getElementById('ovTitle');
-const ovSub=document.getElementById('ovSub');
-const winStat=document.getElementById('winStat');
 
 function fit(){
   const s=Math.max(1,Math.floor(Math.min(window.innerWidth/W,window.innerHeight/H)));

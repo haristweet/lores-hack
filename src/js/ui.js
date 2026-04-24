@@ -316,3 +316,64 @@ function drawIntro(){
   }
 }
 
+// ── Game Over overlay (canvas-rendered) ──────────
+const goBtns={};
+function goBtnPri(key,label,x,y,w,h,col){
+  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  goBtns[key]={x,y,w,h};
+}
+function drawGameOver(){
+  ctx.fillStyle='rgba(0,0,0,0.82)';ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
+  const pulse=0.85+Math.sin(performance.now()/400)*0.15;
+  ctx.save();ctx.globalAlpha=pulse;
+  pixBig('YOU DIED',Math.floor((W-64)/2),30,'#f44');
+  ctx.restore();
+  if(gameOverMsg)pixText(gameOverMsg,Math.floor((W-gameOverMsg.length*4)/2),52,'#fa8');
+  ctx.fillStyle='#f44';ctx.fillRect(40,64,W-80,1);
+  const bw=60,bx=Math.floor(W/2-bw/2);
+  Object.keys(goBtns).forEach(k=>delete goBtns[k]);
+  goBtnPri('retry','RETRY',bx,72,bw,13,'#f88');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),96,'#445');
+}
+function goHandleClick(){
+  for(const[k,b] of Object.entries(goBtns)){
+    if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
+      if(k==='retry'){gameOverState=false;lobbyEl.style.display='flex';renderLobby();}
+    }
+  }
+}
+
+// ── Win overlay (canvas-rendered) ──────────
+const winBtns2={};
+function winBtnPri(key,label,x,y,w,h,col){
+  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  winBtns2[key]={x,y,w,h};
+}
+function drawWin(){
+  ctx.fillStyle='rgba(0,0,0,0.82)';ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
+  const pulse=0.85+Math.sin(performance.now()/400)*0.15;
+  ctx.save();ctx.globalAlpha=pulse;
+  pixBig('CLEARED!!',Math.floor((W-72)/2),28,'#ff0');
+  ctx.restore();
+  pixText('THE SCREW IS YOURS',Math.floor((W-72)/2),48,'#fc8');
+  if(winMsg)pixText(winMsg,Math.max(4,Math.floor((W-winMsg.length*4)/2)),60,'#fa8');
+  ctx.fillStyle='#ff0';ctx.fillRect(40,72,W-80,1);
+  const bw=72,bx=Math.floor(W/2-bw/2);
+  Object.keys(winBtns2).forEach(k=>delete winBtns2[k]);
+  winBtnPri('again','PLAY AGAIN',bx,80,bw,13,'#ff8');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),102,'#445');
+}
+function winHandleClick(){
+  for(const[k,b] of Object.entries(winBtns2)){
+    if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
+      if(k==='again'){gameWon=false;lobbyEl.style.display='flex';renderLobby();}
+    }
+  }
+}
+

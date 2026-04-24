@@ -18,6 +18,8 @@ addEventListener('keydown',e=>{
     return;
   }
   if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
+  if((e.code==='Escape'||e.code==='KeyR')&&gameOverState){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
+  if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}
   if(debug&&running){
     if(e.code==='BracketRight'){nextStage();return;}        // ] next floor
@@ -51,5 +53,7 @@ cv.addEventListener('click',e=>{
   }
   if(lobbyEl.style.display!=='none'){lobbyHandleClick();return;}
   if(paused){pauseHandleClick();return;}
+  if(gameOverState){goHandleClick();return;}
+  if(gameWon){winHandleClick();return;}
 });
 

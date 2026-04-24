@@ -13,6 +13,8 @@ let last=performance.now();
     if(!paused)update(dt);
     draw();
     if(paused)drawPause();
+    else if(gameOverState)drawGameOver();
+    else if(gameWon)drawWin();
   }
   requestAnimationFrame(loop);
 })(last);

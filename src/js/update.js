@@ -485,13 +485,11 @@ function nextStage(){
 
 function gameOver(){
   PSG.stop();clearSave();
-  ovTitle.textContent='YOU DIED';
-  ovSub.textContent='DEPTH '+stage+' / KILLS '+totalKills;
-  overEl.style.display='flex';
+  gameOverState=true;
+  gameOverMsg='DEPTH '+stage+' / KILLS '+totalKills;
 }
 function gameCleared(){
   PSG.stop();clearSave();running=false;gameWon=true;
-  winStat.textContent='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
-  winEl.style.display='flex';
+  winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
 }
 
