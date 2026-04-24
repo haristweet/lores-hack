@@ -22,6 +22,42 @@ let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
 let secretWallPos=null,secretWallHits=0,driverActive=false;
 
+// ── Flow field for enemy navigation ──────────
+const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
+const _ffParent=new Int32Array(MAPW*MAPH);
+const _ffQueue=new Int32Array(MAPW*MAPH);
+let _ffTx=-1,_ffTy=-1;
+function buildFlowField(px,py){
+  const tx=px/TILE|0,ty=py/TILE|0;
+  if(tx===_ffTx&&ty===_ffTy)return; // same tile — no recompute needed
+  _ffTx=tx;_ffTy=ty;
+  _ffParent.fill(-1);
+  // BFS from player tile outward
+  let head=0,tail=0;
+  const start=ty*MAPW+tx;
+  _ffParent[start]=start;
+  _ffQueue[tail++]=start;
+  while(head<tail){
+    const idx=_ffQueue[head++];
+    const cx=idx%MAPW,cy=(idx/MAPW)|0;
+    const nb=[cx-1+cy*MAPW,cx+1+cy*MAPW,cx+(cy-1)*MAPW,cx+(cy+1)*MAPW];
+    const nx=[cx-1,cx+1,cx,cx],ny=[cy,cy,cy-1,cy+1];
+    for(let k=0;k<4;k++){
+      if(nx[k]<0||ny[k]<0||nx[k]>=MAPW||ny[k]>=MAPH)continue;
+      const ni=nb[k];if(_ffParent[ni]!==-1)continue;
+      if(map[ni]===1||map[ni]===4)continue; // wall
+      _ffParent[ni]=idx;_ffQueue[tail++]=ni;
+    }
+  }
+  // Build direction: each tile points one step toward player
+  for(let i=0;i<MAPW*MAPH;i++){
+    const p=_ffParent[i];
+    if(p===-1||p===i){flowField[i*2]=0;flowField[i*2+1]=0;continue;}
+    flowField[i*2]=(p%MAPW)-(i%MAPW);
+    flowField[i*2+1]=((p/MAPW)|0)-((i/MAPW)|0);
+  }
+}
+
 function genMap(){
   map=new Uint8Array(MAPW*MAPH); map.fill(1);
 
@@ -85,7 +121,7 @@ function genMap(){
   screwObj=null;
   if(stage===MAX_DEPTH){screwObj={x:best.cx*TILE+8,y:best.cy*TILE+8-12,t:0};}
   // Secret wall (20% chance, not on boss/MH floors)
-  secretWallPos=null;secretWallHits=0;
+  secretWallPos=null;secretWallHits=0;_ffTx=-1;_ffTy=-1; // force flow field rebuild
   const isBossFloor=stage%10===0||stage===99;
   if(!isBossFloor&&!monsterHouse&&Math.random()<.20){
     for(let t=0;t<400;t++){

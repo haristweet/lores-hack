@@ -292,6 +292,42 @@ let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
 let secretWallPos=null,secretWallHits=0,driverActive=false;
 
+// ── Flow field for enemy navigation ──────────
+const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
+const _ffParent=new Int32Array(MAPW*MAPH);
+const _ffQueue=new Int32Array(MAPW*MAPH);
+let _ffTx=-1,_ffTy=-1;
+function buildFlowField(px,py){
+  const tx=px/TILE|0,ty=py/TILE|0;
+  if(tx===_ffTx&&ty===_ffTy)return; // same tile — no recompute needed
+  _ffTx=tx;_ffTy=ty;
+  _ffParent.fill(-1);
+  // BFS from player tile outward
+  let head=0,tail=0;
+  const start=ty*MAPW+tx;
+  _ffParent[start]=start;
+  _ffQueue[tail++]=start;
+  while(head<tail){
+    const idx=_ffQueue[head++];
+    const cx=idx%MAPW,cy=(idx/MAPW)|0;
+    const nb=[cx-1+cy*MAPW,cx+1+cy*MAPW,cx+(cy-1)*MAPW,cx+(cy+1)*MAPW];
+    const nx=[cx-1,cx+1,cx,cx],ny=[cy,cy,cy-1,cy+1];
+    for(let k=0;k<4;k++){
+      if(nx[k]<0||ny[k]<0||nx[k]>=MAPW||ny[k]>=MAPH)continue;
+      const ni=nb[k];if(_ffParent[ni]!==-1)continue;
+      if(map[ni]===1||map[ni]===4)continue; // wall
+      _ffParent[ni]=idx;_ffQueue[tail++]=ni;
+    }
+  }
+  // Build direction: each tile points one step toward player
+  for(let i=0;i<MAPW*MAPH;i++){
+    const p=_ffParent[i];
+    if(p===-1||p===i){flowField[i*2]=0;flowField[i*2+1]=0;continue;}
+    flowField[i*2]=(p%MAPW)-(i%MAPW);
+    flowField[i*2+1]=((p/MAPW)|0)-((i/MAPW)|0);
+  }
+}
+
 function genMap(){
   map=new Uint8Array(MAPW*MAPH); map.fill(1);
 
@@ -355,7 +391,7 @@ function genMap(){
   screwObj=null;
   if(stage===MAX_DEPTH){screwObj={x:best.cx*TILE+8,y:best.cy*TILE+8-12,t:0};}
   // Secret wall (20% chance, not on boss/MH floors)
-  secretWallPos=null;secretWallHits=0;
+  secretWallPos=null;secretWallHits=0;_ffTx=-1;_ffTy=-1; // force flow field rebuild
   const isBossFloor=stage%10===0||stage===99;
   if(!isBossFloor&&!monsterHouse&&Math.random()<.20){
     for(let t=0;t<400;t++){
@@ -675,6 +711,8 @@ function update(dt){
 
   // ── Players ──
   for(const p of players){updatePlayer(p,eff);if(p.alive)revealFog(p.x,p.y);}
+  // Update flow field when human player moves to a new tile
+  {const _hpf=humanPlayer();if(_hpf)buildFlowField(_hpf.x,_hpf.y);}
   // soft player-player separation
   for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
     const a=players[i],b=players[j];if(!a.alive||!b.alive)continue;
@@ -900,6 +938,12 @@ function update(dt){
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
       if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.7;e.vx-=Math.cos(e.ang)*55;e.vy-=Math.sin(e.ang)*55;}
+    }
+    // Flow field: redirect movement through corridors when no LoS
+    if(!hasLoS(e.x,e.y,tgt.x,tgt.y)){
+      const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
+      const fdx=flowField[fi],fdy=flowField[fi+1];
+      if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
     }
     moveObj(e,eff);
     // separation

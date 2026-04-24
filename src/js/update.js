@@ -80,6 +80,8 @@ function update(dt){
 
   // ── Players ──
   for(const p of players){updatePlayer(p,eff);if(p.alive)revealFog(p.x,p.y);}
+  // Update flow field when human player moves to a new tile
+  {const _hpf=humanPlayer();if(_hpf)buildFlowField(_hpf.x,_hpf.y);}
   // soft player-player separation
   for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
     const a=players[i],b=players[j];if(!a.alive||!b.alive)continue;
@@ -305,6 +307,12 @@ function update(dt){
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
       if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.7;e.vx-=Math.cos(e.ang)*55;e.vy-=Math.sin(e.ang)*55;}
+    }
+    // Flow field: redirect movement through corridors when no LoS
+    if(!hasLoS(e.x,e.y,tgt.x,tgt.y)){
+      const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
+      const fdx=flowField[fi],fdy=flowField[fi+1];
+      if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
     }
     moveObj(e,eff);
     // separation
