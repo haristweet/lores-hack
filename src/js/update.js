@@ -225,6 +225,12 @@ function update(dt){
           if(Math.hypot(core.x-e.x,core.y-e.y)<e.r+8){spark(core.x,core.y,'#f80',6,60);cores.splice(cores.indexOf(core),1);flash('CORE EATEN!','#f44');}
         } else {
           if(d>45){e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;}else{e.vx*=.7;e.vy*=.7;}
+          e.fireCd=Math.max(0,(e.fireCd||0)-eff);
+          if(d<130&&e.fireCd<=0&&hasLoS(e.x,e.y,tgt.x,tgt.y)){
+            const a=e.ang+rnd(-e.weapon.spread,e.weapon.spread);
+            ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*e.weapon.spd,vy:Math.sin(a)*e.weapon.spd,life:e.weapon.range,dmg:e.weapon.dmg});
+            e.fireCd=e.weapon.fireCd;spark(e.x,e.y,'#f80',2,30);
+          }
           if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;}
         }
       }
@@ -235,7 +241,15 @@ function update(dt){
           const da=Math.atan2(ex.y-e.y,ex.x-e.x);const dd=Math.hypot(ex.x-e.x,ex.y-e.y);
           if(dd>18){e.vx=Math.cos(da)*e.spd;e.vy=Math.sin(da)*e.spd;}
           else{e.vx*=.2;e.vy*=.2;e._gateReached=true;flash(e.fromName+' BLOCKS EXIT!','#f44');}
-        } else if(e._gateReached){e.vx*=.1;e.vy*=.1;}
+        } else if(e._gateReached){
+          e.vx*=.1;e.vy*=.1;
+          e.fireCd=Math.max(0,(e.fireCd||0)-eff);
+          if(d<160&&e.fireCd<=0&&hasLoS(e.x,e.y,tgt.x,tgt.y)){
+            const a=Math.atan2(tgt.y-e.y,tgt.x-e.x)+rnd(-.1,.1);
+            ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*e.weapon.spd,vy:Math.sin(a)*e.weapon.spd,life:e.weapon.range,dmg:e.weapon.dmg});
+            e.fireCd=e.weapon.fireCd;spark(e.x,e.y,'#f88',3,40);
+          }
+        }
         if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg*1.5);e.atkCd=.4;}
       }
       // ── WALL-HACK (sniper): wall-penetrating high-damage shots ──
