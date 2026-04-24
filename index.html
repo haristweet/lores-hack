@@ -700,8 +700,9 @@ function update(dt){
         if(secretWallHits>=25){
           // Destroy secret wall, drop driver
           map[secretWallPos.ty*MAPW+secretWallPos.tx]=0;
-          pickups.push({type:'driver',x:bTx*TILE+8,y:bTy*TILE+8,t:0});
-          flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT UNLOCKED','#ffd700');
+          driverActive=true;
+          spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
+          flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
           SE.driver();secretWallPos=null;
         }else{
           spark(b.x,b.y,'#ff8',2,50);
@@ -895,7 +896,6 @@ function update(dt){
         if(p.type==='core'){coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');}
         else if(p.type==='health'){pl.hp=Math.min(pl.maxHp,pl.hp+25);flash(pl.pal.name+' +25HP',pl.pal.body);}
         else if(p.type==='revive'){pl.hasRevive=true;flash(pl.pal.name+' GOT REVIVE!','#ff0');spark(pl.x,pl.y,'#ff0',12,100);}
-        else if(p.type==='driver'){driverActive=true;flash('DRIVER ACTIVE — 3-WAY','#ffd700');spark(pl.x,pl.y,'#ffd700',16,110);SE.driver();}
         pickups.splice(i,1);break;
       }
     }
