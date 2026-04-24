@@ -91,6 +91,7 @@ addEventListener('keydown',e=>{
     return;
   }
   if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
+  if(e.code==='Tab'&&running&&!paused&&!gameOverState&&!gameWon){callCPU();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameOverState){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}
@@ -191,6 +192,16 @@ class CPUController{
   }
   pre(p,dt){
     this._strT+=dt;
+    // ── Rush to player when called ──
+    if(p.rushing){
+      const hp=humanPlayer();
+      if(hp){
+        const dx=hp.x-p.x,dy=hp.y-p.y,d=Math.hypot(dx,dy);
+        if(d<30){p.rushing=false;}
+        else{this._mx=dx/d;this._my=dy/d;this._fire=false;this._dash=d>60&&p.dashCd<=0&&Math.random()<.04;}
+      }else{p.rushing=false;}
+      return;
+    }
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -479,7 +490,7 @@ function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,d
 //  GAME STATE
 // ═══════════════════════════════════════════════
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
-let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='';
+let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
 let bulletTime=null; // {timer,victimName,victimPal}
@@ -496,6 +507,7 @@ function makePlayer(idx,ctrl,isHuman){
     weapon:{fireCd:.12,dmg:1,spread:.07,range:.55,spd:220},
     chargeT:0,hasRevive:false,
     edge:{dash:false,fire:false},
+    rushing:false,
     kills:0,accXp:0};
 }
 
@@ -644,6 +656,10 @@ function fireChargeShot(p,t){
 function update(dt){
   time+=dt;
   if(!running)return;
+  callCooldown=Math.max(0,callCooldown-dt);
+  callAggroTimer=Math.max(0,callAggroTimer-dt);
+  // ── Gamepad Select → callCPU ──
+  {const gps=navigator.getGamepads?navigator.getGamepads():[];for(const gp of gps){if(!gp)continue;const sel=!!gp.buttons[8]?.pressed;if(sel&&!_prevSel)callCPU();_prevSel=sel;break;}}
 
   // ── Bullet time ──
   let eff=dt;
@@ -768,9 +784,11 @@ function update(dt){
   }
 
   // ── Enemy AI ──
+  const _callHp=callAggroTimer>0?humanPlayer():null;
   for(const e of enemies){
     let tgt=null,td=Infinity;
-    for(const p of players){if(!p.alive)continue;const d=(p.x-e.x)**2+(p.y-e.y)**2;if(d<td){td=d;tgt=p;}}
+    if(_callHp&&fog[(e.y/TILE|0)*MAPW+(e.x/TILE|0)]>0){tgt=_callHp;}
+    else for(const p of players){if(!p.alive)continue;const d=(p.x-e.x)**2+(p.y-e.y)**2;if(d<td){td=d;tgt=p;}}
     if(!tgt){e.vx*=.9;e.vy*=.9;moveObj(e,eff);continue;}
     const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;
     e.ang=Math.atan2(dy,dx);e.atkCd=Math.max(0,e.atkCd-eff);e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
@@ -1058,6 +1076,16 @@ function nextStage(){
   }
 }
 
+function callCPU(){
+  if(callCooldown>0||!running||paused)return;
+  const hp=humanPlayer();if(!hp)return;
+  let called=0;
+  for(const p of players){if(!p.alive||p.isHuman)continue;p.rushing=true;called++;}
+  if(!called){flash('NO ALLIES','#555');return;}
+  callCooldown=60;callAggroTimer=8;
+  flash('CALLING ALLIES!','#0ff');
+  spark(hp.x,hp.y,'#0ff',16,110);
+}
 function gameOver(){
   PSG.stop();clearSave();
   gameOverState=true;
@@ -1360,6 +1388,7 @@ function drawHUD(){
     // Revive star
     if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
     if(p.isHuman&&driverActive){pixText('DRV',sx,H-22+6,'#ffd700');}
+    if(p.isHuman&&callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',driverActive?sx+16:sx,H-22+6,'#446');}
   }
 
   // Stage / cores (top-right, below progress bar)

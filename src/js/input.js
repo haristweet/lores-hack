@@ -18,6 +18,7 @@ addEventListener('keydown',e=>{
     return;
   }
   if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
+  if(e.code==='Tab'&&running&&!paused&&!gameOverState&&!gameWon){callCPU();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameOverState){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}

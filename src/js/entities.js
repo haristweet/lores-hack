@@ -3,7 +3,7 @@
 //  GAME STATE
 // ═══════════════════════════════════════════════
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
-let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='';
+let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
 let bulletTime=null; // {timer,victimName,victimPal}
@@ -20,6 +20,7 @@ function makePlayer(idx,ctrl,isHuman){
     weapon:{fireCd:.12,dmg:1,spread:.07,range:.55,spd:220},
     chargeT:0,hasRevive:false,
     edge:{dash:false,fire:false},
+    rushing:false,
     kills:0,accXp:0};
 }
 

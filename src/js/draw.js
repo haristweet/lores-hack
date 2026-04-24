@@ -289,6 +289,7 @@ function drawHUD(){
     // Revive star
     if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
     if(p.isHuman&&driverActive){pixText('DRV',sx,H-22+6,'#ffd700');}
+    if(p.isHuman&&callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',driverActive?sx+16:sx,H-22+6,'#446');}
   }
 
   // Stage / cores (top-right, below progress bar)

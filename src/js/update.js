@@ -61,6 +61,10 @@ function fireChargeShot(p,t){
 function update(dt){
   time+=dt;
   if(!running)return;
+  callCooldown=Math.max(0,callCooldown-dt);
+  callAggroTimer=Math.max(0,callAggroTimer-dt);
+  // ── Gamepad Select → callCPU ──
+  {const gps=navigator.getGamepads?navigator.getGamepads():[];for(const gp of gps){if(!gp)continue;const sel=!!gp.buttons[8]?.pressed;if(sel&&!_prevSel)callCPU();_prevSel=sel;break;}}
 
   // ── Bullet time ──
   let eff=dt;
@@ -185,9 +189,11 @@ function update(dt){
   }
 
   // ── Enemy AI ──
+  const _callHp=callAggroTimer>0?humanPlayer():null;
   for(const e of enemies){
     let tgt=null,td=Infinity;
-    for(const p of players){if(!p.alive)continue;const d=(p.x-e.x)**2+(p.y-e.y)**2;if(d<td){td=d;tgt=p;}}
+    if(_callHp&&fog[(e.y/TILE|0)*MAPW+(e.x/TILE|0)]>0){tgt=_callHp;}
+    else for(const p of players){if(!p.alive)continue;const d=(p.x-e.x)**2+(p.y-e.y)**2;if(d<td){td=d;tgt=p;}}
     if(!tgt){e.vx*=.9;e.vy*=.9;moveObj(e,eff);continue;}
     const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;
     e.ang=Math.atan2(dy,dx);e.atkCd=Math.max(0,e.atkCd-eff);e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
@@ -475,6 +481,16 @@ function nextStage(){
   }
 }
 
+function callCPU(){
+  if(callCooldown>0||!running||paused)return;
+  const hp=humanPlayer();if(!hp)return;
+  let called=0;
+  for(const p of players){if(!p.alive||p.isHuman)continue;p.rushing=true;called++;}
+  if(!called){flash('NO ALLIES','#555');return;}
+  callCooldown=60;callAggroTimer=8;
+  flash('CALLING ALLIES!','#0ff');
+  spark(hp.x,hp.y,'#0ff',16,110);
+}
 function gameOver(){
   PSG.stop();clearSave();
   gameOverState=true;

@@ -58,6 +58,16 @@ class CPUController{
   }
   pre(p,dt){
     this._strT+=dt;
+    // ── Rush to player when called ──
+    if(p.rushing){
+      const hp=humanPlayer();
+      if(hp){
+        const dx=hp.x-p.x,dy=hp.y-p.y,d=Math.hypot(dx,dy);
+        if(d<30){p.rushing=false;}
+        else{this._mx=dx/d;this._my=dy/d;this._fire=false;this._dash=d>60&&p.dashCd<=0&&Math.random()<.04;}
+      }else{p.rushing=false;}
+      return;
+    }
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
