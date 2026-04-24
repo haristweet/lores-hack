@@ -83,6 +83,8 @@ function setPause(v){
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
+  if(attractDemo){stopAttractDemo();e.preventDefault();return;}
+  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
     if(e.code==='Space'||e.code==='Enter'){
       introPage++;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;e.preventDefault();return;
@@ -109,11 +111,13 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>keys[e.code]=false);
 const mouse={x:W/2,y:H/2,down:false};
 function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*(W/r.width);mouse.y=(e.clientY-r.top)*(H/r.height);}
-cv.addEventListener('mousemove',updMouse);
+cv.addEventListener('mousemove',e=>{updMouse(e);if(lobbyEl.style.display!=='none')lobbyIdleT=0;});
 cv.addEventListener('mousedown',e=>{updMouse(e);if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('click',e=>{
+  if(attractDemo){stopAttractDemo();return;}
+  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
     // Page 3: BACK TO TITLE button hit test
     if(introPage===3){
@@ -527,6 +531,7 @@ function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,d
 // ═══════════════════════════════════════════════
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
 let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false;
+let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
 let bulletTime=null; // {timer,victimName,victimPal}
@@ -1946,6 +1951,33 @@ function endIntro(){
   renderLobby();
 }
 
+// ── Attract Demo ──────────────────────────────
+function startAttractDemo(){
+  attractDemo=true; attractDemoT=0;
+  const demoStage=rndi(1,100);
+  players=[];
+  const total=2+rndi(0,3); // 2-4 CPU players
+  for(let i=0;i<total;i++){
+    players.push(makePlayer(i,new CPUController(randPers()),false));
+  }
+  stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
+  monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
+  bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
+  running=true; PSG.play(1);
+  cv.classList.remove('cur');
+  genMap(); spawnT=.5;
+  let cx=0,cy=0,n=0; for(const p of players){cx+=p.x;cy+=p.y;n++;} camX=cx/n; camY=cy/n;
+  lobbyEl.style.display='none';
+}
+function stopAttractDemo(){
+  attractDemo=false; attractDemoT=0;
+  running=false; gameOverState=false; gameWon=false; bulletTime=null;
+  lobbyIdleT=0;
+  lobbyEl.style.display='flex';
+  renderLobby();
+}
+
 // Draw a player-style sprite at screen coords (sx,sy), centered, scaled sc×
 
 // ── Pause overlay (canvas-rendered) ──────────
@@ -2018,7 +2050,7 @@ function pixHuge(str,x,y,c){
 }
 
 // ── Lobby canvas UI ───────────────────────────
-let lobbyT=0,padStatus='NO GAMEPAD DETECTED';
+let lobbyT=0,lobbyIdleT=0,padStatus='NO GAMEPAD DETECTED';
 const lobbyBtns={};
 
 // standard chip button (active=selected state)
@@ -2042,6 +2074,8 @@ function lbBtnPri(key,label,x,y,w,h,col){
 
 function drawLobbyCanvas(dt){
   lobbyT+=dt;
+  lobbyIdleT+=dt;
+  if(lobbyIdleT>10)startAttractDemo();
   cv.classList.add('cur');
   Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);
 
@@ -2095,6 +2129,7 @@ function drawLobbyCanvas(dt){
 }
 
 function lobbyHandleClick(){
+  lobbyIdleT=0;
   for(const[k,b]of Object.entries(lobbyBtns)){
     if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
       if(k.startsWith('cpu')){cfg.cpus=+k[3];return;}
@@ -2340,6 +2375,19 @@ function winHandleClick(){
   }
 }
 
+// ── Attract demo overlay ──────────────────────
+function drawAttractOverlay(){
+  // Top bar: depth label
+  ctx.fillStyle='rgba(0,0,0,0.80)';ctx.fillRect(0,0,W,13);
+  const dLabel='\u2605 DEMO \u2605  DEPTH '+stage;
+  pixText(dLabel,Math.round((W-dLabel.length*4)/2),4,'#ff0');
+  // Bottom bar: pulsing exit hint
+  ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,H-13,W,13);
+  ctx.globalAlpha=0.5+Math.sin(attractDemoT*4)*0.5;
+  pixText('PRESS ANY KEY TO EXIT DEMO',Math.round((W-104)/2),H-9,'#0ff');
+  ctx.globalAlpha=1;
+}
+
 
 // ═══════════════════════════════════════════════
 //  LOOP
@@ -2356,7 +2404,11 @@ let last=performance.now();
     if(!paused)update(dt);
     draw();
     if(bulletTime)drawBulletTime();
-    if(paused)drawPause();
+    if(attractDemo){
+      attractDemoT+=dt;
+      drawAttractOverlay();
+      if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
+    }else if(paused)drawPause();
     else if(gameOverState)drawGameOver();
     else if(gameWon)drawWin();
   }

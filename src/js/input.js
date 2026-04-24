@@ -10,6 +10,8 @@ function setPause(v){
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
+  if(attractDemo){stopAttractDemo();e.preventDefault();return;}
+  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
     if(e.code==='Space'||e.code==='Enter'){
       introPage++;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;e.preventDefault();return;
@@ -36,11 +38,13 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>keys[e.code]=false);
 const mouse={x:W/2,y:H/2,down:false};
 function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*(W/r.width);mouse.y=(e.clientY-r.top)*(H/r.height);}
-cv.addEventListener('mousemove',updMouse);
+cv.addEventListener('mousemove',e=>{updMouse(e);if(lobbyEl.style.display!=='none')lobbyIdleT=0;});
 cv.addEventListener('mousedown',e=>{updMouse(e);if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('click',e=>{
+  if(attractDemo){stopAttractDemo();return;}
+  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
     // Page 3: BACK TO TITLE button hit test
     if(introPage===3){

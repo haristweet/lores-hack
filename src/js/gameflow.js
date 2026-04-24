@@ -66,4 +66,31 @@ function endIntro(){
   renderLobby();
 }
 
+// ── Attract Demo ──────────────────────────────
+function startAttractDemo(){
+  attractDemo=true; attractDemoT=0;
+  const demoStage=rndi(1,100);
+  players=[];
+  const total=2+rndi(0,3); // 2-4 CPU players
+  for(let i=0;i<total;i++){
+    players.push(makePlayer(i,new CPUController(randPers()),false));
+  }
+  stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
+  monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
+  bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
+  running=true; PSG.play(1);
+  cv.classList.remove('cur');
+  genMap(); spawnT=.5;
+  let cx=0,cy=0,n=0; for(const p of players){cx+=p.x;cy+=p.y;n++;} camX=cx/n; camY=cy/n;
+  lobbyEl.style.display='none';
+}
+function stopAttractDemo(){
+  attractDemo=false; attractDemoT=0;
+  running=false; gameOverState=false; gameWon=false; bulletTime=null;
+  lobbyIdleT=0;
+  lobbyEl.style.display='flex';
+  renderLobby();
+}
+
 // Draw a player-style sprite at screen coords (sx,sy), centered, scaled sc×

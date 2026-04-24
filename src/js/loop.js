@@ -13,7 +13,11 @@ let last=performance.now();
     if(!paused)update(dt);
     draw();
     if(bulletTime)drawBulletTime();
-    if(paused)drawPause();
+    if(attractDemo){
+      attractDemoT+=dt;
+      drawAttractOverlay();
+      if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
+    }else if(paused)drawPause();
     else if(gameOverState)drawGameOver();
     else if(gameWon)drawWin();
   }

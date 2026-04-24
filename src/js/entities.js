@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
 let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false;
+let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
 let bulletTime=null; // {timer,victimName,victimPal}

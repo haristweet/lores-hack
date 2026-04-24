@@ -68,7 +68,7 @@ function pixHuge(str,x,y,c){
 }
 
 // ── Lobby canvas UI ───────────────────────────
-let lobbyT=0,padStatus='NO GAMEPAD DETECTED';
+let lobbyT=0,lobbyIdleT=0,padStatus='NO GAMEPAD DETECTED';
 const lobbyBtns={};
 
 // standard chip button (active=selected state)
@@ -92,6 +92,8 @@ function lbBtnPri(key,label,x,y,w,h,col){
 
 function drawLobbyCanvas(dt){
   lobbyT+=dt;
+  lobbyIdleT+=dt;
+  if(lobbyIdleT>10)startAttractDemo();
   cv.classList.add('cur');
   Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);
 
@@ -145,6 +147,7 @@ function drawLobbyCanvas(dt){
 }
 
 function lobbyHandleClick(){
+  lobbyIdleT=0;
   for(const[k,b]of Object.entries(lobbyBtns)){
     if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
       if(k.startsWith('cpu')){cfg.cpus=+k[3];return;}
@@ -388,5 +391,18 @@ function winHandleClick(){
       if(k==='again'){gameWon=false;lobbyEl.style.display='flex';renderLobby();}
     }
   }
+}
+
+// ── Attract demo overlay ──────────────────────
+function drawAttractOverlay(){
+  // Top bar: depth label
+  ctx.fillStyle='rgba(0,0,0,0.80)';ctx.fillRect(0,0,W,13);
+  const dLabel='\u2605 DEMO \u2605  DEPTH '+stage;
+  pixText(dLabel,Math.round((W-dLabel.length*4)/2),4,'#ff0');
+  // Bottom bar: pulsing exit hint
+  ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,H-13,W,13);
+  ctx.globalAlpha=0.5+Math.sin(attractDemoT*4)*0.5;
+  pixText('PRESS ANY KEY TO EXIT DEMO',Math.round((W-104)/2),H-9,'#0ff');
+  ctx.globalAlpha=1;
 }
 
