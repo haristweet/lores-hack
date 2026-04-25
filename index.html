@@ -953,6 +953,8 @@ function update(dt){
       e.x+=e.vx*eff;e.y+=e.vy*eff;
       e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
       e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
+      // boss pushes players away (boss itself doesn't move)
+      for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;p.x+=ox/dd*push;p.y+=oy/dd*push;}}
       continue; // skip standard moveObj + enemy separation
     } else {
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
@@ -966,8 +968,10 @@ function update(dt){
       if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
     }
     moveObj(e,eff);
-    // separation
+    // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
+    // separation: enemy-player (both directions)
+    for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;p.x-=ox/dd*push;p.y-=oy/dd*push;}}
   }
 
   // ── Pickups ──
