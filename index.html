@@ -213,13 +213,23 @@ class CPUController{
       this._rT=0.3+Math.random()*.2;
       this._target=this._pickTarget(p,ps,hp);
     }
-    if(!this._target){this._wander(p,hp);this._fire=false;return;}
+    if(!this._target){this._wander(p,hp);this._seekNearbyItem(p,70*70);this._fire=false;return;}
     const dx=this._target.x-p.x,dy=this._target.y-p.y,d=Math.hypot(dx,dy)||1;
     this._aim=Math.atan2(dy,dx);
     this._move(p,ps,hp,d,this._wantDist(ps));
     const los=hasLoS(p.x,p.y,this._target.x,this._target.y);
     this._fire=d<this._fireRange(ps)&&los;
     this._dash=this._wantDash(p,ps,d);
+    this._seekNearbyItem(p,28*28);
+  }
+  _seekNearbyItem(p,r2){
+    let best=null,bestD=r2;
+    for(const c of cores){const dd=(c.x-p.x)**2+(c.y-p.y)**2;if(dd<Math.min(bestD,50*50)){best=c;bestD=dd;}}
+    for(const pk of pickups){
+      const dd=(pk.x-p.x)**2+(pk.y-p.y)**2;if(dd>=bestD)continue;
+      if(pk.type==='core'||(pk.type==='health'&&p.hp<p.maxHp*.75)||(pk.type==='revive'&&!p.hasRevive)){best=pk;bestD=dd;}
+    }
+    if(best){const d=Math.sqrt(bestD)||1,idx=best.x-p.x,idy=best.y-p.y;this._mx=idx/d;this._my=idy/d;}
   }
   _pickTarget(p,ps,hp){
     if(!enemies.length)return null;
