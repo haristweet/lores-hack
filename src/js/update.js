@@ -408,7 +408,8 @@ function update(dt){
   }
 
   // ── Game over ──
-  if(!players.some(p=>p.alive&&p.isHuman)){running=false;gameOver();}
+  const _goCheck=attractDemo?!players.some(p=>p.alive):!players.some(p=>p.alive&&p.isHuman);
+  if(_goCheck){running=false;gameOver();}
 }
 
 function damagePlayer(p,d){
