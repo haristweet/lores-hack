@@ -223,6 +223,7 @@ function update(dt){
           const ca=Math.atan2(core.y-e.y,core.x-e.x);
           e.vx=Math.cos(ca)*e.spd;e.vy=Math.sin(ca)*e.spd;
           if(Math.hypot(core.x-e.x,core.y-e.y)<e.r+8){spark(core.x,core.y,'#f80',6,60);cores.splice(cores.indexOf(core),1);flash('CORE EATEN!','#f44');}
+          if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.5;}
         } else {
           if(d>45){e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;}else{e.vx*=.7;e.vy*=.7;}
           e.fireCd=Math.max(0,(e.fireCd||0)-eff);
