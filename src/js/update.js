@@ -426,6 +426,7 @@ function update(dt){
 function damagePlayer(p,d){
   if(p.iframe>0)return;
   p.hp-=d;p.iframe=.4;shake=Math.max(shake,2);blood(p.x,p.y);
+  if(!p.isHuman)p._hit=true;
   if(p.hp<=0){
     // Revive item auto-activates
     if(p.hasRevive){

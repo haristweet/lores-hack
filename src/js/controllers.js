@@ -68,6 +68,7 @@ class CPUController{
       }else{p.rushing=false;}
       return;
     }
+    if(p._hit){p._hit=false;this._rT=0;this._target=null;}
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -120,6 +121,14 @@ class CPUController{
     this._mx*=.9;this._my*=.9;
   }
   _preScav(p,dt,hp){
+    if(p._hit){p._hit=false;this._retaliateT=2.5+Math.random();}
+    if((this._retaliateT||0)>0){
+      this._retaliateT-=dt;
+      const t=nearEnemy(p.x,p.y);
+      if(t){const dx=t.x-p.x,dy=t.y-p.y,d=Math.hypot(dx,dy)||1;this._aim=Math.atan2(dy,dx);this._mx=d>20?dx/d:0;this._my=d>20?dy/d:0;this._fire=d<110;}
+      else{this._wander(p,hp);this._fire=false;}
+      this._dash=false;return;
+    }
     const item=nearItem(p.x,p.y);
     if(item){
       const dx=item.x-p.x,dy=item.y-p.y,d=Math.hypot(dx,dy)||1;
