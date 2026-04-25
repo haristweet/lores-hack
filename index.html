@@ -895,7 +895,7 @@ function update(dt){
           if(dd>18){e.vx=Math.cos(da)*e.spd;e.vy=Math.sin(da)*e.spd;}
           else{e.vx*=.2;e.vy*=.2;e._gateReached=true;flash(e.fromName+' BLOCKS EXIT!','#f44');}
         } else if(e._gateReached){
-          e.vx*=.1;e.vy*=.1;
+          e.vx=0;e.vy=0; // flow field will navigate at full spd when no LoS
           e.fireCd=Math.max(0,(e.fireCd||0)-eff);
           if(d<160&&e.fireCd<=0&&hasLoS(e.x,e.y,tgt.x,tgt.y)){
             const a=Math.atan2(tgt.y-e.y,tgt.x-e.x)+rnd(-.1,.1);
