@@ -249,4 +249,4 @@ function drawOffscreenIndicators(){
 function tileAt(x,y){const tx=(x/TILE)|0,ty=(y/TILE)|0;if(tx<0||ty<0||tx>=MAPW||ty>=MAPH)return 1;return map[ty*MAPW+tx];}
 function solid(x,y){const t=tileAt(x,y);return t===1||t===4;}
 function hitsWall(x,y,r){for(let a=0;a<8;a++){const t=a*Math.PI/4;if(solid(x+Math.cos(t)*r,y+Math.sin(t)*r))return true;}return solid(x,y);}
-function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,dy)/4);for(let i=1;i<n;i++){const t=i/n;if(solid(x0+dx*t,y0+dy*t))return false;}return true;}
+function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,dy)/4);const px=-dy/Math.hypot(dx,dy)*3||0,py=dx/Math.hypot(dx,dy)*3||0;for(let i=1;i<n;i++){const t=i/n;const mx=x0+dx*t,my=y0+dy*t;if(solid(mx,my)||solid(mx+px,my+py)||solid(mx-px,my-py))return false;}return true;}

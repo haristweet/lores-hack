@@ -533,7 +533,7 @@ function drawOffscreenIndicators(){
 function tileAt(x,y){const tx=(x/TILE)|0,ty=(y/TILE)|0;if(tx<0||ty<0||tx>=MAPW||ty>=MAPH)return 1;return map[ty*MAPW+tx];}
 function solid(x,y){const t=tileAt(x,y);return t===1||t===4;}
 function hitsWall(x,y,r){for(let a=0;a<8;a++){const t=a*Math.PI/4;if(solid(x+Math.cos(t)*r,y+Math.sin(t)*r))return true;}return solid(x,y);}
-function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,dy)/4);for(let i=1;i<n;i++){const t=i/n;if(solid(x0+dx*t,y0+dy*t))return false;}return true;}
+function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,dy)/4);const px=-dy/Math.hypot(dx,dy)*3||0,py=dx/Math.hypot(dx,dy)*3||0;for(let i=1;i<n;i++){const t=i/n;const mx=x0+dx*t,my=y0+dy*t;if(solid(mx,my)||solid(mx+px,my+py)||solid(mx-px,my-py))return false;}return true;}
 
 
 // ═══════════════════════════════════════════════
@@ -981,6 +981,7 @@ function update(dt){
       const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
       const fdx=flowField[fi],fdy=flowField[fi+1];
       if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
+      else{if(!e._wanderA||Math.random()<.015)e._wanderA=Math.random()*Math.PI*2;const spd=e.spd*.6;e.vx=Math.cos(e._wanderA)*spd;e.vy=Math.sin(e._wanderA)*spd;}
     }
     moveObj(e,eff);
     // separation: enemy-enemy

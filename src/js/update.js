@@ -335,6 +335,7 @@ function update(dt){
       const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
       const fdx=flowField[fi],fdy=flowField[fi+1];
       if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
+      else{if(!e._wanderA||Math.random()<.015)e._wanderA=Math.random()*Math.PI*2;const spd=e.spd*.6;e.vx=Math.cos(e._wanderA)*spd;e.vy=Math.sin(e._wanderA)*spd;}
     }
     moveObj(e,eff);
     // separation: enemy-enemy
