@@ -68,7 +68,7 @@ class CPUController{
       }else{p.rushing=false;}
       return;
     }
-    if(p._hit){p._hit=false;this._rT=0;this._target=null;}
+    if(p._hit){p._hit=false;this._rT=0;this._target=null;this._retaliateT=2.5+Math.random();}
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -121,7 +121,6 @@ class CPUController{
     this._mx*=.9;this._my*=.9;
   }
   _preScav(p,dt,hp){
-    if(p._hit){p._hit=false;this._retaliateT=2.5+Math.random();}
     if((this._retaliateT||0)>0){
       this._retaliateT-=dt;
       const t=nearEnemy(p.x,p.y);

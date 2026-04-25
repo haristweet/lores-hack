@@ -16,6 +16,13 @@ function updatePlayer(p,dt){
   const chB=p.controller.charge(p);
   if(chB&&p.dashT<=0)spd*=0.35;
   p.vx=mx*spd;p.vy=my*spd;
+  // CPU wall avoidance: try perpendicular when heading into a wall
+  if(!p.isHuman&&(mx||my)&&hitsWall(p.x+p.vx*.08,p.y+p.vy*.08,p.r)){
+    const a=Math.atan2(p.vy,p.vx);
+    const a2=a+Math.PI/2,a3=a-Math.PI/2;
+    if(!hitsWall(p.x+Math.cos(a2)*spd*.08,p.y+Math.sin(a2)*spd*.08,p.r)){p.vx=Math.cos(a2)*spd*.7;p.vy=Math.sin(a2)*spd*.7;}
+    else if(!hitsWall(p.x+Math.cos(a3)*spd*.08,p.y+Math.sin(a3)*spd*.08,p.r)){p.vx=Math.cos(a3)*spd*.7;p.vy=Math.sin(a3)*spd*.7;}
+  }
   moveObj(p,dt);
   p.aim=p.controller.aim(p);
   // Charge accumulation / release

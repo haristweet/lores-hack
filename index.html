@@ -206,7 +206,7 @@ class CPUController{
       }else{p.rushing=false;}
       return;
     }
-    if(p._hit){p._hit=false;this._rT=0;this._target=null;}
+    if(p._hit){p._hit=false;this._rT=0;this._target=null;this._retaliateT=2.5+Math.random();}
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -259,7 +259,6 @@ class CPUController{
     this._mx*=.9;this._my*=.9;
   }
   _preScav(p,dt,hp){
-    if(p._hit){p._hit=false;this._retaliateT=2.5+Math.random();}
     if((this._retaliateT||0)>0){
       this._retaliateT-=dt;
       const t=nearEnemy(p.x,p.y);
@@ -671,6 +670,13 @@ function updatePlayer(p,dt){
   const chB=p.controller.charge(p);
   if(chB&&p.dashT<=0)spd*=0.35;
   p.vx=mx*spd;p.vy=my*spd;
+  // CPU wall avoidance: try perpendicular when heading into a wall
+  if(!p.isHuman&&(mx||my)&&hitsWall(p.x+p.vx*.08,p.y+p.vy*.08,p.r)){
+    const a=Math.atan2(p.vy,p.vx);
+    const a2=a+Math.PI/2,a3=a-Math.PI/2;
+    if(!hitsWall(p.x+Math.cos(a2)*spd*.08,p.y+Math.sin(a2)*spd*.08,p.r)){p.vx=Math.cos(a2)*spd*.7;p.vy=Math.sin(a2)*spd*.7;}
+    else if(!hitsWall(p.x+Math.cos(a3)*spd*.08,p.y+Math.sin(a3)*spd*.08,p.r)){p.vx=Math.cos(a3)*spd*.7;p.vy=Math.sin(a3)*spd*.7;}
+  }
   moveObj(p,dt);
   p.aim=p.controller.aim(p);
   // Charge accumulation / release
