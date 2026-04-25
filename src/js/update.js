@@ -152,7 +152,7 @@ function update(dt){
             for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
             if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
-            PSG.play(stage); // revert to zone BGM
+            if(!attractDemo)PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
             const refund=Math.min(coresNeeded-coresCollected,2);
             if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
@@ -460,7 +460,7 @@ function nextStage(){
   const isBoss=stage%10===0||stage===99;
   monsterHouse=!isBoss&&stage>1&&!wasMH&&Math.random()<0.2;
   monsterHouseCleared=false;
-  PSG.play(stage);saveGame();
+  if(!attractDemo)PSG.play(stage);saveGame();
   // Re-roll moody sub-ability each floor
   const msgs=[];
   for(const p of players){
@@ -499,7 +499,7 @@ function nextStage(){
       flash('★ BOSS APPROACHES ★','#f44');
       flash('WALL-BREAKER INCOMING','#f88');
       shake=Math.max(shake,3);
-      PSG.boss(stage);
+      if(!attractDemo)PSG.boss(stage);
     },1200);
   }
 }

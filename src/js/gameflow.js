@@ -79,7 +79,7 @@ function startAttractDemo(){
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
   bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
-  running=true; PSG.play(1);
+  running=true; PSG.stop();
   cv.classList.remove('cur');
   genMap(); spawnT=.5;
   let cx=0,cy=0,n=0; for(const p of players){cx+=p.x;cy+=p.y;n++;} camX=cx/n; camY=cy/n;
@@ -88,6 +88,7 @@ function startAttractDemo(){
 function stopAttractDemo(){
   attractDemo=false; attractDemoT=0;
   running=false; gameOverState=false; gameWon=false; bulletTime=null;
+  PSG.stop();
   lobbyIdleT=0;
   lobbyEl.style.display='flex';
   renderLobby();
