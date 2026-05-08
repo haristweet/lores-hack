@@ -76,6 +76,7 @@ window.addEventListener('resize',fit); fit();
 // ═══════════════════════════════════════════════
 const keys={};
 let paused=false,debug=false,introActive=false,introPage=0,introT=0;
+let podSelectState=null,_podPadPrev={};
 const pauseEl=document.getElementById('pause');
 function setPause(v){
   paused=v;
@@ -207,6 +208,9 @@ class CPUController{
       return;
     }
     if(p._hit){p._hit=false;this._rT=0;this._target=null;this._retaliateT=2.5+Math.random();}
+    const boss=enemies.find(e=>e.type==='boss');
+    if(boss){this._preBoss(p,dt,boss);return;}
+    if(this._needsHeal(p))return;
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -222,6 +226,38 @@ class CPUController{
     this._fire=d<this._fireRange(ps)&&los;
     this._dash=this._wantDash(p,ps,d);
     this._seekNearbyItem(p,28*28);
+  }
+  _preBoss(p,dt,boss){
+    const dx=boss.x-p.x,dy=boss.y-p.y,d=Math.hypot(dx,dy)||1;
+    this._aim=Math.atan2(dy,dx);
+    // Maintain safe distance, strafe hard to dodge shots
+    const wantD=80;
+    let mx=0,my=0;
+    if(d>wantD+15){mx=Math.cos(this._aim);my=Math.sin(this._aim);}
+    else if(d<wantD-15){mx=-Math.cos(this._aim);my=-Math.sin(this._aim);}
+    const sa=this._aim+Math.PI/2,sv=Math.sin(this._strT*3.5);
+    mx+=Math.cos(sa)*sv*.9;my+=Math.sin(sa)*sv*.9;
+    const ml=Math.hypot(mx,my);if(ml>1){mx/=ml;my/=ml;}
+    this._mx=mx;this._my=my;
+    this._fire=d<150&&hasLoS(p.x,p.y,boss.x,boss.y);
+    // Dash away when boss closes in
+    this._dash=d<45&&p.dashCd<=0&&Math.random()<.07;
+  }
+  _needsHeal(p){
+    if(p.hp>=p.maxHp*.5)return false;
+    let best=null,bestD=Infinity;
+    for(const pk of pickups){
+      if(pk.type!=='health')continue;
+      const dd=(pk.x-p.x)**2+(pk.y-p.y)**2;
+      if(dd<bestD){bestD=dd;best=pk;}
+    }
+    if(!best)return false;
+    const d=Math.sqrt(bestD)||1;
+    this._mx=(best.x-p.x)/d;this._my=(best.y-p.y)/d;
+    const ne=nearEnemy(p.x,p.y);
+    if(ne){const ed=Math.hypot(ne.x-p.x,ne.y-p.y);this._aim=Math.atan2(ne.y-p.y,ne.x-p.x);this._fire=ed<this._fireRange(this.effPers)&&hasLoS(p.x,p.y,ne.x,ne.y);}
+    this._dash=false;
+    return true;
   }
   _seekNearbyItem(p,r2){
     let best=null,bestD=r2;
@@ -312,7 +348,7 @@ function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
-let secretWallPos=null,secretWallHits=0,driverActive=false;
+let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false;
 
 // ── Flow field for enemy navigation ──────────
 const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
@@ -379,9 +415,13 @@ function genMap(){
     return;
   }
 
+  // Active area grows with depth: D1=22×22, D84+=60×60
+  const span=Math.min(MAPW-4,Math.max(22,18+((stage/2)|0)));
+  const ox=(MAPW-span)>>1,oy=(MAPH-span)>>1;
+  const nRooms=Math.min(24,Math.max(6,4+((stage/4)|0)));
   const rs=[];
-  for(let i=0;i<24;i++){
-    const w=rndi(6,12),h=rndi(5,10),x=rndi(1,MAPW-w-1),y=rndi(1,MAPH-h-1);
+  for(let i=0;i<nRooms;i++){
+    const w=rndi(6,12),h=rndi(5,10),x=rndi(ox+1,ox+span-w-1),y=rndi(oy+1,oy+span-h-1);
     rs.push({x,y,w,h,cx:x+(w>>1),cy:y+(h>>1)});
     for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)map[yy*MAPW+xx]=0;
   }
@@ -404,6 +444,16 @@ function genMap(){
   coresNeeded=nc; coresCollected=0; exitOpen=false; cores=[];
   let placed=0,guard=0;
   while(placed<nc&&guard++<800){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){cores.push({x:tx*TILE+8,y:ty*TILE+8,t:0});placed++;}}
+  // gatekeepers: start D10, placed in rooms (not starting room)
+  gatekeepers=[];poisonPuddles=[];
+  if(stage>=10){
+    const nGK=Math.min(4,1+((stage-10)/25|0));
+    const used=new Set();used.add(0);// skip starting room
+    for(let i=0;i<nGK;i++){
+      const ri=rndi(1,rs.length);if(used.has(ri))continue;used.add(ri);
+      const r=rs[ri];gatekeepers.push({x:r.cx*TILE+8,y:r.cy*TILE+8,cd:1.5+Math.random()*1.5});
+    }
+  }
   // cold sleep pods: every 10 floors, one pod
   pods=[];
   if(stage%10===0){
@@ -552,6 +602,7 @@ let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOve
 let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
+let gatekeepers=[],poisonPuddles=[];
 let bulletTime=null; // {timer,victimName,victimPal}
 
 // ═══════════════════════════════════════════════
@@ -578,6 +629,7 @@ function makeEnemy(type,x,y){
   else if(type==='runner'){b.hp=2*sc;b.spd=42+stage*.15;b.r=2.5;b.dmg=6*sc;}
   else if(type==='brute') {b.hp=10*sc;b.spd=14+stage*.08;b.r=5;b.dmg=18*sc;}
   else if(type==='shooter'){b.hp=3*sc;b.spd=14+stage*.08;b.r=3;b.dmg=10*sc;b.range=70;}
+  else if(type==='poison') {b.hp=4*sc;b.spd=11+stage*.07;b.r=3;b.dmg=5*sc;b.pudCd=0;}
   return b;
 }
 function makeZombie(p){
@@ -604,7 +656,7 @@ function makeZombie(p){
 
 function makeBoss(){
   const sc=eScale();
-  const hp=Math.round(120*(1+stage*.09)*sc);
+  const hp=Math.round(100+stage*stage*.8);
   let bx,by;
   for(let t=0;t<300;t++){
     const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
@@ -635,8 +687,8 @@ function moveObj(o,dt){
   const nx=o.x+o.vx*dt; if(!hitsWall(nx,o.y,o.r))o.x=nx;
   const ny=o.y+o.vy*dt; if(!hitsWall(o.x,ny,o.r))o.y=ny;
   // Wall escape: if somehow embedded, push out
-  if(solid(o.x,o.y)){
-    for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.6,ey=o.y+Math.sin(t)*TILE*.6;if(!solid(ex,ey)){o.x=ex;o.y=ey;break;}}
+  if(hitsWall(o.x,o.y,o.r)){
+    for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.8,ey=o.y+Math.sin(t)*TILE*.8;if(!hitsWall(ex,ey,o.r)){o.x=ex;o.y=ey;break;}}
   }
 }
 function spawnEnemy(type){
@@ -663,7 +715,7 @@ function updatePlayer(p,dt){
   let spd=p.spd;
   p.dashCd=Math.max(0,p.dashCd-dt);p.dashT=Math.max(0,p.dashT-dt);
   const db=p.controller.dash(p);
-  if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
+  if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=overdriveActive?.18:1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
   p.edge.dash=db;
   if(p.dashT>0)spd*=3.2;
   // Charge button (need early peek to apply speed penalty)
@@ -693,6 +745,7 @@ function updatePlayer(p,dt){
     const dmg=(w.dmg+p.level*.4)*.25;
     const angles=driverActive?[p.aim-0.22,p.aim,p.aim+0.22]:[p.aim+rnd(-spread,spread)];
     for(const a of angles)bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,life:w.range,dmg:dmg*(driverActive?.7:1),owner:p,trail:[]});
+    if(vertidriveActive)bullets.push({x:p.x-ox,y:p.y-oy,vx:Math.cos(p.aim+Math.PI)*w.spd,vy:Math.sin(p.aim+Math.PI)*w.spd,life:w.range,dmg:dmg*.8,owner:p,trail:[]});
     p.fireCd=w.fireCd*(driverActive?1.15:1);p.muzzle=.08;
     shake=Math.max(shake,.8);
     p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
@@ -747,7 +800,7 @@ function update(dt){
   for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
     const a=players[i],b=players[j];if(!a.alive||!b.alive)continue;
     const dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy),mn=a.r+b.r;
-    if(d>0&&d<mn){const push=(mn-d)*.5;a.x+=dx/d*push;a.y+=dy/d*push;b.x-=dx/d*push;b.y-=dy/d*push;}
+    if(d>0&&d<mn){const push=(mn-d)*.5;const nax=a.x+dx/d*push,nay=a.y+dy/d*push,nbx=b.x-dx/d*push,nby=b.y-dy/d*push;if(!hitsWall(nax,nay,a.r)){a.x=nax;a.y=nay;}if(!hitsWall(nbx,nby,b.r)){b.x=nbx;b.y=nby;}}
   }
 
   // ── Enemy spawn ──
@@ -757,7 +810,8 @@ function update(dt){
   if(!monsterHouse&&spawnT<=0&&enemies.length<maxE){
     spawnT=spawnInterval;
     const r=Math.random();
-    spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
+    if(stage>=20)spawnEnemy(r<.32?'grunt':r<.58?'runner':r<.76?'shooter':r<.9?'brute':'poison');
+    else spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
   }
   // ── Monster House clear check ──
   if(monsterHouse&&!monsterHouseCleared&&mhSpawnPending===0&&time>2&&enemies.length===0){
@@ -782,11 +836,20 @@ function update(dt){
         SE.clang();
         spark(b.x,b.y,'#ffd700',6,70);
         if(secretWallHits>=25){
-          // Destroy secret wall, drop driver
+          // Destroy secret wall, drop driver or overdrive (50/50)
           map[secretWallPos.ty*MAPW+secretWallPos.tx]=0;
-          driverActive=true;
+          const roll=Math.random();
+          if(roll<1/3){
+            driverActive=true;
+            flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
+          }else if(roll<2/3){
+            overdriveActive=true;
+            flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');
+          }else{
+            vertidriveActive=true;
+            flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');
+          }
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
-          flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
           SE.driver();secretWallPos=null;
         }else{
           spark(b.x,b.y,'#ff8',2,50);
@@ -795,6 +858,9 @@ function update(dt){
       bullets.splice(i,1);continue;
     }
     let hit=false;
+    // gatekeeper absorbs bullets
+    for(const gk of gatekeepers){if((b.x-gk.x)**2+(b.y-gk.y)**2<6*6){spark(b.x,b.y,'#f44',3,40);bullets.splice(i,1);hit=true;break;}}
+    if(hit)continue;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
       if(dx*dx+dy*dy<(e.r+(b.r||1.5))**2){
@@ -803,6 +869,7 @@ function update(dt){
         if(e.hp<=0){
           e._dead=true;enemies.splice(j,1);
           totalKills++;if(b.owner)b.owner.kills++;
+          if(e.type==='boss')SE.bossDeath();else SE.kill();
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
           const healRate=stage>50?Math.max(.02,.12-(stage-50)*.002):.12;
@@ -813,6 +880,8 @@ function update(dt){
             for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
             if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
+            if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
+            if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
             if(!attractDemo)PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
             const refund=Math.min(coresNeeded-coresCollected,2);
@@ -860,7 +929,12 @@ function update(dt){
     if(!tgt){e.vx*=.9;e.vy*=.9;moveObj(e,eff);continue;}
     const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;
     e.ang=Math.atan2(dy,dx);e.atkCd=Math.max(0,e.atkCd-eff);e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
-    if(e.type==='shooter'){
+    if(e.type==='poison'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
+      e.pudCd-=eff;
+      if(e.pudCd<=0){poisonPuddles.push({x:e.x,y:e.y,t:6,damageCd:0});e.pudCd=0.7;}
+    } else if(e.type==='shooter'){
       const s=e.spd,w=70;
       if(d<w-10){e.vx=-Math.cos(e.ang)*s;e.vy=-Math.sin(e.ang)*s;}
       else if(d>w+10){e.vx=Math.cos(e.ang)*s;e.vy=Math.sin(e.ang)*s;}
@@ -984,7 +1058,7 @@ function update(dt){
       e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
       e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
       // boss pushes players away (boss itself doesn't move)
-      for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;p.x+=ox/dd*push;p.y+=oy/dd*push;}}
+      for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;const npx=p.x+ox/dd*push,npy=p.y+oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
       continue; // skip standard moveObj + enemy separation
     } else {
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
@@ -1002,7 +1076,30 @@ function update(dt){
     // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
     // separation: enemy-player (both directions)
-    for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;p.x-=ox/dd*push;p.y-=oy/dd*push;}}
+    for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;const npx=p.x-ox/dd*push,npy=p.y-oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
+  }
+
+  // ── Gatekeepers ──
+  for(const gk of gatekeepers){
+    gk.cd-=eff;
+    if(gk.cd<=0){
+      gk.cd=2.5;
+      for(let a=0;a<8;a++){const ang=a*Math.PI/4;ebullets.push({x:gk.x,y:gk.y,vx:Math.cos(ang)*80,vy:Math.sin(ang)*80,life:1.8,dmg:8});}
+      spark(gk.x,gk.y,'#f44',8,60);
+    }
+  }
+
+  // ── Poison puddles ──
+  for(let i=poisonPuddles.length-1;i>=0;i--){
+    const pd=poisonPuddles[i];pd.t-=eff;
+    if(pd.t<=0){poisonPuddles.splice(i,1);continue;}
+    pd.damageCd=(pd.damageCd||0)-eff;
+    for(const p of players){
+      if(!p.alive)continue;
+      if((p.x-pd.x)**2+(p.y-pd.y)**2<10*10){
+        if(pd.damageCd<=0){damagePlayer(p,3);pd.damageCd=0.5;}
+      }
+    }
   }
 
   // ── Pickups ──
@@ -1024,17 +1121,50 @@ function update(dt){
       if(dx*dx+dy*dy<64){cores.splice(i,1);coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');break;}
     }
   }
-  if(!exitOpen&&coresCollected>=coresNeeded){exitOpen=true;flash('EXIT ONLINE','#ff0');}
+  if(!monsterHouse&&!exitOpen&&coresCollected>=coresNeeded){exitOpen=true;flash('EXIT ONLINE','#ff0');}
 
   // ── Cold sleep pods ──
+  // Update active pod selection
+  if(podSelectState){
+    const ps=podSelectState;
+    const adx=ps.activator.x-ps.pod.x,ady=ps.activator.y-ps.pod.y;
+    if(!ps.activator.alive||adx*adx+ady*ady>144){podSelectState=null;_podPadPrev={};}
+    else{
+      ps.moveCd=(ps.moveCd||0)-dt;
+      const gps=navigator.getGamepads?navigator.getGamepads():[];
+      let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+      const edge=(k,v)=>{const r=v&&!_podPadPrev[k];_podPadPrev[k]=!!v;return r;};
+      const ax=gp?gp.axes[0]||0:0;
+      const left=edge('L',keys.ArrowLeft||(gp&&((gp.buttons[14]?.pressed)||ax<-.5)));
+      const right=edge('R',keys.ArrowRight||(gp&&((gp.buttons[15]?.pressed)||ax>.5)));
+      const confirm=edge('A',(keys.Enter||keys.NumpadEnter)||(gp&&gp.buttons[0]?.pressed));
+      const cancel=edge('B',keys.Escape||(gp&&gp.buttons[1]?.pressed));
+      if(left||right){ps.cursor=((ps.cursor+(right?1:-1))+ps.candidates.length)%ps.candidates.length;}
+      if(confirm){
+        const dead=ps.candidates[ps.cursor];
+        ps.pod.used=true;
+        dead.alive=true;dead.hp=dead.maxHp*.5;dead.iframe=1;
+        dead.x=ps.pod.x+rnd(-10,10);dead.y=ps.pod.y+rnd(-10,10);
+        const newPers=randPers();
+        dead.controller=new CPUController(newPers);
+        spark(ps.pod.x,ps.pod.y,'#0ff',16,80);
+        flash('COLD SLEEP: '+dead.pal.name+' REVIVED','#0ff');
+        flash(dead.pal.name+': '+PERS_LABEL[newPers],dead.pal.body);
+        podSelectState=null;_podPadPrev={};
+      }
+      if(cancel){podSelectState=null;_podPadPrev={};}
+    }
+  }
   for(const pod of pods){
     if(pod.used)continue;
     pod.t+=eff;
     for(const pl of players){if(!pl.alive)continue;const dx=pl.x-pod.x,dy=pl.y-pod.y;
       if(dx*dx+dy*dy<64){
-        const dead=players.find(p=>!p.alive&&!p.isHuman);
-        if(dead){
+        const deadCPUs=players.filter(p=>!p.alive&&!p.isHuman);
+        if(deadCPUs.length===0)break;
+        if(deadCPUs.length===1){
           pod.used=true;
+          const dead=deadCPUs[0];
           dead.alive=true;dead.hp=dead.maxHp*.5;dead.iframe=1;
           dead.x=pod.x+rnd(-10,10);dead.y=pod.y+rnd(-10,10);
           const newPers=randPers();
@@ -1042,6 +1172,8 @@ function update(dt){
           spark(pod.x,pod.y,'#0ff',16,80);
           flash('COLD SLEEP: '+dead.pal.name+' REVIVED','#0ff');
           flash(dead.pal.name+': '+PERS_LABEL[newPers],dead.pal.body);
+        }else if(!podSelectState||podSelectState.pod!==pod){
+          podSelectState={pod,candidates:deadCPUs,cursor:0,activator:pl};
         }
         break;
       }
@@ -1051,7 +1183,7 @@ function update(dt){
   // ── Exit / Screw ──
   if(exitOpen&&exits[0]){
     const ex=exits[0];
-    for(const pl of players){if(!pl.alive)continue;const dx=pl.x-ex.x,dy=pl.y-ex.y;
+    for(const pl of players){if(!pl.alive||!pl.isHuman)continue;const dx=pl.x-ex.x,dy=pl.y-ex.y;
       if(dx*dx+dy*dy<80){
         if(stage===MAX_DEPTH){/* screw handled below */}
         else{nextStage();return;}
@@ -1133,6 +1265,7 @@ function nextStage(){
   const isBoss=stage%10===0||stage===99;
   monsterHouse=!isBoss&&stage>1&&!wasMH&&Math.random()<0.2;
   monsterHouseCleared=false;
+  if(monsterHouse)mhSpawnPending=1; // prevent premature clear before spawn timeout fires
   if(!attractDemo)PSG.play(stage);saveGame();
   // Re-roll moody sub-ability each floor
   const msgs=[];
@@ -1251,6 +1384,28 @@ function draw(){
     pixText('SCREW',(screwObj.x-10)|0,(screwObj.y-12)|0,'#ff0');
   }
 
+  // POISON PUDDLES
+  for(const pd of poisonPuddles){
+    const a=Math.min(.55,pd.t/6*.55);
+    ctx.fillStyle='#3a0';ctx.globalAlpha=a;
+    ctx.fillRect(pd.x-8,pd.y-5,16,10);
+    ctx.fillStyle='#6f2';ctx.globalAlpha=a*.7;
+    ctx.fillRect(pd.x-5,pd.y-7,10,14);
+    ctx.globalAlpha=1;
+  }
+
+  // GATEKEEPERS
+  for(const gk of gatekeepers){
+    const pulse=(Math.sin(performance.now()*.003)+1)*.5;
+    ctx.fillStyle='#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
+    ctx.fillStyle='#f44';ctx.globalAlpha=.5+pulse*.5;
+    ctx.fillRect(gk.x-4,gk.y-4,8,8);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#f88';
+    ctx.fillRect(gk.x-1,gk.y-6,2,12);ctx.fillRect(gk.x-6,gk.y-1,12,2);
+    pixText('GK',(gk.x-4)|0,(gk.y-14)|0,'#f44');
+  }
+
   // COLD SLEEP POD
   for(const pod of pods){
     if(pod.used)continue;pod.t=(pod.t||0);
@@ -1335,6 +1490,24 @@ function draw(){
     const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,140);
     g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(200,0,0,.35)');
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  // Pod revival selection UI
+  if(podSelectState){
+    const ps=podSelectState;
+    const sx=(ps.pod.x-camX+W/2)|0,sy=(ps.pod.y-camY+H/2)|0;
+    const sel=ps.candidates[ps.cursor];
+    const name=sel.pal.name;
+    const bw=Math.max(52,name.length*4+24),bh=22;
+    const bx=(sx-bw/2)|0,by=sy-38;
+    ctx.fillStyle='#001a1a';ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='#0ff';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+    pixText('REVIVE?',bx+((bw-7*4)/2)|0,by+2,'#0ff');
+    if(ps.candidates.length>1){
+      pixText('◄',(bx+3)|0,by+11,'#0af');
+      pixText('►',(bx+bw-7)|0,by+11,'#0af');
+    }
+    pixText(name,(bx+(bw-name.length*4)/2)|0,by+11,sel.pal.body);
   }
 
   // Pause dim
@@ -1464,9 +1637,8 @@ function drawHUD(){
 
   // Bottom bar
   ctx.fillStyle='#000c';ctx.fillRect(0,H-22,W,22);
-  ctx.fillStyle='#0ff';ctx.fillRect(0,H-22,W,1);
 
-  const n=Math.max(1,players.length),sw=Math.floor(W/n);
+  const n=Math.max(4,players.length),sw=Math.floor(W/n);
   for(let i=0;i<players.length;i++){
     const p=players[i],sx=i*sw+2;
     const nc=p.alive?p.pal.body:'#555';
@@ -1488,8 +1660,13 @@ function drawHUD(){
     ctx.fillStyle=p.dashCd<=0?'#0ff':'#334';ctx.fillRect(sx+sw-8,H-22+2,2,2);
     // Revive star
     if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
-    if(p.isHuman&&driverActive){pixText('DRV',sx,H-22+6,'#ffd700');}
-    if(p.isHuman&&callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',driverActive?sx+16:sx,H-22+6,'#446');}
+    if(p.isHuman){
+      let bx=sx;
+      if(driverActive){pixText('DRV',bx,H-22+6,'#ffd700');bx+=16;}
+      if(overdriveActive){pixText('OVD',bx,H-22+6,'#f80');bx+=16;}
+      if(vertidriveActive){pixText('VTD',bx,H-22+6,'#f0f');bx+=16;}
+      if(callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',bx,H-22+6,'#446');}
+    }
   }
 
   // Stage / cores (top-right, below progress bar)
@@ -1724,7 +1901,38 @@ const SE=(()=>{
       osc.start(s);osc.stop(s+.18);
     });
   }
-  return{clang,driver};
+  function kill(){
+    // Single descending chirp — chun
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.connect(g);g.connect(c.destination);
+    osc.type='square';
+    osc.frequency.setValueAtTime(900,t);
+    osc.frequency.exponentialRampToValueAtTime(380,t+.06);
+    g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.07);
+    osc.start(t);osc.stop(t+.08);
+  }
+  function bossDeath(){
+    // Low descending roar
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.connect(g);g.connect(c.destination);
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(160,t);
+    osc.frequency.exponentialRampToValueAtTime(35,t+.9);
+    g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+1.0);
+    osc.start(t);osc.stop(t+1.0);
+    // Low noise layer
+    const sz=Math.ceil(c.sampleRate*.05),buf=c.createBuffer(1,sz,c.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;
+    const src=c.createBufferSource();src.buffer=buf;src.loop=true;
+    const flt=c.createBiquadFilter();flt.type='lowpass';flt.frequency.value=280;
+    const ng=c.createGain();
+    ng.gain.setValueAtTime(.25,t);ng.gain.exponentialRampToValueAtTime(.001,t+.8);
+    src.connect(flt);flt.connect(ng);ng.connect(c.destination);
+    src.start(t);src.stop(t+.8);
+  }
+  return{clang,driver,kill,bossDeath};
 })();
 
 // ═══════════════════════════════════════════════
@@ -1745,17 +1953,17 @@ const PSG=(()=>{
   function midi(n){return pf(440*Math.pow(2,(n-69)/12));}
 
   // Depth zones — scale, root MIDI, base BPM
-  // D01-20: major               → bright and clear
-  // D21-40: mixolydian          → major feel, slight edge (b7)
-  // D41-60: dorian              → minor but not oppressive (raised 6th)
-  // D61-80: natural minor       → tension building
-  // D81-100: phrygian           → dark, but not locrian-level horror
+  // D01-20: major               → bright adventure start
+  // D21-40: lydian              → soaring, uplifting (#4 gives floating feel)
+  // D41-60: mixolydian          → driving heroic energy (b7 adds punch)
+  // D61-80: dorian              → dark hero — tense but still fighting
+  // D81-100: major high BPM    → triumphant climax, earned glory
   const ZONES=[
-    {sc:[0,2,4,5,7,9,11],root:50,bpmBase:82},
-    {sc:[0,2,4,5,7,9,10], root:48,bpmBase:98},
-    {sc:[0,2,3,5,7,9,10], root:46,bpmBase:116},
-    {sc:[0,2,3,5,7,8,10], root:44,bpmBase:136},
-    {sc:[0,1,3,5,7,8,10], root:42,bpmBase:156},
+    {sc:[0,2,4,5,7,9,11],root:48,bpmBase:90},
+    {sc:[0,2,4,6,7,9,11],root:50,bpmBase:108},
+    {sc:[0,2,4,5,7,9,10],root:48,bpmBase:126},
+    {sc:[0,2,3,5,7,9,10],root:46,bpmBase:148},
+    {sc:[0,2,4,5,7,9,11],root:52,bpmBase:162},
   ];
   function zone(st){return ZONES[Math.min(4,Math.floor((st-1)/20))];}
 
@@ -1962,8 +2170,8 @@ function startGame(){
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
+  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
@@ -1998,9 +2206,10 @@ function startAttractDemo(){
   for(let i=0;i<total;i++){
     players.push(makePlayer(i,new CPUController(randPers()),false));
   }
+  for(const p of players){p.level=demoStage;}
   stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
   bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
   running=true; PSG.stop();
   cv.classList.remove('cur');
@@ -2023,7 +2232,7 @@ function stopAttractDemo(){
 const pauseBtns={};
 function pBtnPri(key,label,x,y,w,h,col){
   pauseBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
   ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=col;
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
@@ -2090,12 +2299,14 @@ function pixHuge(str,x,y,c){
 
 // ── Lobby canvas UI ───────────────────────────
 let lobbyT=0,lobbyIdleT=0,padStatus='NO GAMEPAD DETECTED';
+let lobbyPadFocus='start',_lobbyPadPrev={};
+let _ovlPadFocus='',_ovlPadPrev={};
 const lobbyBtns={};
 
 // standard chip button (active=selected state)
 function lbBtn(key,label,x,y,w,h,active){
   lobbyBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||lobbyPadFocus===key;
   ctx.fillStyle=hov?'#0ff':active?'#0a2535':'#07101a';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=hov?'#5ff':active?'#0ff':'#1c3c5c';
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
@@ -2104,17 +2315,58 @@ function lbBtn(key,label,x,y,w,h,active){
 // primary action button (START / CONTINUE)
 function lbBtnPri(key,label,x,y,w,h,col){
   lobbyBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||lobbyPadFocus===key;
   ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=col;
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
   pixText(label,x+Math.round((w-label.length*4)/2),y+Math.round((h-6)/2),hov?'#000':col);
+}
+function _lobbyPadNav(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp){padStatus='NO GAMEPAD DETECTED';return;}
+  padStatus=gp.id.slice(0,36);
+  const edge=(k,v)=>{const r=v&&!_lobbyPadPrev[k];_lobbyPadPrev[k]=v;return r;};
+  const ax=gp.axes[0]||0,ay=gp.axes[1]||0;
+  const dL=edge('dL',(gp.buttons[14]?.pressed)||ax<-0.5);
+  const dR=edge('dR',(gp.buttons[15]?.pressed)||ax>0.5);
+  const dU=edge('dU',(gp.buttons[12]?.pressed)||ay<-0.5);
+  const dD=edge('dD',(gp.buttons[13]?.pressed)||ay>0.5);
+  const ok=edge('A',gp.buttons[0]?.pressed);
+  if(!(dL||dR||dU||dD||ok))return;
+  lobbyIdleT=0;
+  const hasCont=!!hasSave();
+  const grid=[
+    ['cpu0','cpu1','cpu2','cpu3'],
+    ['kbm','pad'],
+    ['start'],
+    ...(hasCont?[['cont']]:[]),
+    ['how'],
+  ];
+  let ri=2,ci=0;
+  for(let r=0;r<grid.length;r++){const c=grid[r].indexOf(lobbyPadFocus);if(c>=0){ri=r;ci=c;break;}}
+  if(dR)ci=Math.min(ci+1,grid[ri].length-1);
+  if(dL)ci=Math.max(ci-1,0);
+  if(dD){ri=Math.min(ri+1,grid.length-1);ci=Math.min(ci,grid[ri].length-1);}
+  if(dU){ri=Math.max(ri-1,0);ci=Math.min(ci,grid[ri].length-1);}
+  lobbyPadFocus=grid[ri][ci];
+  // Toggle-style buttons update immediately on focus
+  if(lobbyPadFocus.startsWith('cpu'))cfg.cpus=+lobbyPadFocus[3];
+  else if(lobbyPadFocus==='kbm')cfg.slots[0]='KB+M';
+  else if(lobbyPadFocus==='pad')cfg.slots[0]='GAMEPAD';
+  if(ok){
+    const k=lobbyPadFocus;
+    if(k==='start')startGame();
+    else if(k==='cont')loadGame();
+    else if(k==='how')startIntro();
+  }
 }
 
 function drawLobbyCanvas(dt){
   lobbyT+=dt;
   lobbyIdleT+=dt;
   if(lobbyIdleT>10)startAttractDemo();
+  _lobbyPadNav();
   cv.classList.add('cur');
   Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);
 
@@ -2356,9 +2608,10 @@ function drawBulletTime(){
 // ── Game Over overlay (canvas-rendered) ──────────
 const goBtns={};
 function goBtnPri(key,label,x,y,w,h,col){
-  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
+  ctx.fillStyle=hov?col:col+'33';ctx.fillRect(x,y,w,h);
   ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
-  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,hov?'#000':col);
   goBtns[key]={x,y,w,h};
 }
 function drawGameOver(){
@@ -2386,9 +2639,10 @@ function goHandleClick(){
 // ── Win overlay (canvas-rendered) ──────────
 const winBtns2={};
 function winBtnPri(key,label,x,y,w,h,col){
-  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
+  ctx.fillStyle=hov?col:col+'33';ctx.fillRect(x,y,w,h);
   ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
-  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,hov?'#000':col);
   winBtns2[key]={x,y,w,h};
 }
 function drawWin(){
@@ -2427,6 +2681,39 @@ function drawAttractOverlay(){
   ctx.globalAlpha=1;
 }
 
+function _ovlPadNav(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp)return;
+  const edge=(k,v)=>{const r=v&&!_ovlPadPrev[k];_ovlPadPrev[k]=!!v;return r;};
+  const ay=gp.axes[1]||0;
+  const dU=edge('U',(gp.buttons[12]?.pressed)||ay<-.5);
+  const dD=edge('D',(gp.buttons[13]?.pressed)||ay>.5);
+  const ok=edge('A',gp.buttons[0]?.pressed);
+  const back=edge('B',gp.buttons[1]?.pressed);
+  if(paused){
+    const order=['resume','squit','quit'];
+    if(!order.includes(_ovlPadFocus))_ovlPadFocus='resume';
+    let i=order.indexOf(_ovlPadFocus);
+    if(dU)i=Math.max(0,i-1);
+    if(dD)i=Math.min(order.length-1,i+1);
+    _ovlPadFocus=order[i];
+    if(back){setPause(false);_ovlPadFocus='';_ovlPadPrev={};}
+    else if(ok){
+      if(_ovlPadFocus==='resume'){setPause(false);}
+      else if(_ovlPadFocus==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
+      else if(_ovlPadFocus==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
+      _ovlPadFocus='';_ovlPadPrev={};
+    }
+  }else if(gameOverState){
+    _ovlPadFocus='retry';
+    if(ok||back){gameOverState=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+  }else if(gameWon){
+    _ovlPadFocus='again';
+    if(ok||back){gameWon=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+  }
+}
+
 
 // ═══════════════════════════════════════════════
 //  LOOP
@@ -2447,9 +2734,9 @@ let last=performance.now();
       attractDemoT+=dt;
       drawAttractOverlay();
       if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
-    }else if(paused)drawPause();
-    else if(gameOverState)drawGameOver();
-    else if(gameWon)drawWin();
+    }else if(paused){drawPause();_ovlPadNav();}
+    else if(gameOverState){drawGameOver();_ovlPadNav();}
+    else if(gameWon){drawWin();_ovlPadNav();}
   }
   requestAnimationFrame(loop);
 })(last);

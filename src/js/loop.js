@@ -17,9 +17,9 @@ let last=performance.now();
       attractDemoT+=dt;
       drawAttractOverlay();
       if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
-    }else if(paused)drawPause();
-    else if(gameOverState)drawGameOver();
-    else if(gameWon)drawWin();
+    }else if(paused){drawPause();_ovlPadNav();}
+    else if(gameOverState){drawGameOver();_ovlPadNav();}
+    else if(gameWon){drawWin();_ovlPadNav();}
   }
   requestAnimationFrame(loop);
 })(last);

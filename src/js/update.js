@@ -9,7 +9,7 @@ function updatePlayer(p,dt){
   let spd=p.spd;
   p.dashCd=Math.max(0,p.dashCd-dt);p.dashT=Math.max(0,p.dashT-dt);
   const db=p.controller.dash(p);
-  if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
+  if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=overdriveActive?.18:1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
   p.edge.dash=db;
   if(p.dashT>0)spd*=3.2;
   // Charge button (need early peek to apply speed penalty)
@@ -39,6 +39,7 @@ function updatePlayer(p,dt){
     const dmg=(w.dmg+p.level*.4)*.25;
     const angles=driverActive?[p.aim-0.22,p.aim,p.aim+0.22]:[p.aim+rnd(-spread,spread)];
     for(const a of angles)bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,life:w.range,dmg:dmg*(driverActive?.7:1),owner:p,trail:[]});
+    if(vertidriveActive)bullets.push({x:p.x-ox,y:p.y-oy,vx:Math.cos(p.aim+Math.PI)*w.spd,vy:Math.sin(p.aim+Math.PI)*w.spd,life:w.range,dmg:dmg*.8,owner:p,trail:[]});
     p.fireCd=w.fireCd*(driverActive?1.15:1);p.muzzle=.08;
     shake=Math.max(shake,.8);
     p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
@@ -93,7 +94,7 @@ function update(dt){
   for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
     const a=players[i],b=players[j];if(!a.alive||!b.alive)continue;
     const dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy),mn=a.r+b.r;
-    if(d>0&&d<mn){const push=(mn-d)*.5;a.x+=dx/d*push;a.y+=dy/d*push;b.x-=dx/d*push;b.y-=dy/d*push;}
+    if(d>0&&d<mn){const push=(mn-d)*.5;const nax=a.x+dx/d*push,nay=a.y+dy/d*push,nbx=b.x-dx/d*push,nby=b.y-dy/d*push;if(!hitsWall(nax,nay,a.r)){a.x=nax;a.y=nay;}if(!hitsWall(nbx,nby,b.r)){b.x=nbx;b.y=nby;}}
   }
 
   // ── Enemy spawn ──
@@ -103,7 +104,8 @@ function update(dt){
   if(!monsterHouse&&spawnT<=0&&enemies.length<maxE){
     spawnT=spawnInterval;
     const r=Math.random();
-    spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
+    if(stage>=20)spawnEnemy(r<.32?'grunt':r<.58?'runner':r<.76?'shooter':r<.9?'brute':'poison');
+    else spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
   }
   // ── Monster House clear check ──
   if(monsterHouse&&!monsterHouseCleared&&mhSpawnPending===0&&time>2&&enemies.length===0){
@@ -128,11 +130,20 @@ function update(dt){
         SE.clang();
         spark(b.x,b.y,'#ffd700',6,70);
         if(secretWallHits>=25){
-          // Destroy secret wall, drop driver
+          // Destroy secret wall, drop driver or overdrive (50/50)
           map[secretWallPos.ty*MAPW+secretWallPos.tx]=0;
-          driverActive=true;
+          const roll=Math.random();
+          if(roll<1/3){
+            driverActive=true;
+            flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
+          }else if(roll<2/3){
+            overdriveActive=true;
+            flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');
+          }else{
+            vertidriveActive=true;
+            flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');
+          }
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
-          flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
           SE.driver();secretWallPos=null;
         }else{
           spark(b.x,b.y,'#ff8',2,50);
@@ -141,6 +152,9 @@ function update(dt){
       bullets.splice(i,1);continue;
     }
     let hit=false;
+    // gatekeeper absorbs bullets
+    for(const gk of gatekeepers){if((b.x-gk.x)**2+(b.y-gk.y)**2<6*6){spark(b.x,b.y,'#f44',3,40);bullets.splice(i,1);hit=true;break;}}
+    if(hit)continue;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
       if(dx*dx+dy*dy<(e.r+(b.r||1.5))**2){
@@ -149,6 +163,7 @@ function update(dt){
         if(e.hp<=0){
           e._dead=true;enemies.splice(j,1);
           totalKills++;if(b.owner)b.owner.kills++;
+          if(e.type==='boss')SE.bossDeath();else SE.kill();
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
           const healRate=stage>50?Math.max(.02,.12-(stage-50)*.002):.12;
@@ -159,6 +174,8 @@ function update(dt){
             for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
             flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
             if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
+            if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
+            if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
             if(!attractDemo)PSG.play(stage); // revert to zone BGM
             // restore any devoured cores (partial refund)
             const refund=Math.min(coresNeeded-coresCollected,2);
@@ -206,7 +223,12 @@ function update(dt){
     if(!tgt){e.vx*=.9;e.vy*=.9;moveObj(e,eff);continue;}
     const dx=tgt.x-e.x,dy=tgt.y-e.y,d=Math.hypot(dx,dy)||1;
     e.ang=Math.atan2(dy,dx);e.atkCd=Math.max(0,e.atkCd-eff);e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
-    if(e.type==='shooter'){
+    if(e.type==='poison'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
+      e.pudCd-=eff;
+      if(e.pudCd<=0){poisonPuddles.push({x:e.x,y:e.y,t:6,damageCd:0});e.pudCd=0.7;}
+    } else if(e.type==='shooter'){
       const s=e.spd,w=70;
       if(d<w-10){e.vx=-Math.cos(e.ang)*s;e.vy=-Math.sin(e.ang)*s;}
       else if(d>w+10){e.vx=Math.cos(e.ang)*s;e.vy=Math.sin(e.ang)*s;}
@@ -330,7 +352,7 @@ function update(dt){
       e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
       e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
       // boss pushes players away (boss itself doesn't move)
-      for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;p.x+=ox/dd*push;p.y+=oy/dd*push;}}
+      for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;const npx=p.x+ox/dd*push,npy=p.y+oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
       continue; // skip standard moveObj + enemy separation
     } else {
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
@@ -348,7 +370,30 @@ function update(dt){
     // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
     // separation: enemy-player (both directions)
-    for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;p.x-=ox/dd*push;p.y-=oy/dd*push;}}
+    for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;const npx=p.x-ox/dd*push,npy=p.y-oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
+  }
+
+  // ── Gatekeepers ──
+  for(const gk of gatekeepers){
+    gk.cd-=eff;
+    if(gk.cd<=0){
+      gk.cd=2.5;
+      for(let a=0;a<8;a++){const ang=a*Math.PI/4;ebullets.push({x:gk.x,y:gk.y,vx:Math.cos(ang)*80,vy:Math.sin(ang)*80,life:1.8,dmg:8});}
+      spark(gk.x,gk.y,'#f44',8,60);
+    }
+  }
+
+  // ── Poison puddles ──
+  for(let i=poisonPuddles.length-1;i>=0;i--){
+    const pd=poisonPuddles[i];pd.t-=eff;
+    if(pd.t<=0){poisonPuddles.splice(i,1);continue;}
+    pd.damageCd=(pd.damageCd||0)-eff;
+    for(const p of players){
+      if(!p.alive)continue;
+      if((p.x-pd.x)**2+(p.y-pd.y)**2<10*10){
+        if(pd.damageCd<=0){damagePlayer(p,3);pd.damageCd=0.5;}
+      }
+    }
   }
 
   // ── Pickups ──
@@ -370,17 +415,50 @@ function update(dt){
       if(dx*dx+dy*dy<64){cores.splice(i,1);coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');break;}
     }
   }
-  if(!exitOpen&&coresCollected>=coresNeeded){exitOpen=true;flash('EXIT ONLINE','#ff0');}
+  if(!monsterHouse&&!exitOpen&&coresCollected>=coresNeeded){exitOpen=true;flash('EXIT ONLINE','#ff0');}
 
   // ── Cold sleep pods ──
+  // Update active pod selection
+  if(podSelectState){
+    const ps=podSelectState;
+    const adx=ps.activator.x-ps.pod.x,ady=ps.activator.y-ps.pod.y;
+    if(!ps.activator.alive||adx*adx+ady*ady>144){podSelectState=null;_podPadPrev={};}
+    else{
+      ps.moveCd=(ps.moveCd||0)-dt;
+      const gps=navigator.getGamepads?navigator.getGamepads():[];
+      let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+      const edge=(k,v)=>{const r=v&&!_podPadPrev[k];_podPadPrev[k]=!!v;return r;};
+      const ax=gp?gp.axes[0]||0:0;
+      const left=edge('L',keys.ArrowLeft||(gp&&((gp.buttons[14]?.pressed)||ax<-.5)));
+      const right=edge('R',keys.ArrowRight||(gp&&((gp.buttons[15]?.pressed)||ax>.5)));
+      const confirm=edge('A',(keys.Enter||keys.NumpadEnter)||(gp&&gp.buttons[0]?.pressed));
+      const cancel=edge('B',keys.Escape||(gp&&gp.buttons[1]?.pressed));
+      if(left||right){ps.cursor=((ps.cursor+(right?1:-1))+ps.candidates.length)%ps.candidates.length;}
+      if(confirm){
+        const dead=ps.candidates[ps.cursor];
+        ps.pod.used=true;
+        dead.alive=true;dead.hp=dead.maxHp*.5;dead.iframe=1;
+        dead.x=ps.pod.x+rnd(-10,10);dead.y=ps.pod.y+rnd(-10,10);
+        const newPers=randPers();
+        dead.controller=new CPUController(newPers);
+        spark(ps.pod.x,ps.pod.y,'#0ff',16,80);
+        flash('COLD SLEEP: '+dead.pal.name+' REVIVED','#0ff');
+        flash(dead.pal.name+': '+PERS_LABEL[newPers],dead.pal.body);
+        podSelectState=null;_podPadPrev={};
+      }
+      if(cancel){podSelectState=null;_podPadPrev={};}
+    }
+  }
   for(const pod of pods){
     if(pod.used)continue;
     pod.t+=eff;
     for(const pl of players){if(!pl.alive)continue;const dx=pl.x-pod.x,dy=pl.y-pod.y;
       if(dx*dx+dy*dy<64){
-        const dead=players.find(p=>!p.alive&&!p.isHuman);
-        if(dead){
+        const deadCPUs=players.filter(p=>!p.alive&&!p.isHuman);
+        if(deadCPUs.length===0)break;
+        if(deadCPUs.length===1){
           pod.used=true;
+          const dead=deadCPUs[0];
           dead.alive=true;dead.hp=dead.maxHp*.5;dead.iframe=1;
           dead.x=pod.x+rnd(-10,10);dead.y=pod.y+rnd(-10,10);
           const newPers=randPers();
@@ -388,6 +466,8 @@ function update(dt){
           spark(pod.x,pod.y,'#0ff',16,80);
           flash('COLD SLEEP: '+dead.pal.name+' REVIVED','#0ff');
           flash(dead.pal.name+': '+PERS_LABEL[newPers],dead.pal.body);
+        }else if(!podSelectState||podSelectState.pod!==pod){
+          podSelectState={pod,candidates:deadCPUs,cursor:0,activator:pl};
         }
         break;
       }
@@ -397,7 +477,7 @@ function update(dt){
   // ── Exit / Screw ──
   if(exitOpen&&exits[0]){
     const ex=exits[0];
-    for(const pl of players){if(!pl.alive)continue;const dx=pl.x-ex.x,dy=pl.y-ex.y;
+    for(const pl of players){if(!pl.alive||!pl.isHuman)continue;const dx=pl.x-ex.x,dy=pl.y-ex.y;
       if(dx*dx+dy*dy<80){
         if(stage===MAX_DEPTH){/* screw handled below */}
         else{nextStage();return;}
@@ -479,6 +559,7 @@ function nextStage(){
   const isBoss=stage%10===0||stage===99;
   monsterHouse=!isBoss&&stage>1&&!wasMH&&Math.random()<0.2;
   monsterHouseCleared=false;
+  if(monsterHouse)mhSpawnPending=1; // prevent premature clear before spawn timeout fires
   if(!attractDemo)PSG.play(stage);saveGame();
   // Re-roll moody sub-ability each floor
   const msgs=[];

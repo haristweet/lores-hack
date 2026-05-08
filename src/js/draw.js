@@ -51,6 +51,28 @@ function draw(){
     pixText('SCREW',(screwObj.x-10)|0,(screwObj.y-12)|0,'#ff0');
   }
 
+  // POISON PUDDLES
+  for(const pd of poisonPuddles){
+    const a=Math.min(.55,pd.t/6*.55);
+    ctx.fillStyle='#3a0';ctx.globalAlpha=a;
+    ctx.fillRect(pd.x-8,pd.y-5,16,10);
+    ctx.fillStyle='#6f2';ctx.globalAlpha=a*.7;
+    ctx.fillRect(pd.x-5,pd.y-7,10,14);
+    ctx.globalAlpha=1;
+  }
+
+  // GATEKEEPERS
+  for(const gk of gatekeepers){
+    const pulse=(Math.sin(performance.now()*.003)+1)*.5;
+    ctx.fillStyle='#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
+    ctx.fillStyle='#f44';ctx.globalAlpha=.5+pulse*.5;
+    ctx.fillRect(gk.x-4,gk.y-4,8,8);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#f88';
+    ctx.fillRect(gk.x-1,gk.y-6,2,12);ctx.fillRect(gk.x-6,gk.y-1,12,2);
+    pixText('GK',(gk.x-4)|0,(gk.y-14)|0,'#f44');
+  }
+
   // COLD SLEEP POD
   for(const pod of pods){
     if(pod.used)continue;pod.t=(pod.t||0);
@@ -135,6 +157,24 @@ function draw(){
     const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,140);
     g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(200,0,0,.35)');
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  // Pod revival selection UI
+  if(podSelectState){
+    const ps=podSelectState;
+    const sx=(ps.pod.x-camX+W/2)|0,sy=(ps.pod.y-camY+H/2)|0;
+    const sel=ps.candidates[ps.cursor];
+    const name=sel.pal.name;
+    const bw=Math.max(52,name.length*4+24),bh=22;
+    const bx=(sx-bw/2)|0,by=sy-38;
+    ctx.fillStyle='#001a1a';ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='#0ff';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+    pixText('REVIVE?',bx+((bw-7*4)/2)|0,by+2,'#0ff');
+    if(ps.candidates.length>1){
+      pixText('◄',(bx+3)|0,by+11,'#0af');
+      pixText('►',(bx+bw-7)|0,by+11,'#0af');
+    }
+    pixText(name,(bx+(bw-name.length*4)/2)|0,by+11,sel.pal.body);
   }
 
   // Pause dim
@@ -264,9 +304,8 @@ function drawHUD(){
 
   // Bottom bar
   ctx.fillStyle='#000c';ctx.fillRect(0,H-22,W,22);
-  ctx.fillStyle='#0ff';ctx.fillRect(0,H-22,W,1);
 
-  const n=Math.max(1,players.length),sw=Math.floor(W/n);
+  const n=Math.max(4,players.length),sw=Math.floor(W/n);
   for(let i=0;i<players.length;i++){
     const p=players[i],sx=i*sw+2;
     const nc=p.alive?p.pal.body:'#555';
@@ -288,8 +327,13 @@ function drawHUD(){
     ctx.fillStyle=p.dashCd<=0?'#0ff':'#334';ctx.fillRect(sx+sw-8,H-22+2,2,2);
     // Revive star
     if(p.hasRevive){ctx.fillStyle='#ff0';ctx.fillRect(sx+sw-8,H-22+6,2,2);pixText('★',sx+sw-14,H-22+5,'#ff0');}
-    if(p.isHuman&&driverActive){pixText('DRV',sx,H-22+6,'#ffd700');}
-    if(p.isHuman&&callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',driverActive?sx+16:sx,H-22+6,'#446');}
+    if(p.isHuman){
+      let bx=sx;
+      if(driverActive){pixText('DRV',bx,H-22+6,'#ffd700');bx+=16;}
+      if(overdriveActive){pixText('OVD',bx,H-22+6,'#f80');bx+=16;}
+      if(vertidriveActive){pixText('VTD',bx,H-22+6,'#f0f');bx+=16;}
+      if(callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',bx,H-22+6,'#446');}
+    }
   }
 
   // Stage / cores (top-right, below progress bar)

@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════
 const keys={};
 let paused=false,debug=false,introActive=false,introPage=0,introT=0;
+let podSelectState=null,_podPadPrev={};
 const pauseEl=document.getElementById('pause');
 function setPause(v){
   paused=v;

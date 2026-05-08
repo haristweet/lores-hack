@@ -69,6 +69,9 @@ class CPUController{
       return;
     }
     if(p._hit){p._hit=false;this._rT=0;this._target=null;this._retaliateT=2.5+Math.random();}
+    const boss=enemies.find(e=>e.type==='boss');
+    if(boss){this._preBoss(p,dt,boss);return;}
+    if(this._needsHeal(p))return;
     const ps=this.effPers,hp=humanPlayer();
     if(ps==='prospector'){this._preScav(p,dt,hp);return;}
     this._rT-=dt;
@@ -84,6 +87,38 @@ class CPUController{
     this._fire=d<this._fireRange(ps)&&los;
     this._dash=this._wantDash(p,ps,d);
     this._seekNearbyItem(p,28*28);
+  }
+  _preBoss(p,dt,boss){
+    const dx=boss.x-p.x,dy=boss.y-p.y,d=Math.hypot(dx,dy)||1;
+    this._aim=Math.atan2(dy,dx);
+    // Maintain safe distance, strafe hard to dodge shots
+    const wantD=80;
+    let mx=0,my=0;
+    if(d>wantD+15){mx=Math.cos(this._aim);my=Math.sin(this._aim);}
+    else if(d<wantD-15){mx=-Math.cos(this._aim);my=-Math.sin(this._aim);}
+    const sa=this._aim+Math.PI/2,sv=Math.sin(this._strT*3.5);
+    mx+=Math.cos(sa)*sv*.9;my+=Math.sin(sa)*sv*.9;
+    const ml=Math.hypot(mx,my);if(ml>1){mx/=ml;my/=ml;}
+    this._mx=mx;this._my=my;
+    this._fire=d<150&&hasLoS(p.x,p.y,boss.x,boss.y);
+    // Dash away when boss closes in
+    this._dash=d<45&&p.dashCd<=0&&Math.random()<.07;
+  }
+  _needsHeal(p){
+    if(p.hp>=p.maxHp*.5)return false;
+    let best=null,bestD=Infinity;
+    for(const pk of pickups){
+      if(pk.type!=='health')continue;
+      const dd=(pk.x-p.x)**2+(pk.y-p.y)**2;
+      if(dd<bestD){bestD=dd;best=pk;}
+    }
+    if(!best)return false;
+    const d=Math.sqrt(bestD)||1;
+    this._mx=(best.x-p.x)/d;this._my=(best.y-p.y)/d;
+    const ne=nearEnemy(p.x,p.y);
+    if(ne){const ed=Math.hypot(ne.x-p.x,ne.y-p.y);this._aim=Math.atan2(ne.y-p.y,ne.x-p.x);this._fire=ed<this._fireRange(this.effPers)&&hasLoS(p.x,p.y,ne.x,ne.y);}
+    this._dash=false;
+    return true;
   }
   _seekNearbyItem(p,r2){
     let best=null,bestD=r2;

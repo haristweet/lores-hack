@@ -7,6 +7,7 @@ let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOve
 let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
+let gatekeepers=[],poisonPuddles=[];
 let bulletTime=null; // {timer,victimName,victimPal}
 
 // ═══════════════════════════════════════════════
@@ -33,6 +34,7 @@ function makeEnemy(type,x,y){
   else if(type==='runner'){b.hp=2*sc;b.spd=42+stage*.15;b.r=2.5;b.dmg=6*sc;}
   else if(type==='brute') {b.hp=10*sc;b.spd=14+stage*.08;b.r=5;b.dmg=18*sc;}
   else if(type==='shooter'){b.hp=3*sc;b.spd=14+stage*.08;b.r=3;b.dmg=10*sc;b.range=70;}
+  else if(type==='poison') {b.hp=4*sc;b.spd=11+stage*.07;b.r=3;b.dmg=5*sc;b.pudCd=0;}
   return b;
 }
 function makeZombie(p){
@@ -59,7 +61,7 @@ function makeZombie(p){
 
 function makeBoss(){
   const sc=eScale();
-  const hp=Math.round(120*(1+stage*.09)*sc);
+  const hp=Math.round(100+stage*stage*.8);
   let bx,by;
   for(let t=0;t<300;t++){
     const tx=rndi(2,MAPW-2),ty=rndi(2,MAPH-2);
@@ -90,8 +92,8 @@ function moveObj(o,dt){
   const nx=o.x+o.vx*dt; if(!hitsWall(nx,o.y,o.r))o.x=nx;
   const ny=o.y+o.vy*dt; if(!hitsWall(o.x,ny,o.r))o.y=ny;
   // Wall escape: if somehow embedded, push out
-  if(solid(o.x,o.y)){
-    for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.6,ey=o.y+Math.sin(t)*TILE*.6;if(!solid(ex,ey)){o.x=ex;o.y=ey;break;}}
+  if(hitsWall(o.x,o.y,o.r)){
+    for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.8,ey=o.y+Math.sin(t)*TILE*.8;if(!hitsWall(ex,ey,o.r)){o.x=ex;o.y=ey;break;}}
   }
 }
 function spawnEnemy(type){

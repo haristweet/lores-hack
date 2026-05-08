@@ -2,7 +2,7 @@
 const pauseBtns={};
 function pBtnPri(key,label,x,y,w,h,col){
   pauseBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
   ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=col;
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
@@ -69,12 +69,14 @@ function pixHuge(str,x,y,c){
 
 // ── Lobby canvas UI ───────────────────────────
 let lobbyT=0,lobbyIdleT=0,padStatus='NO GAMEPAD DETECTED';
+let lobbyPadFocus='start',_lobbyPadPrev={};
+let _ovlPadFocus='',_ovlPadPrev={};
 const lobbyBtns={};
 
 // standard chip button (active=selected state)
 function lbBtn(key,label,x,y,w,h,active){
   lobbyBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||lobbyPadFocus===key;
   ctx.fillStyle=hov?'#0ff':active?'#0a2535':'#07101a';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=hov?'#5ff':active?'#0ff':'#1c3c5c';
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
@@ -83,17 +85,58 @@ function lbBtn(key,label,x,y,w,h,active){
 // primary action button (START / CONTINUE)
 function lbBtnPri(key,label,x,y,w,h,col){
   lobbyBtns[key]={x,y,w,h};
-  const hov=mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||lobbyPadFocus===key;
   ctx.fillStyle=hov?col:'#040c14';ctx.fillRect(x,y,w,h);
   ctx.fillStyle=col;
   ctx.fillRect(x,y,w,1);ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x,y,1,h);ctx.fillRect(x+w-1,y,1,h);
   pixText(label,x+Math.round((w-label.length*4)/2),y+Math.round((h-6)/2),hov?'#000':col);
+}
+function _lobbyPadNav(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp){padStatus='NO GAMEPAD DETECTED';return;}
+  padStatus=gp.id.slice(0,36);
+  const edge=(k,v)=>{const r=v&&!_lobbyPadPrev[k];_lobbyPadPrev[k]=v;return r;};
+  const ax=gp.axes[0]||0,ay=gp.axes[1]||0;
+  const dL=edge('dL',(gp.buttons[14]?.pressed)||ax<-0.5);
+  const dR=edge('dR',(gp.buttons[15]?.pressed)||ax>0.5);
+  const dU=edge('dU',(gp.buttons[12]?.pressed)||ay<-0.5);
+  const dD=edge('dD',(gp.buttons[13]?.pressed)||ay>0.5);
+  const ok=edge('A',gp.buttons[0]?.pressed);
+  if(!(dL||dR||dU||dD||ok))return;
+  lobbyIdleT=0;
+  const hasCont=!!hasSave();
+  const grid=[
+    ['cpu0','cpu1','cpu2','cpu3'],
+    ['kbm','pad'],
+    ['start'],
+    ...(hasCont?[['cont']]:[]),
+    ['how'],
+  ];
+  let ri=2,ci=0;
+  for(let r=0;r<grid.length;r++){const c=grid[r].indexOf(lobbyPadFocus);if(c>=0){ri=r;ci=c;break;}}
+  if(dR)ci=Math.min(ci+1,grid[ri].length-1);
+  if(dL)ci=Math.max(ci-1,0);
+  if(dD){ri=Math.min(ri+1,grid.length-1);ci=Math.min(ci,grid[ri].length-1);}
+  if(dU){ri=Math.max(ri-1,0);ci=Math.min(ci,grid[ri].length-1);}
+  lobbyPadFocus=grid[ri][ci];
+  // Toggle-style buttons update immediately on focus
+  if(lobbyPadFocus.startsWith('cpu'))cfg.cpus=+lobbyPadFocus[3];
+  else if(lobbyPadFocus==='kbm')cfg.slots[0]='KB+M';
+  else if(lobbyPadFocus==='pad')cfg.slots[0]='GAMEPAD';
+  if(ok){
+    const k=lobbyPadFocus;
+    if(k==='start')startGame();
+    else if(k==='cont')loadGame();
+    else if(k==='how')startIntro();
+  }
 }
 
 function drawLobbyCanvas(dt){
   lobbyT+=dt;
   lobbyIdleT+=dt;
   if(lobbyIdleT>10)startAttractDemo();
+  _lobbyPadNav();
   cv.classList.add('cur');
   Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);
 
@@ -335,9 +378,10 @@ function drawBulletTime(){
 // ── Game Over overlay (canvas-rendered) ──────────
 const goBtns={};
 function goBtnPri(key,label,x,y,w,h,col){
-  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
+  ctx.fillStyle=hov?col:col+'33';ctx.fillRect(x,y,w,h);
   ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
-  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,hov?'#000':col);
   goBtns[key]={x,y,w,h};
 }
 function drawGameOver(){
@@ -365,9 +409,10 @@ function goHandleClick(){
 // ── Win overlay (canvas-rendered) ──────────
 const winBtns2={};
 function winBtnPri(key,label,x,y,w,h,col){
-  ctx.fillStyle=col+'33';ctx.fillRect(x,y,w,h);
+  const hov=(mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h)||_ovlPadFocus===key;
+  ctx.fillStyle=hov?col:col+'33';ctx.fillRect(x,y,w,h);
   ctx.strokeStyle=col;ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
-  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,col);
+  pixText(label,x+Math.floor(w/2)-Math.floor(label.length*2),y+4,hov?'#000':col);
   winBtns2[key]={x,y,w,h};
 }
 function drawWin(){
@@ -404,5 +449,38 @@ function drawAttractOverlay(){
   ctx.globalAlpha=0.5+Math.sin(attractDemoT*4)*0.5;
   pixText('PRESS ANY KEY TO EXIT DEMO',Math.round((W-104)/2),H-9,'#0ff');
   ctx.globalAlpha=1;
+}
+
+function _ovlPadNav(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp)return;
+  const edge=(k,v)=>{const r=v&&!_ovlPadPrev[k];_ovlPadPrev[k]=!!v;return r;};
+  const ay=gp.axes[1]||0;
+  const dU=edge('U',(gp.buttons[12]?.pressed)||ay<-.5);
+  const dD=edge('D',(gp.buttons[13]?.pressed)||ay>.5);
+  const ok=edge('A',gp.buttons[0]?.pressed);
+  const back=edge('B',gp.buttons[1]?.pressed);
+  if(paused){
+    const order=['resume','squit','quit'];
+    if(!order.includes(_ovlPadFocus))_ovlPadFocus='resume';
+    let i=order.indexOf(_ovlPadFocus);
+    if(dU)i=Math.max(0,i-1);
+    if(dD)i=Math.min(order.length-1,i+1);
+    _ovlPadFocus=order[i];
+    if(back){setPause(false);_ovlPadFocus='';_ovlPadPrev={};}
+    else if(ok){
+      if(_ovlPadFocus==='resume'){setPause(false);}
+      else if(_ovlPadFocus==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
+      else if(_ovlPadFocus==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
+      _ovlPadFocus='';_ovlPadPrev={};
+    }
+  }else if(gameOverState){
+    _ovlPadFocus='retry';
+    if(ok||back){gameOverState=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+  }else if(gameWon){
+    _ovlPadFocus='again';
+    if(ok||back){gameWon=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+  }
 }
 

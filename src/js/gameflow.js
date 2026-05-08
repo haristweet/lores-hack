@@ -39,8 +39,8 @@ function startGame(){
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
-  bulletTime=null;
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
+  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
@@ -75,9 +75,10 @@ function startAttractDemo(){
   for(let i=0;i<total;i++){
     players.push(makePlayer(i,new CPUController(randPers()),false));
   }
+  for(const p of players){p.level=demoStage;}
   stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
   bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
   running=true; PSG.stop();
   cv.classList.remove('cur');

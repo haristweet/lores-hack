@@ -69,7 +69,38 @@ const SE=(()=>{
       osc.start(s);osc.stop(s+.18);
     });
   }
-  return{clang,driver};
+  function kill(){
+    // Single descending chirp — chun
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.connect(g);g.connect(c.destination);
+    osc.type='square';
+    osc.frequency.setValueAtTime(900,t);
+    osc.frequency.exponentialRampToValueAtTime(380,t+.06);
+    g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.07);
+    osc.start(t);osc.stop(t+.08);
+  }
+  function bossDeath(){
+    // Low descending roar
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.connect(g);g.connect(c.destination);
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(160,t);
+    osc.frequency.exponentialRampToValueAtTime(35,t+.9);
+    g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+1.0);
+    osc.start(t);osc.stop(t+1.0);
+    // Low noise layer
+    const sz=Math.ceil(c.sampleRate*.05),buf=c.createBuffer(1,sz,c.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;
+    const src=c.createBufferSource();src.buffer=buf;src.loop=true;
+    const flt=c.createBiquadFilter();flt.type='lowpass';flt.frequency.value=280;
+    const ng=c.createGain();
+    ng.gain.setValueAtTime(.25,t);ng.gain.exponentialRampToValueAtTime(.001,t+.8);
+    src.connect(flt);flt.connect(ng);ng.connect(c.destination);
+    src.start(t);src.stop(t+.8);
+  }
+  return{clang,driver,kill,bossDeath};
 })();
 
 // ═══════════════════════════════════════════════
@@ -90,17 +121,17 @@ const PSG=(()=>{
   function midi(n){return pf(440*Math.pow(2,(n-69)/12));}
 
   // Depth zones — scale, root MIDI, base BPM
-  // D01-20: major               → bright and clear
-  // D21-40: mixolydian          → major feel, slight edge (b7)
-  // D41-60: dorian              → minor but not oppressive (raised 6th)
-  // D61-80: natural minor       → tension building
-  // D81-100: phrygian           → dark, but not locrian-level horror
+  // D01-20: major               → bright adventure start
+  // D21-40: lydian              → soaring, uplifting (#4 gives floating feel)
+  // D41-60: mixolydian          → driving heroic energy (b7 adds punch)
+  // D61-80: dorian              → dark hero — tense but still fighting
+  // D81-100: major high BPM    → triumphant climax, earned glory
   const ZONES=[
-    {sc:[0,2,4,5,7,9,11],root:50,bpmBase:82},
-    {sc:[0,2,4,5,7,9,10], root:48,bpmBase:98},
-    {sc:[0,2,3,5,7,9,10], root:46,bpmBase:116},
-    {sc:[0,2,3,5,7,8,10], root:44,bpmBase:136},
-    {sc:[0,1,3,5,7,8,10], root:42,bpmBase:156},
+    {sc:[0,2,4,5,7,9,11],root:48,bpmBase:90},
+    {sc:[0,2,4,6,7,9,11],root:50,bpmBase:108},
+    {sc:[0,2,4,5,7,9,10],root:48,bpmBase:126},
+    {sc:[0,2,3,5,7,9,10],root:46,bpmBase:148},
+    {sc:[0,2,4,5,7,9,11],root:52,bpmBase:162},
   ];
   function zone(st){return ZONES[Math.min(4,Math.floor((st-1)/20))];}
 

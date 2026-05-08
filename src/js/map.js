@@ -20,7 +20,7 @@ function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
-let secretWallPos=null,secretWallHits=0,driverActive=false;
+let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false;
 
 // ── Flow field for enemy navigation ──────────
 const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
@@ -87,9 +87,13 @@ function genMap(){
     return;
   }
 
+  // Active area grows with depth: D1=22×22, D84+=60×60
+  const span=Math.min(MAPW-4,Math.max(22,18+((stage/2)|0)));
+  const ox=(MAPW-span)>>1,oy=(MAPH-span)>>1;
+  const nRooms=Math.min(24,Math.max(6,4+((stage/4)|0)));
   const rs=[];
-  for(let i=0;i<24;i++){
-    const w=rndi(6,12),h=rndi(5,10),x=rndi(1,MAPW-w-1),y=rndi(1,MAPH-h-1);
+  for(let i=0;i<nRooms;i++){
+    const w=rndi(6,12),h=rndi(5,10),x=rndi(ox+1,ox+span-w-1),y=rndi(oy+1,oy+span-h-1);
     rs.push({x,y,w,h,cx:x+(w>>1),cy:y+(h>>1)});
     for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)map[yy*MAPW+xx]=0;
   }
@@ -112,6 +116,16 @@ function genMap(){
   coresNeeded=nc; coresCollected=0; exitOpen=false; cores=[];
   let placed=0,guard=0;
   while(placed<nc&&guard++<800){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){cores.push({x:tx*TILE+8,y:ty*TILE+8,t:0});placed++;}}
+  // gatekeepers: start D10, placed in rooms (not starting room)
+  gatekeepers=[];poisonPuddles=[];
+  if(stage>=10){
+    const nGK=Math.min(4,1+((stage-10)/25|0));
+    const used=new Set();used.add(0);// skip starting room
+    for(let i=0;i<nGK;i++){
+      const ri=rndi(1,rs.length);if(used.has(ri))continue;used.add(ri);
+      const r=rs[ri];gatekeepers.push({x:r.cx*TILE+8,y:r.cy*TILE+8,cd:1.5+Math.random()*1.5});
+    }
+  }
   // cold sleep pods: every 10 floors, one pod
   pods=[];
   if(stage%10===0){
