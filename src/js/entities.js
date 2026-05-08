@@ -7,7 +7,15 @@ let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOve
 let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
-let gatekeepers=[],poisonPuddles=[];
+let gatekeepers=[],poisonPuddles=[],npcs=[];
+const NPC_PALS=[
+  {body:'#8b4513',head:'#f4a460',dark:'#5c2e00'},
+  {body:'#556b2f',head:'#c8a96e',dark:'#2e3d1a'},
+  {body:'#8b008b',head:'#dda0dd',dark:'#4b004b'},
+  {body:'#8b0000',head:'#e9967a',dark:'#4b0000'},
+  {body:'#4682b4',head:'#d2b48c',dark:'#1e3d5c'},
+  {body:'#b8860b',head:'#ffe4b5',dark:'#7a5800'},
+];
 let bulletTime=null; // {timer,victimName,victimPal}
 
 // ═══════════════════════════════════════════════

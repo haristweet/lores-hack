@@ -396,6 +396,60 @@ function update(dt){
     }
   }
 
+  // ── NPC state machine ──
+  for(let i=npcs.length-1;i>=0;i--){
+    const npc=npcs[i];
+    if(npc.state==='idle'){
+      let near=false;
+      for(const p of players){if(p.alive&&Math.hypot(p.x-npc.x,p.y-npc.y)<24){near=true;break;}}
+      if(near){
+        npc.talkT+=eff;
+        npc.msg='...ODD TO FIND ANOTHER FOOL DOWN HERE';
+        if(npc.talkT>2.5&&!npc.hasSpokenFollow){
+          npc.hasSpokenFollow=true;
+          npc.msg='FOLLOW ME.';
+          setTimeout(()=>{
+            if(npc.state==='idle'){
+              npc.state='leading';
+              // head in a random walkable direction
+              npc.dir=Math.random()*Math.PI*2;
+              npc.msg='';
+            }
+          },1800);
+        }
+      }else{
+        if(!npc.hasSpokenFollow)npc.msg='';
+      }
+    }else if(npc.state==='leading'){
+      npc.leadT+=eff;
+      // move forward, bounce off walls
+      const spd=28;
+      const nx=npc.x+Math.cos(npc.dir)*spd*eff;
+      const ny=npc.y+Math.sin(npc.dir)*spd*eff;
+      if(!hitsWall(nx,ny,2)){npc.x=nx;npc.y=ny;}
+      else{npc.dir+=Math.PI*.5+rnd(-.3,.3);}
+      // occasional "THIS WAY!" bubble
+      npc.msg=(npc.leadT%4<.6)?'THIS WAY!':'';
+      if(npc.leadT>npc.leadDur){
+        // FALL INTO CRACK
+        SE.npcFall();
+        flash('AAAAGGH!!','#fa4');
+        // scatter loot
+        const lootTypes=['core','core','core','health','health'];
+        for(let j=0;j<2+rndi(0,3);j++){
+          const ang=Math.random()*Math.PI*2,d=rnd(6,20);
+          pickups.push({type:lootTypes[rndi(0,lootTypes.length)],x:npc.x+Math.cos(ang)*d,y:npc.y+Math.sin(ang)*d,t:0});
+        }
+        // crack particles (dark earth)
+        for(let j=0;j<16;j++){
+          const ang=Math.random()*Math.PI*2;
+          particles.push({x:npc.x,y:npc.y,vx:Math.cos(ang)*rnd(8,28),vy:Math.sin(ang)*rnd(8,28),life:rnd(.5,1.4),c:j%3===0?'#543':'#321'});
+        }
+        npcs.splice(i,1);
+      }
+    }
+  }
+
   // ── Pickups ──
   for(let i=pickups.length-1;i>=0;i--){
     const p=pickups[i];p.t+=eff;

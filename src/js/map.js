@@ -116,6 +116,15 @@ function genMap(){
   coresNeeded=nc; coresCollected=0; exitOpen=false; cores=[];
   let placed=0,guard=0;
   while(placed<nc&&guard++<800){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){cores.push({x:tx*TILE+8,y:ty*TILE+8,t:0});placed++;}}
+  // NPCs: 1-2 per floor in random rooms
+  npcs=[];
+  const npcCount=rndi(1,3);
+  for(let i=0;i<npcCount;i++){
+    const r=rs[rndi(1,rs.length)];
+    const pal=NPC_PALS[rndi(0,NPC_PALS.length)];
+    npcs.push({x:r.cx*TILE+8+rndi(-8,8),y:r.cy*TILE+8+rndi(-8,8),pal,
+      state:'idle',talkT:0,leadT:0,leadDur:rnd(6,13),dir:0,msg:'',hasSpokenFollow:false});
+  }
   // gatekeepers: start D10, placed in rooms (not starting room)
   gatekeepers=[];poisonPuddles=[];
   if(stage>=10){

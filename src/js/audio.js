@@ -100,7 +100,25 @@ const SE=(()=>{
     src.connect(flt);flt.connect(ng);ng.connect(c.destination);
     src.start(t);src.stop(t+.8);
   }
-  return{clang,driver,kill,bossDeath};
+  function npcFall(){
+    const c=ctx(),t=c.currentTime;
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(480,t);
+    osc.frequency.exponentialRampToValueAtTime(55,t+.75);
+    g.gain.setValueAtTime(.28,t);g.gain.exponentialRampToValueAtTime(.001,t+.8);
+    osc.connect(g);g.connect(c.destination);
+    osc.start(t);osc.stop(t+.8);
+    // vibrato-like wobble via second osc
+    const osc2=c.createOscillator(),g2=c.createGain();
+    osc2.type='square';
+    osc2.frequency.setValueAtTime(490,t);
+    osc2.frequency.exponentialRampToValueAtTime(58,t+.75);
+    g2.gain.setValueAtTime(.09,t);g2.gain.exponentialRampToValueAtTime(.001,t+.7);
+    osc2.connect(g2);g2.connect(c.destination);
+    osc2.start(t);osc2.stop(t+.8);
+  }
+  return{clang,driver,kill,bossDeath,npcFall};
 })();
 
 // ═══════════════════════════════════════════════

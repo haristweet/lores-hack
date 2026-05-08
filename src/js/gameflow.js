@@ -39,7 +39,7 @@ function startGame(){
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;
   paused=false;
   running=true;PSG.play(1);
@@ -78,7 +78,7 @@ function startAttractDemo(){
   for(const p of players){p.level=demoStage;}
   stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
-  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];
+  bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null; paused=false; callCooldown=0; callAggroTimer=0;
   running=true; PSG.stop();
   cv.classList.remove('cur');
