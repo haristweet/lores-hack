@@ -46,6 +46,17 @@ function updatePlayer(p,dt){
   }
   p.iframe=Math.max(0,p.iframe-dt);
   p.muzzle=Math.max(0,p.muzzle-dt);
+  // Parry
+  p.parryCd=Math.max(0,p.parryCd-dt);
+  p.parryT=Math.max(0,p.parryT-dt);
+  if(p.isHuman&&p.controller.parry){
+    const parB=p.controller.parry(p);
+    if(parB&&!p.edge.parry&&p.parryCd<=0){
+      p.parryT=.18;p.parryCd=1.5;
+      spark(p.x,p.y,'#fff',5,35);
+    }
+    p.edge.parry=parB;
+  }
 }
 
 function fireChargeShot(p,t){
@@ -207,6 +218,20 @@ function update(dt){
   for(let i=ebullets.length-1;i>=0;i--){
     const b=ebullets[i];b.x+=b.vx*eff;b.y+=b.vy*eff;b.life-=eff;
     if(b.life<=0||(solid(b.x,b.y)&&!b.wallpass)){spark(b.x,b.y,'#f8a',4,60);ebullets.splice(i,1);continue;}
+    // Parry check (before damage)
+    let parried=false;
+    for(const p of players){
+      if(!p.alive||p.parryT<=0)continue;
+      if(Math.hypot(b.x-p.x,b.y-p.y)<18){
+        // reflect bullet back as player bullet
+        bullets.push({x:b.x,y:b.y,vx:-b.vx*1.1,vy:-b.vy*1.1,life:1.2,dmg:b.dmg*1.5,owner:p,trail:[]});
+        ebullets.splice(i,1);
+        spark(b.x,b.y,'#fff',10,70);SE.clang();
+        flash('PARRY!','#fff');
+        parried=true;break;
+      }
+    }
+    if(parried)continue;
     for(const p of players){
       if(!p.alive)continue;
       const dx=p.x-b.x,dy=p.y-b.y;

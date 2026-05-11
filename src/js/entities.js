@@ -29,7 +29,8 @@ function makePlayer(idx,ctrl,isHuman){
     controller:ctrl,pal:P_PAL[idx],muzzle:0,
     weapon:{fireCd:.12,dmg:1,spread:.07,range:.55,spd:220},
     chargeT:0,hasRevive:false,
-    edge:{dash:false,fire:false},
+    parryCd:0,parryT:0,
+    edge:{dash:false,fire:false,parry:false},
     rushing:false,
     kills:0,accXp:0};
 }

@@ -17,6 +17,7 @@ class KMController{
   fire(){return mouse.down;}
   charge(){return!!(mouse.right||keys.KeyE);}
   dash(){return!!(keys.Space||keys.KeyF);}
+  parry(){return!!(keys.KeyQ);}
 }
 class PadController{
   constructor(){this.type='PAD';this.label='GAMEPAD';this._a=0;}
@@ -30,6 +31,7 @@ class PadController{
   fire(){const g=this._gp();if(!g)return false;if(Math.hypot(g.axes[2]||0,g.axes[3]||0)>.6)return true;if(g.buttons[7]?.value>.5)return true;return!!g.buttons[0]?.pressed;}
   charge(){const g=this._gp();if(!g)return false;return!!(g.buttons[6]?.value>.5);}
   dash(){const g=this._gp();if(!g)return false;return!!(g.buttons[4]?.pressed||g.buttons[1]?.pressed);}
+  parry(){const g=this._gp();if(!g)return false;return!!(g.buttons[10]?.pressed);}
 }
 
 // ── CPU helper fns (use live arrays) ─────────

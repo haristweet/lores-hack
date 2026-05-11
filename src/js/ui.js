@@ -324,6 +324,7 @@ function drawIntro(){
       ['FIRE','CLICK / HOLD'],
       ['CHARGE','R-CLICK / E'],
       ['DASH','SPACE / F'],
+      ['PARRY','Q'],
       ['WALK','SHIFT+MOUSE'],
       ['PAUSE','ESC'],
     ];
@@ -333,6 +334,7 @@ function drawIntro(){
       ['','RT TRIGGER'],
       ['','LT (HOLD)'],
       ['','LB'],
+      ['','R3 (STICK)'],
       ['','---'],
       ['','START'],
     ];

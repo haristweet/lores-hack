@@ -229,6 +229,17 @@ function drawPlayer(p){
       ctx.fillRect(x-d-1,y+d,2,2);ctx.fillRect(x+d,y+d,2,2);}
     ctx.globalAlpha=1;
   }
+  // Parry ring
+  if(p.parryT>0){
+    const pa=p.parryT/.18;
+    ctx.globalAlpha=pa*.9;
+    ctx.strokeStyle='#fff';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=pa*.25;
+    ctx.fillStyle='#adf';
+    ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  }
   // Name tag (MP only)
   if(players.length>1)pixText(p.pal.name,x-4,y-12,p.pal.body);
 }
@@ -373,7 +384,7 @@ function drawHUD(){
   if(time<7){
     const fa=time<5?1:Math.max(0,(7-time)/2);
     ctx.globalAlpha=fa*.7;
-    const hints=['WASD=MOVE  CLICK=FIRE  SPACE=DASH','TAB=CALL CPU  HOW TO PLAY: LOBBY'];
+    const hints=['WASD=MOVE  CLICK=FIRE  SPACE=DASH  Q=PARRY','TAB=CALL CPU  HOW TO PLAY: LOBBY'];
     hints.forEach((h,i)=>pixText(h,(W-h.length*4)>>1,H-45+i*8,'#89a'));
     ctx.globalAlpha=1;
   }
