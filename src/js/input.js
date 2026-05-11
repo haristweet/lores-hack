@@ -4,6 +4,7 @@
 const keys={};
 let paused=false,debug=false,introActive=false,introPage=0,introT=0;
 let podSelectState=null,_podPadPrev={};
+let padConfigActive=false,padCfgFocus=0,padCfgWaiting=false,_padCfgPrev={};
 const pauseEl=document.getElementById('pause');
 function setPause(v){
   paused=v;

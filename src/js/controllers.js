@@ -1,6 +1,11 @@
 // ═══════════════════════════════════════════════
 //  CONTROLLERS
 // ═══════════════════════════════════════════════
+const PAD_BTN_NAMES={0:'A',1:'B',2:'X',3:'Y',4:'LB',5:'RB',6:'LT',7:'RT',8:'SEL',9:'STA',10:'L3',11:'R3',12:'DU',13:'DD',14:'DL',15:'DR'};
+const PAD_ACT_KEYS=['fire','charge','dash','parry'];
+const padConfig={fire:7,charge:6,dash:4,parry:10};
+(function(){try{const s=localStorage.getItem('lores_pad_cfg');if(s)Object.assign(padConfig,JSON.parse(s));}catch(e){}})();
+function savePadConfig(){try{localStorage.setItem('lores_pad_cfg',JSON.stringify(padConfig));}catch(e){}}
 class KMController{
   constructor(){this.type='KB+M';this.label='KB+M';}
   move(p){
@@ -28,10 +33,10 @@ class PadController{
   }
   move(){const g=this._gp();if(!g)return{x:0,y:0};const x=g.axes[0]||0,y=g.axes[1]||0;if(Math.hypot(x,y)<.18)return{x:0,y:0};return{x,y};}
   aim(p){const g=this._gp();if(!g)return this._a;const x=g.axes[2]||0,y=g.axes[3]||0;if(Math.hypot(x,y)>.3)this._a=Math.atan2(y,x);return this._a;}
-  fire(){const g=this._gp();if(!g)return false;if(Math.hypot(g.axes[2]||0,g.axes[3]||0)>.6)return true;if(g.buttons[7]?.value>.5)return true;return!!g.buttons[0]?.pressed;}
-  charge(){const g=this._gp();if(!g)return false;return!!(g.buttons[6]?.value>.5);}
-  dash(){const g=this._gp();if(!g)return false;return!!(g.buttons[4]?.pressed||g.buttons[1]?.pressed);}
-  parry(){const g=this._gp();if(!g)return false;return!!(g.buttons[10]?.pressed);}
+  fire(){const g=this._gp();if(!g)return false;if(Math.hypot(g.axes[2]||0,g.axes[3]||0)>.6)return true;if(g.buttons[padConfig.fire]?.value>.5)return true;return!!g.buttons[0]?.pressed;}
+  charge(){const g=this._gp();if(!g)return false;return!!(g.buttons[padConfig.charge]?.value>.5);}
+  dash(){const g=this._gp();if(!g)return false;return!!(g.buttons[padConfig.dash]?.pressed||g.buttons[1]?.pressed);}
+  parry(){const g=this._gp();if(!g)return false;return!!(g.buttons[padConfig.parry]?.pressed);}
 }
 
 // ── CPU helper fns (use live arrays) ─────────
@@ -145,6 +150,11 @@ class CPUController{
     const sa=a+Math.PI/2,sv=Math.sin(this._strT*2.3);
     mx+=Math.cos(sa)*sv*.4;my+=Math.sin(sa)*sv*.4;
     if(ps==='bodyguard'&&hp){const hdx=hp.x-p.x,hdy=hp.y-p.y,hd=Math.hypot(hdx,hdy);if(hd>55){mx=(mx+hdx/hd)/2;my=(my+hdy/hd)/2;}}
+    // Gatekeeper avoidance: steer away when too close
+    for(const gk of gatekeepers){
+      const gdx=p.x-gk.x,gdy=p.y-gk.y,gd=Math.hypot(gdx,gdy)||1;
+      if(gd<32){const f=(1-gd/32)*2.5;mx+=gdx/gd*f;my+=gdy/gd*f;}
+    }
     const ml=Math.hypot(mx,my);if(ml>1){mx/=ml;my/=ml;}
     this._mx=mx;this._my=my;
   }

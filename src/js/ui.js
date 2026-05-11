@@ -112,6 +112,7 @@ function _lobbyPadNav(){
     ['start'],
     ...(hasCont?[['cont']]:[]),
     ['how'],
+    ...(cfg.slots[0]==='GAMEPAD'?[['padcfg']]:[]),
   ];
   let ri=2,ci=0;
   for(let r=0;r<grid.length;r++){const c=grid[r].indexOf(lobbyPadFocus);if(c>=0){ri=r;ci=c;break;}}
@@ -129,10 +130,69 @@ function _lobbyPadNav(){
     if(k==='start')startGame();
     else if(k==='cont')loadGame();
     else if(k==='how')startIntro();
+    else if(k==='padcfg'){padConfigActive=true;padCfgFocus=0;padCfgWaiting=false;_padCfgPrev={};}
   }
 }
 
+function drawPadConfig(){
+  ctx.fillStyle='#040010';ctx.fillRect(0,0,W,H);
+  for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,0,0.2)';ctx.fillRect(0,sy,W,2);}
+  pixBig('PAD CONFIG',Math.floor((W-72)/2),12,'#0ff');
+  ctx.fillStyle='#234';ctx.fillRect(20,26,W-40,1);
+  const ACT_LABELS=['FIRE','CHARGE','DASH','PARRY'];
+  ACT_LABELS.forEach((act,i)=>{
+    const y=34+i*20;
+    const sel=padCfgFocus===i;
+    if(sel){ctx.fillStyle='#081828';ctx.fillRect(16,y-2,W-32,14);}
+    pixText(act,22,y+2,sel?'#0ff':'#7ab');
+    const btnIdx=padConfig[PAD_ACT_KEYS[i]];
+    const btnName=(padCfgWaiting&&sel)?'...  ':(PAD_BTN_NAMES[btnIdx]||'?');
+    const bw=btnName.length*4+8;const bx=W-22-bw;
+    ctx.fillStyle=sel?(padCfgWaiting?'#f80':'#0af'):'#1a2a3a';ctx.fillRect(bx,y,bw,9);
+    ctx.strokeStyle=sel?(padCfgWaiting?'#fa0':'#0ff'):'#345';ctx.lineWidth=1;ctx.strokeRect(bx+.5,y+.5,bw-1,8);
+    pixText(btnName,bx+4,y+2,sel?'#000':'#567');
+  });
+  ctx.fillStyle='#234';ctx.fillRect(20,118,W-40,1);
+  if(padCfgWaiting){
+    const pw='PRESS ANY BUTTON';
+    ctx.globalAlpha=0.7+Math.sin(performance.now()/300)*0.3;
+    pixText(pw,Math.floor((W-pw.length*4)/2),126,'#f80');
+    ctx.globalAlpha=1;
+    pixText('B : CANCEL',Math.floor((W-40)/2),140,'#456');
+  }else{
+    pixText('A:SET   B:BACK',Math.floor((W-56)/2),126,'#456');
+  }
+}
+function padCfgNav(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp)return;
+  const edge=(k,v)=>{const r=v&&!_padCfgPrev[k];_padCfgPrev[k]=v;return r;};
+  if(padCfgWaiting){
+    const ignore=new Set([8,9,12,13,14,15]);
+    for(let i=0;i<gp.buttons.length;i++){
+      if(ignore.has(i))continue;
+      if(edge('b'+i,!!(gp.buttons[i]?.pressed||(gp.buttons[i]?.value>.5)))){
+        padConfig[PAD_ACT_KEYS[padCfgFocus]]=i;
+        savePadConfig();
+        padCfgWaiting=false;_padCfgPrev={};break;
+      }
+    }
+    if(edge('cancel',gp.buttons[1]?.pressed)){padCfgWaiting=false;_padCfgPrev={};}
+    return;
+  }
+  const up=edge('u',(gp.buttons[12]?.pressed)||(gp.axes[1]||0)<-0.5);
+  const dn=edge('d',(gp.buttons[13]?.pressed)||(gp.axes[1]||0)>0.5);
+  const ok=edge('a',gp.buttons[0]?.pressed);
+  const back=edge('b',gp.buttons[1]?.pressed);
+  if(up)padCfgFocus=Math.max(0,padCfgFocus-1);
+  if(dn)padCfgFocus=Math.min(PAD_ACT_KEYS.length-1,padCfgFocus+1);
+  if(ok){padCfgWaiting=true;_padCfgPrev={};}
+  if(back){padConfigActive=false;_padCfgPrev={};}
+}
+
 function drawLobbyCanvas(dt){
+  if(padConfigActive){drawPadConfig();padCfgNav();return;}
   lobbyT+=dt;
   lobbyIdleT+=dt;
   if(lobbyIdleT>10)startAttractDemo();
@@ -190,9 +250,12 @@ function drawLobbyCanvas(dt){
     pixText(sl,Math.round((W-sl.length*4)/2),nY+1,'#3a7'); nY+=9;
   }
 
-  // — HOW TO PLAY —
-  const botY=Math.min(nY+4,155);
+  // — HOW TO PLAY / PAD CONFIG —
+  const botY=Math.min(nY+4,150);
   lbBtn('how','HOW TO PLAY',Math.round(W/2)-26,botY,52,rh,false);
+  if(cfg.slots[0]==='GAMEPAD'){
+    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,botY+12,52,rh,false);
+  }
 }
 
 function lobbyHandleClick(){
@@ -205,6 +268,7 @@ function lobbyHandleClick(){
       if(k==='start'){startGame();return;}
       if(k==='cont'){loadGame();return;}
       if(k==='how'){startIntro();return;}
+      if(k==='padcfg'){padConfigActive=true;padCfgFocus=0;padCfgWaiting=false;_padCfgPrev={};return;}
     }
   }
 }
