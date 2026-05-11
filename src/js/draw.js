@@ -87,7 +87,6 @@ function draw(){
     ctx.globalAlpha=1;
     ctx.fillStyle='#f88';
     ctx.fillRect(gk.x-1,gk.y-6,2,12);ctx.fillRect(gk.x-6,gk.y-1,12,2);
-    pixText('GK',(gk.x-4)|0,(gk.y-14)|0,'#f44');
   }
 
   // COLD SLEEP POD

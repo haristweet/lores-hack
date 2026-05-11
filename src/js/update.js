@@ -381,6 +381,22 @@ function update(dt){
       for(let a=0;a<8;a++){const ang=a*Math.PI/4;ebullets.push({x:gk.x,y:gk.y,vx:Math.cos(ang)*80,vy:Math.sin(ang)*80,life:1.8,dmg:8});}
       spark(gk.x,gk.y,'#f44',8,60);
     }
+    // contact damage + knockback
+    for(const p of players){
+      if(!p.alive||p.iframe>0)continue;
+      const dx=p.x-gk.x,dy=p.y-gk.y,dist=Math.hypot(dx,dy);
+      if(dist<8){
+        damagePlayer(p,15);
+        p.iframe=.6;
+        // push player away
+        const nx=dist>0?dx/dist:1,ny=dist>0?dy/dist:0;
+        const pushDist=18;
+        const px2=p.x+nx*pushDist,py2=p.y+ny*pushDist;
+        if(!hitsWall(px2,p.y,p.r))p.x=px2;
+        if(!hitsWall(p.x,py2,p.r))p.y=py2;
+        spark(p.x,p.y,'#f44',5,55);
+      }
+    }
   }
 
   // ── Poison puddles ──
