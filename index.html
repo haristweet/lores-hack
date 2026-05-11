@@ -686,7 +686,7 @@ function makeBoss(){
   if(bx===undefined){bx=MAPW*TILE*.5;by=16;}
   return{type:'boss',x:bx,y:by,vx:0,vy:0,
     hp,_maxHp:hp,r:9,spd:22+stage*.25,
-    dmg:Math.round(35*sc),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
+    dmg:Math.round(18+stage*stage*.018),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
     _phase2:false,_shootCd:0};
 }
 
@@ -1407,13 +1407,20 @@ function callCPU(){
   flash('CALLING ALLIES!','#0ff');
   spark(hp.x,hp.y,'#0ff',16,110);
 }
+function _saveBest(){
+  const prev=+(localStorage.getItem('lores_best')||0);
+  if(stage>prev){localStorage.setItem('lores_best',stage);return true;}
+  return false;
+}
 function gameOver(){
   PSG.stop();clearSave();
   gameOverState=true;
-  gameOverMsg='DEPTH '+stage+' / KILLS '+totalKills;
+  const newRecord=!attractDemo&&_saveBest();
+  gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
 function gameCleared(){
   PSG.stop();clearSave();running=false;gameWon=true;
+  if(!attractDemo)_saveBest();
   winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
 }
 
@@ -1788,6 +1795,15 @@ function drawHUD(){
 
   if(exitOpen&&stage!==MAX_DEPTH)pixText('REACH EXIT >>',W/2-(13*4)/2,H-28,'#ff0');
   if(stage===MAX_DEPTH&&exitOpen)pixText('FIND THE SCREW!',W/2-(15*4)/2,H-28,'#ff0');
+
+  // Controls hint (first 7 seconds of a floor)
+  if(time<7){
+    const fa=time<5?1:Math.max(0,(7-time)/2);
+    ctx.globalAlpha=fa*.7;
+    const hints=['WASD=MOVE  CLICK=FIRE  SPACE=DASH','TAB=CALL CPU  HOW TO PLAY: LOBBY'];
+    hints.forEach((h,i)=>pixText(h,(W-h.length*4)>>1,H-45+i*8,'#89a'));
+    ctx.globalAlpha=1;
+  }
 
   // ── Debug overlay ─────────────────────────
   if(!debug||!running)return;
@@ -2504,6 +2520,12 @@ function drawLobbyCanvas(dt){
   pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${fch}${fch}`);
   const sub='THE SCREW AWAITS AT THE BOTTOM';
   pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
+  // best depth badge
+  const bestD=+(localStorage.getItem('lores_best')||0);
+  if(bestD>0){
+    const bs='BEST: '+bestD;
+    pixText(bs,Math.round((W-bs.length*4)/2),72,'#08f');
+  }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
   ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,75,116,1);
 
@@ -2740,14 +2762,34 @@ function drawGameOver(){
   for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
   const pulse=0.85+Math.sin(performance.now()/400)*0.15;
   ctx.save();ctx.globalAlpha=pulse;
-  pixBig('YOU DIED',Math.floor((W-64)/2),30,'#f44');
+  pixBig('YOU DIED',Math.floor((W-64)/2),20,'#f44');
   ctx.restore();
-  if(gameOverMsg)pixText(gameOverMsg,Math.floor((W-gameOverMsg.length*4)/2),52,'#fa8');
-  ctx.fillStyle='#f44';ctx.fillRect(40,64,W-80,1);
+  // stats
+  const depthStr='DEPTH  '+stage;
+  const killStr='KILLS  '+totalKills;
+  pixText(depthStr,Math.floor((W-depthStr.length*4)/2),40,'#ff8');
+  pixText(killStr, Math.floor((W-killStr.length*4)/2),51,'#fa8');
+  // best depth
+  const best=+(localStorage.getItem('lores_best')||0);
+  if(best>0){
+    const bestStr='BEST   '+best;
+    const isNew=stage>=best;
+    const bc=isNew?'#0ff':'#456';
+    pixText(bestStr,Math.floor((W-bestStr.length*4)/2),62,bc);
+    if(isNew){
+      const nb='NEW RECORD!';
+      const pa=0.7+Math.sin(performance.now()/200)*0.3;
+      ctx.save();ctx.globalAlpha=pa;
+      pixText(nb,Math.floor((W-nb.length*4)/2),72,'#0ff');
+      ctx.restore();
+    }
+  }
+  ctx.fillStyle='#f44';ctx.fillRect(40,best>0?82:66,W-80,1);
   const bw=60,bx=Math.floor(W/2-bw/2);
+  const btnY=best>0?88:72;
   Object.keys(goBtns).forEach(k=>delete goBtns[k]);
-  goBtnPri('retry','RETRY',bx,72,bw,13,'#f88');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),96,'#445');
+  goBtnPri('retry','RETRY',bx,btnY,bw,13,'#f88');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
 }
 function goHandleClick(){
   for(const[k,b] of Object.entries(goBtns)){

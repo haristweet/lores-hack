@@ -82,7 +82,7 @@ function makeBoss(){
   if(bx===undefined){bx=MAPW*TILE*.5;by=16;}
   return{type:'boss',x:bx,y:by,vx:0,vy:0,
     hp,_maxHp:hp,r:9,spd:22+stage*.25,
-    dmg:Math.round(35*sc),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
+    dmg:Math.round(18+stage*stage*.018),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
     _phase2:false,_shootCd:0};
 }
 

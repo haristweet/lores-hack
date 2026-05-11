@@ -153,6 +153,12 @@ function drawLobbyCanvas(dt){
   pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${fch}${fch}`);
   const sub='THE SCREW AWAITS AT THE BOTTOM';
   pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
+  // best depth badge
+  const bestD=+(localStorage.getItem('lores_best')||0);
+  if(bestD>0){
+    const bs='BEST: '+bestD;
+    pixText(bs,Math.round((W-bs.length*4)/2),72,'#08f');
+  }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
   ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,75,116,1);
 
@@ -389,14 +395,34 @@ function drawGameOver(){
   for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
   const pulse=0.85+Math.sin(performance.now()/400)*0.15;
   ctx.save();ctx.globalAlpha=pulse;
-  pixBig('YOU DIED',Math.floor((W-64)/2),30,'#f44');
+  pixBig('YOU DIED',Math.floor((W-64)/2),20,'#f44');
   ctx.restore();
-  if(gameOverMsg)pixText(gameOverMsg,Math.floor((W-gameOverMsg.length*4)/2),52,'#fa8');
-  ctx.fillStyle='#f44';ctx.fillRect(40,64,W-80,1);
+  // stats
+  const depthStr='DEPTH  '+stage;
+  const killStr='KILLS  '+totalKills;
+  pixText(depthStr,Math.floor((W-depthStr.length*4)/2),40,'#ff8');
+  pixText(killStr, Math.floor((W-killStr.length*4)/2),51,'#fa8');
+  // best depth
+  const best=+(localStorage.getItem('lores_best')||0);
+  if(best>0){
+    const bestStr='BEST   '+best;
+    const isNew=stage>=best;
+    const bc=isNew?'#0ff':'#456';
+    pixText(bestStr,Math.floor((W-bestStr.length*4)/2),62,bc);
+    if(isNew){
+      const nb='NEW RECORD!';
+      const pa=0.7+Math.sin(performance.now()/200)*0.3;
+      ctx.save();ctx.globalAlpha=pa;
+      pixText(nb,Math.floor((W-nb.length*4)/2),72,'#0ff');
+      ctx.restore();
+    }
+  }
+  ctx.fillStyle='#f44';ctx.fillRect(40,best>0?82:66,W-80,1);
   const bw=60,bx=Math.floor(W/2-bw/2);
+  const btnY=best>0?88:72;
   Object.keys(goBtns).forEach(k=>delete goBtns[k]);
-  goBtnPri('retry','RETRY',bx,72,bw,13,'#f88');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),96,'#445');
+  goBtnPri('retry','RETRY',bx,btnY,bw,13,'#f88');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
 }
 function goHandleClick(){
   for(const[k,b] of Object.entries(goBtns)){

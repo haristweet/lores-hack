@@ -369,6 +369,15 @@ function drawHUD(){
   if(exitOpen&&stage!==MAX_DEPTH)pixText('REACH EXIT >>',W/2-(13*4)/2,H-28,'#ff0');
   if(stage===MAX_DEPTH&&exitOpen)pixText('FIND THE SCREW!',W/2-(15*4)/2,H-28,'#ff0');
 
+  // Controls hint (first 7 seconds of a floor)
+  if(time<7){
+    const fa=time<5?1:Math.max(0,(7-time)/2);
+    ctx.globalAlpha=fa*.7;
+    const hints=['WASD=MOVE  CLICK=FIRE  SPACE=DASH','TAB=CALL CPU  HOW TO PLAY: LOBBY'];
+    hints.forEach((h,i)=>pixText(h,(W-h.length*4)>>1,H-45+i*8,'#89a'));
+    ctx.globalAlpha=1;
+  }
+
   // ── Debug overlay ─────────────────────────
   if(!debug||!running)return;
   const dl=[

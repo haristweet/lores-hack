@@ -684,13 +684,20 @@ function callCPU(){
   flash('CALLING ALLIES!','#0ff');
   spark(hp.x,hp.y,'#0ff',16,110);
 }
+function _saveBest(){
+  const prev=+(localStorage.getItem('lores_best')||0);
+  if(stage>prev){localStorage.setItem('lores_best',stage);return true;}
+  return false;
+}
 function gameOver(){
   PSG.stop();clearSave();
   gameOverState=true;
-  gameOverMsg='DEPTH '+stage+' / KILLS '+totalKills;
+  const newRecord=!attractDemo&&_saveBest();
+  gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
 function gameCleared(){
   PSG.stop();clearSave();running=false;gameWon=true;
+  if(!attractDemo)_saveBest();
   winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
 }
 
