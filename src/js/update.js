@@ -190,7 +190,7 @@ function update(dt){
           if(e.type==='splatter'&&!e._split){
             for(let k=0;k<2;k++){const a=Math.random()*Math.PI*2;const mini=makeEnemy('grunt',e.x+Math.cos(a)*8,e.y+Math.sin(a)*8);mini.hp=Math.max(1,mini.hp*.4);mini.r=2;mini._split=true;enemies.push(mini);}
           }
-          if(e.type==='boss')SE.bossDeath();else SE.kill();
+          if(e.type==='boss'&&!e._isFake)SE.bossDeath();else SE.kill();
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
           const healRate=stage>50?Math.max(.02,.12-(stage-50)*.002):.12;
@@ -198,15 +198,21 @@ function update(dt){
           if(chance(healRate))pickups.push({type:'health',x:e.x,y:e.y,t:0});
           // boss drops
           if(e.type==='boss'){
-            for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
-            flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
-            if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
-            if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
-            if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
-            if(!attractDemo)PSG.play(stage); // revert to zone BGM
-            // restore any devoured cores (partial refund)
-            const refund=Math.min(coresNeeded-coresCollected,2);
-            if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
+            if(e._isFake){
+              // Decoy — no rewards, no game effects
+              flash('★ A DECOY! ★','#fa8');shake=Math.max(shake,4);
+              spark(e.x,e.y,'#aaa',24,80);
+            }else{
+              for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
+              flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
+              if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
+              if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
+              if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
+              if(!attractDemo)PSG.play(stage); // revert to zone BGM
+              // restore any devoured cores (partial refund)
+              const refund=Math.min(coresNeeded-coresCollected,2);
+              if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
+            }
           }
           // zombie drops bonus
           if(e.type==='zombie'){
@@ -251,7 +257,7 @@ function update(dt){
     for(const p of players){
       if(!p.alive)continue;
       const dx=p.x-b.x,dy=p.y-b.y;
-      if(dx*dx+dy*dy<(p.r+1.5)**2){ebullets.splice(i,1);damagePlayer(p,b.dmg);break;}
+      if(dx*dx+dy*dy<(p.r+(b.r||1.5))**2){ebullets.splice(i,1);damagePlayer(p,b.dmg);break;}
     }
   }
 
@@ -375,44 +381,126 @@ function update(dt){
         if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.4;e.vx-=Math.cos(e.ang)*40;e.vy-=Math.sin(e.ang)*40;}
       }
     } else if(e.type==='boss'){
+      const tier=e._tier||'green';
       // ── Phase 2 trigger at 50% HP ──
       if(!e._phase2&&e.hp<e._maxHp*.5){
         e._phase2=true;
         flash('★ PHASE 2 ★','#f44');flash('ENRAGED!','#f80');
         shake=Math.max(shake,7);
       }
+      // ── Final boss: split at 50% HP ──
+      if(tier==='final'&&!e._splitDone&&e.hp<e._maxHp*.5){
+        e._splitDone=true;
+        const copy=Object.assign({},e);
+        copy._splitDone=true;copy._gkPhase=null;copy._dashState=null;copy._holdT=0;
+        e._isFake=Math.random()<.5;copy._isFake=!e._isFake;
+        copy.x=e.x+(Math.random()<.5?-36:36);copy.y=e.y+(Math.random()<.5?-28:28);
+        copy.vx=0;copy.vy=0;
+        enemies.push(copy);
+        flash('IT SPLIT!','#f88');flash('WHICH IS REAL??','#fa8');
+        shake=Math.max(shake,8);spark(e.x,e.y,'#f8f',24,120);
+      }
       const bSpd=e._phase2?e.spd*1.5:e.spd;
-      e.vx=Math.cos(e.ang)*bSpd;e.vy=Math.sin(e.ang)*bSpd;
-      // Break surrounding wall tiles
+      let skipMove=false;
+
+      // ── Attack 3: wall-breaking dash (red/final) ──
+      if(tier==='red'||tier==='final'){
+        e._dashCd=Math.max(0,(e._dashCd||5)-eff);
+        if(!e._dashState&&e._dashCd<=0&&d>40){
+          e._dashState='charging';e._chargeT=.35;
+          e._dashVx=Math.cos(e.ang);e._dashVy=Math.sin(e.ang);
+          e._dashDistLeft=rnd(120,190);
+          spark(e.x,e.y,'#f44',8,80);flash('CHARGE!','#f44');
+        }
+        if(e._dashState==='charging'){e._chargeT-=eff;if(e._chargeT<=0)e._dashState='dashing';skipMove=true;}
+        if(e._dashState==='dashing'){
+          const mx=e._dashVx*bSpd*5*eff,my=e._dashVy*bSpd*5*eff;
+          e.x+=mx;e.y+=my;e._dashDistLeft-=Math.hypot(mx,my);
+          const btxD=(e.x/TILE)|0,btyD=(e.y/TILE)|0;
+          for(let dy2=-1;dy2<=1;dy2++)for(let dx2=-1;dx2<=1;dx2++){
+            const nx=btxD+dx2,ny=btyD+dy2;
+            if(nx<1||ny<1||nx>=MAPW-1||ny>=MAPH-1)continue;
+            if(map[ny*MAPW+nx]===1){map[ny*MAPW+nx]=0;fog[ny*MAPW+nx]=1;spark(nx*TILE+8,ny*TILE+8,'#c84',4,55);shake=Math.max(shake,1);}
+          }
+          for(const p of players){if(p.alive&&Math.hypot(p.x-e.x,p.y-e.y)<e.r+p.r+2&&e.atkCd<=0){damagePlayer(p,Math.round(e.dmg*1.3));e.atkCd=.3;shake=Math.max(shake,4);}}
+          const hitOuter=e.x<=TILE*1.5||e.x>=(MAPW-1)*TILE||e.y<=TILE*1.5||e.y>=(MAPH-1)*TILE;
+          e.x=Math.max(TILE,Math.min((MAPW-1)*TILE,e.x));e.y=Math.max(TILE,Math.min((MAPH-1)*TILE,e.y));
+          if(e._dashDistLeft<=0||hitOuter){e._dashState='recovering';e._recoverT=e._phase2?rnd(.5,.9):rnd(.9,1.4);shake=Math.max(shake,4);spark(e.x,e.y,'#c44',12,90);}
+          skipMove=true;
+        }
+        if(e._dashState==='recovering'){e._recoverT-=eff;if(e._recoverT<=0){e._dashState=null;e._dashCd=e._phase2?rnd(3,5):rnd(5,8);}skipMove=true;}
+      }
+
+      // ── Attack 1: GK grab & throw (yellow/red/final) ──
+      let huntingGK=false;
+      if(tier!=='green'&&!e._dashState){
+        e._gkCd=Math.max(0,(e._gkCd||8)-eff);
+        if(!e._gkPhase&&e._gkCd<=0&&gatekeepers.length>0){
+          let ng=null,nd=Infinity;
+          for(const gk of gatekeepers){const dg=Math.hypot(gk.x-e.x,gk.y-e.y);if(dg<nd){nd=dg;ng=gk;}}
+          if(ng){e._gkPhase='hunting';e._gkTarget=ng;flash('GK LOCKED!','#f80');}
+          else e._gkCd=rnd(3,6);
+        }
+        if(e._gkPhase==='hunting'){
+          const gk=e._gkTarget;
+          if(!gk||!gatekeepers.includes(gk)){e._gkPhase=null;e._gkTarget=null;e._gkCd=rnd(5,9);}
+          else{
+            const da=Math.atan2(gk.y-e.y,gk.x-e.x);
+            e.vx=Math.cos(da)*bSpd;e.vy=Math.sin(da)*bSpd;huntingGK=true;
+            if(Math.hypot(gk.x-e.x,gk.y-e.y)<e.r+12){
+              gatekeepers.splice(gatekeepers.indexOf(gk),1);
+              e._gkPhase='holding';e._holdT=rnd(.8,1.4);e._gkTarget=null;
+              flash('GK GRABBED!','#f80');shake=Math.max(shake,2);
+            }
+          }
+        }
+        if(e._gkPhase==='holding'){
+          e._holdT-=eff;
+          if(e._holdT<=0){
+            const ta=Math.atan2(tgt.y-e.y,tgt.x-e.x);
+            ebullets.push({x:e.x,y:e.y,vx:Math.cos(ta)*210,vy:Math.sin(ta)*210,life:1.4,dmg:Math.round(32*eScale()),r:7,_isGK:true});
+            e._gkPhase=null;e._gkCd=rnd(12,18);
+            spark(e.x,e.y,'#f80',10,80);flash('WATCH OUT!','#f44');shake=Math.max(shake,3);
+          }
+        }
+      }
+
+      // ── Attack 2: 16-way ring shot (yellow/red/final) ──
+      if(tier!=='green'&&!huntingGK&&e._gkPhase!=='holding'){
+        e._ring16Cd=Math.max(0,(e._ring16Cd||7)-eff);
+        if(e._ring16Cd<=0){
+          for(let k=0;k<16;k++){const a=k*Math.PI*2/16;ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*95,vy:Math.sin(a)*95,life:1.8,dmg:Math.round(e.dmg*.5)});}
+          e._ring16Cd=e._phase2?rnd(4,6):rnd(7,10);
+          spark(e.x,e.y,'#ff8',16,80);shake=Math.max(shake,2);
+        }
+      }
+
+      // ── Standard movement ──
+      if(!skipMove&&!huntingGK){e.vx=Math.cos(e.ang)*bSpd;e.vy=Math.sin(e.ang)*bSpd;}
+      // Break surrounding wall tiles (all tiers)
       e.breakCd=Math.max(0,(e.breakCd||0)-eff);
       const btx=(e.x/TILE)|0,bty=(e.y/TILE)|0;
       for(let dy2=-1;dy2<=1;dy2++)for(let dx2=-1;dx2<=1;dx2++){
         const nx=btx+dx2,ny=bty+dy2;
         if(nx<1||ny<1||nx>=MAPW-1||ny>=MAPH-1)continue;
-        if(map[ny*MAPW+nx]===1){
-          map[ny*MAPW+nx]=0;fog[ny*MAPW+nx]=1;
-          if(e.breakCd<=0){spark(nx*TILE+8,ny*TILE+8,'#c84',6,65);e.breakCd=.1;shake=Math.max(shake,1.5);}
-        }
+        if(map[ny*MAPW+nx]===1){map[ny*MAPW+nx]=0;fog[ny*MAPW+nx]=1;if(e.breakCd<=0){spark(nx*TILE+8,ny*TILE+8,'#c84',6,65);e.breakCd=.1;shake=Math.max(shake,1.5);}}
       }
-      // Devour cores — wider range in phase 2
+      // Devour cores
       const coreEatR=e._phase2?e.r+28:e.r+8;
       for(let i=cores.length-1;i>=0;i--){const c=cores[i];if(Math.hypot(c.x-e.x,c.y-e.y)<coreEatR){spark(c.x,c.y,'#f80',4,40);cores.splice(i,1);if(e._phase2)flash('CORE DEVOURED!','#f44');}}
       for(let i=pickups.length-1;i>=0;i--){const pk=pickups[i];if(Math.hypot(pk.x-e.x,pk.y-e.y)<e.r+8){spark(pk.x,pk.y,'#622',3,30);pickups.splice(i,1);}}
-      // Phase 2: spread shot burst
-      if(e._phase2){
+      // Green phase 2: 5-way spread shot
+      if(tier==='green'&&e._phase2){
         e._shootCd=Math.max(0,(e._shootCd||0)-eff);
-        if(e._shootCd<=0){
-          for(let k=-2;k<=2;k++){const a=e.ang+k*.28;ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*115,vy:Math.sin(a)*115,life:1.6,dmg:e.dmg*.55});}
-          e._shootCd=2.2;spark(e.x,e.y,'#f80',8,80);
-        }
+        if(e._shootCd<=0){for(let k=-2;k<=2;k++){const a=e.ang+k*.28;ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*115,vy:Math.sin(a)*115,life:1.6,dmg:e.dmg*.55});}e._shootCd=2.2;spark(e.x,e.y,'#f80',8,80);}
       }
-      // Smash attack
-      if(d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=1.0;shake=Math.max(shake,3);e.vx-=Math.cos(e.ang)*45;e.vy-=Math.sin(e.ang)*45;}
-      // Direct position update (no wall check)
-      e.x+=e.vx*eff;e.y+=e.vy*eff;
-      e.x=Math.max(TILE,Math.min(MAPW*TILE-TILE,e.x));e.y=Math.max(TILE,Math.min(MAPH*TILE-TILE,e.y));
+      // Smash attack (not during dash)
+      if(e._dashState!=='dashing'&&d<e.r+tgt.r+2&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=1.0;shake=Math.max(shake,3);e.vx-=Math.cos(e.ang)*45;e.vy-=Math.sin(e.ang)*45;}
+      // Position update (skip if mid-dash — already moved)
+      if(e._dashState!=='dashing'){e.x+=e.vx*eff;e.y+=e.vy*eff;}
+      e.x=Math.max(TILE,Math.min((MAPW-1)*TILE,e.x));e.y=Math.max(TILE,Math.min((MAPH-1)*TILE,e.y));
       e.hit=Math.max(0,e.hit-eff);e.anim+=eff;
-      // boss pushes players away (boss itself doesn't move)
+      // boss pushes players away
       for(const p of players){if(!p.alive)continue;const ox=p.x-e.x,oy=p.y-e.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=mn-dd;const npx=p.x+ox/dd*push,npy=p.y+oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
       continue; // skip standard moveObj + enemy separation
     } else {
@@ -742,7 +830,8 @@ function nextStage(){
       if(!running)return;
       const b=makeBoss();enemies.push(b);
       flash('★ BOSS APPROACHES ★','#f44');
-      flash('WALL-BREAKER INCOMING','#f88');
+      const _bMsg={green:'WALL-BREAKER INCOMING',yellow:'GK-THROWER INCOMING',red:'JUGGERNAUT INCOMING',final:'THE FINAL TERROR'}[b._tier]||'BOSS INCOMING';
+      flash(_bMsg,'#f88');
       shake=Math.max(shake,3);
       if(!attractDemo)PSG.boss(stage);
     },1200);

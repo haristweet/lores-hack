@@ -146,7 +146,12 @@ function draw(){
   }
   // Enemy bullets
   for(const b of ebullets){
-    if(b.wallpass){ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-2,(b.y|0)-2,4,4);ctx.fillStyle='#f0f';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);}
+    if(b._isGK){
+      // Thrown gatekeeper — large cyan projectile
+      ctx.fillStyle='#08a';ctx.fillRect((b.x|0)-3,(b.y|0)-3,7,7);
+      ctx.fillStyle='#0cf';ctx.fillRect((b.x|0)-2,(b.y|0)-2,5,5);
+      ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-1,(b.y|0)-1,1,1);
+    }else if(b.wallpass){ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-2,(b.y|0)-2,4,4);ctx.fillStyle='#f0f';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);}
     else{ctx.fillStyle='#f44';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);ctx.fillStyle='#fa6';ctx.fillRect(b.x|0,b.y|0,1,1);}
   }
 
@@ -247,8 +252,14 @@ function drawEnemy(e){
   const x=Math.round(e.x),y=Math.round(e.y);
   // ── Boss ────────────────────────────────────
   if(e.type==='boss'){
+    const tier=e._tier||'green';
     const pulse=Math.abs(Math.sin(time*5));
-    const bc=e.hit>0?'#fff':'#622',hc=e.hit>0?'#fff':'#411';
+    let _bc,_hc,_belt,_eye='#f00';
+    if(tier==='green') {_bc='#622';_hc='#411';_belt='#833';}
+    else if(tier==='yellow'){_bc='#886';_hc='#553';_belt='#aa8';_eye='#ff8';}
+    else if(tier==='red')  {_bc='#c22';_hc='#811';_belt='#f44';_eye='#f66';}
+    else                   {_bc='#528';_hc='#314';_belt='#83b';_eye='#f0f';}
+    const bc=e.hit>0?'#fff':_bc,hc=e.hit>0?'#fff':_hc;
     // Shadow
     ctx.fillStyle='#000';ctx.globalAlpha=.45;ctx.fillRect(x-10,y+8,20,4);ctx.globalAlpha=1;
     // Fists
@@ -256,21 +267,38 @@ function drawEnemy(e){
     // Body
     ctx.fillStyle=bc;ctx.fillRect(x-6,y-6,12,14);
     // Belt stripe
-    ctx.fillStyle=e.hit>0?'#fff':'#833';ctx.fillRect(x-6,y+1,12,2);
+    ctx.fillStyle=e.hit>0?'#fff':_belt;ctx.fillRect(x-6,y+1,12,2);
     // Head
     ctx.fillStyle=hc;ctx.fillRect(x-5,y-11,10,6);
     // Eyes glow
-    ctx.fillStyle='#f00';ctx.globalAlpha=.6+pulse*.4;
+    ctx.fillStyle=_eye;ctx.globalAlpha=.6+pulse*.4;
     ctx.fillRect(x-4,y-9,3,2);ctx.fillRect(x+1,y-9,3,2);
     ctx.globalAlpha=1;
     // Legs animate
     const lb=((time*7)|0)%2;
     ctx.fillStyle=e.hit>0?'#fff':'#400';
     ctx.fillRect(x-5,y+8,4,4-lb);ctx.fillRect(x+1,y+8,4,3+lb);
+    // Final boss: appendages + orbiting gem
+    if(tier==='final'){
+      ctx.fillStyle=bc;
+      ctx.fillRect(x-15,y-2,6,4);ctx.fillRect(x+9,y-2,6,4); // arms
+      ctx.fillRect(x-2,y-15,4,6);ctx.fillRect(x-2,y+9,4,6); // spikes
+      const ox2=Math.round(Math.cos(time*2.5)*13),oy2=Math.round(Math.sin(time*2.5)*13);
+      ctx.fillStyle='#f0f';ctx.globalAlpha=.5+pulse*.5;
+      ctx.fillRect(x+ox2-1,y+oy2-1,3,3);ctx.globalAlpha=1;
+    }
+    // Holding GK indicator
+    if(e._gkPhase==='holding'){
+      ctx.fillStyle='#0cf';ctx.fillRect(x-2,y-22,5,8);
+      ctx.fillStyle='#08a';ctx.fillRect(x-2,y-26,5,5);
+      ctx.fillStyle='#fff';ctx.fillRect(x-1,y-25,1,1);ctx.fillRect(x+1,y-25,1,1);
+    }
     // Name + HP bar
-    ctx.globalAlpha=.9;pixText('BOSS',x-8,y-18,'#f44');ctx.globalAlpha=1;
-    const bpw=28;ctx.fillStyle='#400';ctx.fillRect(x-(bpw>>1),y-21,bpw,2);
-    ctx.fillStyle=e.hit>0?'#ff0':'#f44';ctx.fillRect(x-(bpw>>1),y-21,(bpw*e.hp/e._maxHp)|0,2);
+    const bLabel=tier==='final'?'FINAL':tier==='red'?'RED':tier==='yellow'?'GOLD':'BOSS';
+    const bLabelCol=tier==='final'?'#f0f':tier==='red'?'#f44':tier==='yellow'?'#ff8':'#f44';
+    ctx.globalAlpha=.9;pixText(bLabel,x-Math.floor(bLabel.length*2),y-18,bLabelCol);ctx.globalAlpha=1;
+    const bpw=tier==='final'?36:28;ctx.fillStyle='#400';ctx.fillRect(x-(bpw>>1),y-21,bpw,2);
+    ctx.fillStyle=e.hit>0?'#ff0':bLabelCol;ctx.fillRect(x-(bpw>>1),y-21,(bpw*e.hp/e._maxHp)|0,2);
     return;
   }
   ctx.fillStyle='#000';ctx.globalAlpha=.4;ctx.fillRect(x-e.r,y+e.r-1,e.r*2,2);ctx.globalAlpha=1;

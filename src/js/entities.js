@@ -85,10 +85,24 @@ function makeBoss(){
     if(minD>180){bx=wx;by=wy;break;}
   }
   if(bx===undefined){bx=MAPW*TILE*.5;by=16;}
+  let _tier='green';
+  if(stage>=99)_tier='final';
+  else if(stage>=66)_tier='red';
+  else if(stage>=33)_tier='yellow';
+  const isFinal=_tier==='final';
   return{type:'boss',x:bx,y:by,vx:0,vy:0,
-    hp,_maxHp:hp,r:9,spd:22+stage*.25,
+    hp,_maxHp:hp,r:isFinal?11:9,spd:22+stage*.25,
     dmg:Math.round(18+stage*stage*.018),atkCd:0,hit:0,ang:0,anim:0,_dead:false,breakCd:0,
-    _phase2:false,_shootCd:0};
+    _phase2:false,_shootCd:0,_tier,
+    // Attack 1: GK grab & throw
+    _gkCd:_tier==='green'?999:rnd(6,10),_gkPhase:null,_gkTarget:null,_holdT:0,
+    // Attack 2: 16-way ring shot
+    _ring16Cd:_tier==='green'?999:rnd(5,8),
+    // Attack 3: wall-breaking dash
+    _dashCd:(_tier==='red'||_tier==='final')?rnd(4,7):999,
+    _dashState:null,_dashVx:0,_dashVy:0,_dashDistLeft:0,_chargeT:0,_recoverT:0,
+    // Final boss: split
+    _splitDone:false,_isFake:false};
 }
 
 // ═══════════════════════════════════════════════
