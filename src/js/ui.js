@@ -244,10 +244,10 @@ function drawLobbyCanvas(dt){
   const bestD=+(localStorage.getItem('lores_best')||0);
   if(bestD>0){
     const bs='BEST: '+bestD;
-    pixText(bs,Math.round((W-bs.length*4)/2),72,'#08f');
+    pixText(bs,Math.round((W-bs.length*4)/2),70,'#08f');
   }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
-  ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,75,116,1);
+  ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,77,116,1);
 
   // — CPU ALLIES row (centered: label40 + gap8 + 4×chip14 + 3×gap2 = 110) —
   const rh=11,cw=14;
@@ -278,7 +278,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — HOW TO PLAY / PAD CONFIG —
-  const botY=Math.min(nY+4,150);
+  const botY=Math.min(nY+4,157);
   lbBtn('how','HOW TO PLAY',Math.round(W/2)-26,botY,52,rh,false);
   if(cfg.slots[0]==='GAMEPAD'){
     lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,botY+12,52,rh,false);
