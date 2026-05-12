@@ -51,22 +51,20 @@ function draw(){
     pixText('SCREW',(screwObj.x-10)|0,(screwObj.y-12)|0,'#ff0');
   }
 
-  // NPCs
-  for(const npc of npcs){
-    // draw sprite
-    ctx.fillStyle=npc.pal.body;ctx.fillRect(npc.x-2,npc.y-3,4,6);
-    ctx.fillStyle=npc.pal.head;ctx.fillRect(npc.x-2,npc.y-5,4,3);
-    ctx.fillStyle='#000';ctx.fillRect(npc.x-1,npc.y-4,1,1);ctx.fillRect(npc.x,npc.y-4,1,1);
-    ctx.fillStyle=npc.pal.dark;ctx.fillRect(npc.x-2,npc.y+3,1,2);ctx.fillRect(npc.x+1,npc.y+3,1,2);
-    // speech bubble (driven by npc.msg set in update)
-    if(npc.msg){
-      const bw=npc.msg.length*4+6,bh=11;
-      const bx=(npc.x-bw/2)|0,by=npc.y-22;
-      ctx.fillStyle='#111';ctx.fillRect(bx,by,bw,bh);
-      ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
-      pixText(npc.msg,bx+3,by+3,'#ddd');
-    }
-  }
+  // NPCs (disabled)
+  // for(const npc of npcs){
+  //   ctx.fillStyle=npc.pal.body;ctx.fillRect(npc.x-2,npc.y-3,4,6);
+  //   ctx.fillStyle=npc.pal.head;ctx.fillRect(npc.x-2,npc.y-5,4,3);
+  //   ctx.fillStyle='#000';ctx.fillRect(npc.x-1,npc.y-4,1,1);ctx.fillRect(npc.x,npc.y-4,1,1);
+  //   ctx.fillStyle=npc.pal.dark;ctx.fillRect(npc.x-2,npc.y+3,1,2);ctx.fillRect(npc.x+1,npc.y+3,1,2);
+  //   if(npc.msg){
+  //     const bw=npc.msg.length*4+6,bh=11;
+  //     const bx=(npc.x-bw/2)|0,by=npc.y-22;
+  //     ctx.fillStyle='#111';ctx.fillRect(bx,by,bw,bh);
+  //     ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+  //     pixText(npc.msg,bx+3,by+3,'#ddd');
+  //   }
+  // }
 
 // POISON PUDDLES
   for(const pd of poisonPuddles){

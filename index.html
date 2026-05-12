@@ -459,13 +459,13 @@ function genMap(){
   while(placed<nc&&guard++<800){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){cores.push({x:tx*TILE+8,y:ty*TILE+8,t:0});placed++;}}
   // NPCs: 1-2 per floor in random rooms
   npcs=[];
-  const npcCount=rndi(1,3);
-  for(let i=0;i<npcCount;i++){
-    const r=rs[rndi(1,rs.length)];
-    const pal=NPC_PALS[rndi(0,NPC_PALS.length)];
-    npcs.push({x:r.cx*TILE+8+rndi(-8,8),y:r.cy*TILE+8+rndi(-8,8),pal,
-      state:'idle',talkT:0,leadT:0,leadDur:rnd(6,13),dir:0,msg:'',hasSpokenFollow:false});
-  }
+  // const npcCount=rndi(1,3);
+  // for(let i=0;i<npcCount;i++){
+  //   const r=rs[rndi(1,rs.length)];
+  //   const pal=NPC_PALS[rndi(0,NPC_PALS.length)];
+  //   npcs.push({x:r.cx*TILE+8+rndi(-8,8),y:r.cy*TILE+8+rndi(-8,8),pal,
+  //     state:'idle',talkT:0,leadT:0,leadDur:rnd(6,13),dir:0,msg:'',hasSpokenFollow:false});
+  // }
   // gatekeepers: start D10, placed in rooms (not starting room)
   gatekeepers=[];poisonPuddles=[];
   if(stage>=10){
@@ -1190,59 +1190,37 @@ function update(dt){
     }
   }
 
-  // ── NPC state machine ──
-  for(let i=npcs.length-1;i>=0;i--){
-    const npc=npcs[i];
-    if(npc.state==='idle'){
-      let near=false;
-      for(const p of players){if(p.alive&&Math.hypot(p.x-npc.x,p.y-npc.y)<24){near=true;break;}}
-      if(near){
-        npc.talkT+=eff;
-        npc.msg='...ODD TO FIND ANOTHER FOOL DOWN HERE';
-        if(npc.talkT>2.5&&!npc.hasSpokenFollow){
-          npc.hasSpokenFollow=true;
-          npc.msg='FOLLOW ME.';
-          setTimeout(()=>{
-            if(npc.state==='idle'){
-              npc.state='leading';
-              // head in a random walkable direction
-              npc.dir=Math.random()*Math.PI*2;
-              npc.msg='';
-            }
-          },1800);
-        }
-      }else{
-        if(!npc.hasSpokenFollow)npc.msg='';
-      }
-    }else if(npc.state==='leading'){
-      npc.leadT+=eff;
-      // move forward, bounce off walls
-      const spd=28;
-      const nx=npc.x+Math.cos(npc.dir)*spd*eff;
-      const ny=npc.y+Math.sin(npc.dir)*spd*eff;
-      if(!hitsWall(nx,ny,2)){npc.x=nx;npc.y=ny;}
-      else{npc.dir+=Math.PI*.5+rnd(-.3,.3);}
-      // occasional "THIS WAY!" bubble
-      npc.msg=(npc.leadT%4<.6)?'THIS WAY!':'';
-      if(npc.leadT>npc.leadDur){
-        // FALL INTO CRACK
-        SE.npcFall();
-        flash('AAAAGGH!!','#fa4');
-        // scatter loot
-        const lootTypes=['core','core','core','health','health'];
-        for(let j=0;j<2+rndi(0,3);j++){
-          const ang=Math.random()*Math.PI*2,d=rnd(6,20);
-          pickups.push({type:lootTypes[rndi(0,lootTypes.length)],x:npc.x+Math.cos(ang)*d,y:npc.y+Math.sin(ang)*d,t:0});
-        }
-        // crack particles (dark earth)
-        for(let j=0;j<16;j++){
-          const ang=Math.random()*Math.PI*2;
-          particles.push({x:npc.x,y:npc.y,vx:Math.cos(ang)*rnd(8,28),vy:Math.sin(ang)*rnd(8,28),life:rnd(.5,1.4),c:j%3===0?'#543':'#321'});
-        }
-        npcs.splice(i,1);
-      }
-    }
-  }
+  // ── NPC state machine (disabled) ──
+  // for(let i=npcs.length-1;i>=0;i--){
+  //   const npc=npcs[i];
+  //   if(npc.state==='idle'){
+  //     let near=false;
+  //     for(const p of players){if(p.alive&&Math.hypot(p.x-npc.x,p.y-npc.y)<24){near=true;break;}}
+  //     if(near){
+  //       npc.talkT+=eff;
+  //       npc.msg='...ODD TO FIND ANOTHER FOOL DOWN HERE';
+  //       if(npc.talkT>2.5&&!npc.hasSpokenFollow){
+  //         npc.hasSpokenFollow=true;
+  //         npc.msg='FOLLOW ME.';
+  //         setTimeout(()=>{
+  //           if(npc.state==='idle'){npc.state='leading';npc.dir=Math.random()*Math.PI*2;npc.msg='';}
+  //         },1800);
+  //       }
+  //     }else{if(!npc.hasSpokenFollow)npc.msg='';}
+  //   }else if(npc.state==='leading'){
+  //     npc.leadT+=eff;
+  //     const spd=28,nx=npc.x+Math.cos(npc.dir)*spd*eff,ny=npc.y+Math.sin(npc.dir)*spd*eff;
+  //     if(!hitsWall(nx,ny,2)){npc.x=nx;npc.y=ny;}else{npc.dir+=Math.PI*.5+rnd(-.3,.3);}
+  //     npc.msg=(npc.leadT%4<.6)?'THIS WAY!':'';
+  //     if(npc.leadT>npc.leadDur){
+  //       SE.npcFall();flash('AAAAGGH!!','#fa4');
+  //       const lootTypes=['core','core','core','health','health'];
+  //       for(let j=0;j<2+rndi(0,3);j++){const ang=Math.random()*Math.PI*2,d=rnd(6,20);pickups.push({type:lootTypes[rndi(0,lootTypes.length)],x:npc.x+Math.cos(ang)*d,y:npc.y+Math.sin(ang)*d,t:0});}
+  //       for(let j=0;j<16;j++){const ang=Math.random()*Math.PI*2;particles.push({x:npc.x,y:npc.y,vx:Math.cos(ang)*rnd(8,28),vy:Math.sin(ang)*rnd(8,28),life:rnd(.5,1.4),c:j%3===0?'#543':'#321'});}
+  //       npcs.splice(i,1);
+  //     }
+  //   }
+  // }
 
   // ── Pickups ──
   for(let i=pickups.length-1;i>=0;i--){
@@ -1533,22 +1511,20 @@ function draw(){
     pixText('SCREW',(screwObj.x-10)|0,(screwObj.y-12)|0,'#ff0');
   }
 
-  // NPCs
-  for(const npc of npcs){
-    // draw sprite
-    ctx.fillStyle=npc.pal.body;ctx.fillRect(npc.x-2,npc.y-3,4,6);
-    ctx.fillStyle=npc.pal.head;ctx.fillRect(npc.x-2,npc.y-5,4,3);
-    ctx.fillStyle='#000';ctx.fillRect(npc.x-1,npc.y-4,1,1);ctx.fillRect(npc.x,npc.y-4,1,1);
-    ctx.fillStyle=npc.pal.dark;ctx.fillRect(npc.x-2,npc.y+3,1,2);ctx.fillRect(npc.x+1,npc.y+3,1,2);
-    // speech bubble (driven by npc.msg set in update)
-    if(npc.msg){
-      const bw=npc.msg.length*4+6,bh=11;
-      const bx=(npc.x-bw/2)|0,by=npc.y-22;
-      ctx.fillStyle='#111';ctx.fillRect(bx,by,bw,bh);
-      ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
-      pixText(npc.msg,bx+3,by+3,'#ddd');
-    }
-  }
+  // NPCs (disabled)
+  // for(const npc of npcs){
+  //   ctx.fillStyle=npc.pal.body;ctx.fillRect(npc.x-2,npc.y-3,4,6);
+  //   ctx.fillStyle=npc.pal.head;ctx.fillRect(npc.x-2,npc.y-5,4,3);
+  //   ctx.fillStyle='#000';ctx.fillRect(npc.x-1,npc.y-4,1,1);ctx.fillRect(npc.x,npc.y-4,1,1);
+  //   ctx.fillStyle=npc.pal.dark;ctx.fillRect(npc.x-2,npc.y+3,1,2);ctx.fillRect(npc.x+1,npc.y+3,1,2);
+  //   if(npc.msg){
+  //     const bw=npc.msg.length*4+6,bh=11;
+  //     const bx=(npc.x-bw/2)|0,by=npc.y-22;
+  //     ctx.fillStyle='#111';ctx.fillRect(bx,by,bw,bh);
+  //     ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+  //     pixText(npc.msg,bx+3,by+3,'#ddd');
+  //   }
+  // }
 
 // POISON PUDDLES
   for(const pd of poisonPuddles){
