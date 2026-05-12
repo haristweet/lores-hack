@@ -660,7 +660,11 @@ function makeEnemy(type,x,y){
   else if(type==='runner'){b.hp=2*sc;b.spd=42+stage*.15;b.r=2.5;b.dmg=6*sc;}
   else if(type==='brute') {b.hp=10*sc;b.spd=14+stage*.08;b.r=5;b.dmg=18*sc;}
   else if(type==='shooter'){b.hp=3*sc;b.spd=14+stage*.08;b.r=3;b.dmg=10*sc;b.range=70;}
-  else if(type==='poison') {b.hp=4*sc;b.spd=11+stage*.07;b.r=3;b.dmg=5*sc;b.pudCd=0;}
+  else if(type==='poison')  {b.hp=4*sc;b.spd=11+stage*.07;b.r=3;b.dmg=5*sc;b.pudCd=0;}
+  else if(type==='splatter'){b.hp=7*sc;b.spd=18+stage*.09;b.r=4;b.dmg=10*sc;}
+  else if(type==='dasher')  {b.hp=4*sc;b.spd=18+stage*.09;b.r=3;b.dmg=16*sc;b.dashCd=rnd(1.8,2.8);b.dashing=false;b.dashVx=0;b.dashVy=0;b.dashT=0;}
+  else if(type==='ghost')   {b.hp=1;b.spd=28+stage*.1;b.r=3;b.dmg=12*sc;}
+  else if(type==='bomber')  {b.hp=6*sc;b.spd=14+stage*.06;b.r=4;b.dmg=4*sc;b.fuseT=4+Math.random();}
   return b;
 }
 function makeZombie(p){
@@ -721,6 +725,14 @@ function moveObj(o,dt){
   if(hitsWall(o.x,o.y,o.r)){
     for(let a=0;a<8;a++){const t=a*Math.PI/4;const ex=o.x+Math.cos(t)*TILE*.8,ey=o.y+Math.sin(t)*TILE*.8;if(!hitsWall(ex,ey,o.r)){o.x=ex;o.y=ey;break;}}
   }
+}
+function _pickType(st,r){
+  if(st>=35)return r<.14?'grunt':r<.26?'runner':r<.38?'shooter':r<.47?'brute':r<.56?'poison':r<.65?'dasher':r<.74?'splatter':r<.85?'ghost':'bomber';
+  if(st>=30)return r<.17?'grunt':r<.31?'runner':r<.45?'shooter':r<.55?'brute':r<.65?'poison':r<.76?'dasher':r<.88?'splatter':'ghost';
+  if(st>=25)return r<.20?'grunt':r<.36?'runner':r<.52?'shooter':r<.63?'brute':r<.74?'poison':r<.86?'dasher':'splatter';
+  if(st>=15)return r<.26?'grunt':r<.48?'runner':r<.64?'shooter':r<.79?'brute':r<.90?'poison':'dasher';
+  if(st>=5) return r<.30?'grunt':r<.55?'runner':r<.76?'shooter':r<.90?'brute':'poison';
+  return r<.45?'grunt':r<.78?'runner':'shooter';
 }
 function spawnEnemy(type){
   for(let t=0;t<200;t++){
@@ -851,9 +863,7 @@ function update(dt){
   const spawnInterval=Math.max(.3,1.4-stage*.011);
   if(!monsterHouse&&spawnT<=0&&enemies.length<maxE){
     spawnT=spawnInterval;
-    const r=Math.random();
-    if(stage>=20)spawnEnemy(r<.32?'grunt':r<.58?'runner':r<.76?'shooter':r<.9?'brute':'poison');
-    else spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
+    spawnEnemy(_pickType(stage,Math.random()));
   }
   // ── Monster House clear check ──
   if(monsterHouse&&!monsterHouseCleared&&mhSpawnPending===0&&time>2&&enemies.length===0){
@@ -918,12 +928,17 @@ function update(dt){
     if(hit)continue;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
+      if(e.type==='ghost')continue; // immune to all bullets
       if(dx*dx+dy*dy<(e.r+(b.r||1.5))**2){
         e.hp-=b.dmg;e.hit=.1;e.vx+=b.vx*.05;e.vy+=b.vy*.05;
         blood(b.x,b.y);
         if(e.hp<=0){
           e._dead=true;enemies.splice(j,1);
           totalKills++;if(b.owner)b.owner.kills++;
+          // splatter: split into 2 mini grunts
+          if(e.type==='splatter'&&!e._split){
+            for(let k=0;k<2;k++){const a=Math.random()*Math.PI*2;const mini=makeEnemy('grunt',e.x+Math.cos(a)*8,e.y+Math.sin(a)*8);mini.hp=Math.max(1,mini.hp*.4);mini.r=2;mini._split=true;enemies.push(mini);}
+          }
           if(e.type==='boss')SE.bossDeath();else SE.kill();
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
@@ -1003,6 +1018,26 @@ function update(dt){
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
       e.pudCd-=eff;
       if(e.pudCd<=0){poisonPuddles.push({x:e.x,y:e.y,t:6,damageCd:0});e.pudCd=0.7;}
+    } else if(e.type==='dasher'){
+      e.dashCd-=eff;e.dashT=Math.max(0,e.dashT-eff);
+      if(e.dashing){
+        if(e.dashT<=0||hitsWall(e.x+e.dashVx*eff,e.y+e.dashVy*eff,e.r)){e.dashing=false;e.dashCd=rnd(1.8,2.8);}
+        else{e.x+=e.dashVx*eff;e.y+=e.dashVy*eff;}
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.4;}
+      }else{
+        e.vx=Math.cos(e.ang)*e.spd*.35;e.vy=Math.sin(e.ang)*e.spd*.35;
+        if(e.dashCd<=0&&d<150){e.dashing=true;e.dashT=.32;e.dashVx=Math.cos(e.ang)*e.spd*4;e.dashVy=Math.sin(e.ang)*e.spd*4;e.dashCd=rnd(1.8,2.8);spark(e.x,e.y,'#f80',4,50);}
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg*.4);e.atkCd=.5;}
+      }
+    } else if(e.type==='ghost'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      // pass through walls — movement handled after AI block
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
+    } else if(e.type==='bomber'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      e.fuseT-=eff;
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.8;}
+      if(e.fuseT<=0){e._explode=true;}
     } else if(e.type==='shooter'){
       const s=e.spd,w=70;
       if(d<w-10){e.vx=-Math.cos(e.ang)*s;e.vy=-Math.sin(e.ang)*s;}
@@ -1134,18 +1169,53 @@ function update(dt){
       if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.7;e.vx-=Math.cos(e.ang)*55;e.vy-=Math.sin(e.ang)*55;}
     }
-    // Flow field: redirect movement through corridors when no LoS
-    if(!hasLoS(e.x,e.y,tgt.x,tgt.y)){
+    // Flow field: redirect movement through corridors when no LoS (skip wall-passers)
+    if(e.type!=='ghost'&&!hasLoS(e.x,e.y,tgt.x,tgt.y)){
       const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
       const fdx=flowField[fi],fdy=flowField[fi+1];
       if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
       else{if(!e._wanderA||Math.random()<.015)e._wanderA=Math.random()*Math.PI*2;const spd=e.spd*.6;e.vx=Math.cos(e._wanderA)*spd;e.vy=Math.sin(e._wanderA)*spd;}
     }
-    moveObj(e,eff);
+    if(e.type==='ghost'){e.x+=e.vx*eff;e.y+=e.vy*eff;}
+    else if(e.type==='dasher'&&e.dashing){/* already moved */}
+    else moveObj(e,eff);
     // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
     // separation: enemy-player (both directions)
     for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;const npx=p.x-ox/dd*push,npy=p.y-oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
+  }
+
+  // ── Ghost: parry kill ──
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];if(e.type!=='ghost')continue;
+    for(const p of players){
+      if(!p.alive||p.parryT<=0)continue;
+      if(Math.hypot(e.x-p.x,e.y-p.y)<22){
+        enemies.splice(i,1);totalKills++;
+        spark(e.x,e.y,'#adf',12,70);SE.kill();
+        flash('BANISHED!','#adf');break;
+      }
+    }
+  }
+
+  // ── Bomber: explosion ──
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];if(!e._explode)continue;
+    enemies.splice(i,1);totalKills++;
+    const expR=44;
+    spark(e.x,e.y,'#f80',24,140);spark(e.x,e.y,'#f44',12,80);smoke(e.x,e.y);shake=Math.max(shake,6);SE.bossDeath();
+    // damage players
+    for(const p of players){if(p.alive&&Math.hypot(p.x-e.x,p.y-e.y)<expR)damagePlayer(p,Math.round(28*eScale()));}
+    // damage other enemies
+    for(let j=enemies.length-1;j>=0;j--){
+      const e2=enemies[j];if(Math.hypot(e2.x-e.x,e2.y-e.y)<expR){e2.hp-=20*eScale();e2.hit=.2;if(e2.hp<=0){enemies.splice(j,1);totalKills++;spark(e2.x,e2.y,'#f44',6,60);}}
+    }
+    // destroy wall tiles
+    const tr=Math.ceil(expR/TILE),etx=(e.x/TILE)|0,ety=(e.y/TILE)|0;
+    for(let ty=ety-tr;ty<=ety+tr;ty++)for(let tx=etx-tr;tx<=etx+tr;tx++){
+      if(tx<1||ty<1||tx>=MAPW-1||ty>=MAPH-1)continue;
+      if(Math.hypot(tx*TILE+8-e.x,ty*TILE+8-e.y)<expR&&map[ty*MAPW+tx]===1)map[ty*MAPW+tx]=0;
+    }
   }
 
   // ── Gatekeepers ──
@@ -1733,11 +1803,16 @@ function drawEnemy(e){
   }
   ctx.fillStyle='#000';ctx.globalAlpha=.4;ctx.fillRect(x-e.r,y+e.r-1,e.r*2,2);ctx.globalAlpha=1;
   let body,head;
-  if(e.type==='grunt'){body='#494';head='#7a7';}
-  else if(e.type==='runner'){body='#963';head='#c85';}
-  else if(e.type==='brute'){body='#722';head='#a44';}
-  else if(e.type==='shooter'){body='#549';head='#86c';}
-  else if(e.type==='zombie'){body=e.pal.body;head='#9a8';}
+  if(e.type==='grunt')    {body='#494';head='#7a7';}
+  else if(e.type==='runner')  {body='#963';head='#c85';}
+  else if(e.type==='brute')   {body='#722';head='#a44';}
+  else if(e.type==='shooter') {body='#549';head='#86c';}
+  else if(e.type==='zombie')  {body=e.pal.body;head='#9a8';}
+  else if(e.type==='splatter'){body='#639';head='#96c';}
+  else if(e.type==='dasher')  {body=e.dashing?'#f60':'#a50';head=e.dashing?'#ff4':'#c80';}
+  else if(e.type==='ghost')   {body='#8af';head='#adf';}
+  else if(e.type==='bomber')  {body='#622';head='#944';}
+  if(e.type==='ghost')ctx.globalAlpha=0.5+Math.sin(time*4+e.x*.05)*0.18;
   if(e.hit>0){body='#fff';head='#fff';}
   if(e.type==='brute'){ctx.fillStyle=body;ctx.fillRect(x-4,y-4,8,7);ctx.fillStyle=head;ctx.fillRect(x-3,y-6,6,3);ctx.fillStyle='#f00';ctx.fillRect(x-2,y-5,1,1);ctx.fillRect(x+1,y-5,1,1);}
   else if(e.type==='shooter'){
@@ -1757,6 +1832,15 @@ function drawEnemy(e){
     ctx.fillStyle=body;ctx.fillRect(x-2,y-2,4,5);ctx.fillStyle=head;ctx.fillRect(x-2,y-4,4,3);
     ctx.fillStyle='#f00';ctx.fillRect(x-1,y-3,1,1);ctx.fillRect(x,y-3,1,1);
     const reach=Math.sin(e.anim*8);ctx.fillStyle=body;ctx.fillRect(x-3,y-1+reach,1,2);ctx.fillRect(x+2,y-1-reach,1,2);
+  }
+  ctx.globalAlpha=1; // reset ghost alpha
+  // Bomber countdown
+  if(e.type==='bomber'&&e.fuseT!==undefined){
+    const cnt=''+Math.ceil(e.fuseT);
+    const fast=e.fuseT<2;
+    ctx.globalAlpha=fast?0.7+Math.sin(performance.now()/120)*0.3:0.9;
+    pixText(cnt,x-Math.floor(cnt.length*2),y-12,fast?'#f44':'#fa8');
+    ctx.globalAlpha=1;
   }
 }
 

@@ -114,9 +114,7 @@ function update(dt){
   const spawnInterval=Math.max(.3,1.4-stage*.011);
   if(!monsterHouse&&spawnT<=0&&enemies.length<maxE){
     spawnT=spawnInterval;
-    const r=Math.random();
-    if(stage>=20)spawnEnemy(r<.32?'grunt':r<.58?'runner':r<.76?'shooter':r<.9?'brute':'poison');
-    else spawnEnemy(r<.45?'grunt':r<.75?'runner':r<.92?'shooter':'brute');
+    spawnEnemy(_pickType(stage,Math.random()));
   }
   // ── Monster House clear check ──
   if(monsterHouse&&!monsterHouseCleared&&mhSpawnPending===0&&time>2&&enemies.length===0){
@@ -181,12 +179,17 @@ function update(dt){
     if(hit)continue;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
+      if(e.type==='ghost')continue; // immune to all bullets
       if(dx*dx+dy*dy<(e.r+(b.r||1.5))**2){
         e.hp-=b.dmg;e.hit=.1;e.vx+=b.vx*.05;e.vy+=b.vy*.05;
         blood(b.x,b.y);
         if(e.hp<=0){
           e._dead=true;enemies.splice(j,1);
           totalKills++;if(b.owner)b.owner.kills++;
+          // splatter: split into 2 mini grunts
+          if(e.type==='splatter'&&!e._split){
+            for(let k=0;k<2;k++){const a=Math.random()*Math.PI*2;const mini=makeEnemy('grunt',e.x+Math.cos(a)*8,e.y+Math.sin(a)*8);mini.hp=Math.max(1,mini.hp*.4);mini.r=2;mini._split=true;enemies.push(mini);}
+          }
           if(e.type==='boss')SE.bossDeath();else SE.kill();
           spark(e.x,e.y,'#c22',12,90);smoke(e.x,e.y);shake=Math.max(shake,2);
           // drops
@@ -266,6 +269,26 @@ function update(dt){
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
       e.pudCd-=eff;
       if(e.pudCd<=0){poisonPuddles.push({x:e.x,y:e.y,t:6,damageCd:0});e.pudCd=0.7;}
+    } else if(e.type==='dasher'){
+      e.dashCd-=eff;e.dashT=Math.max(0,e.dashT-eff);
+      if(e.dashing){
+        if(e.dashT<=0||hitsWall(e.x+e.dashVx*eff,e.y+e.dashVy*eff,e.r)){e.dashing=false;e.dashCd=rnd(1.8,2.8);}
+        else{e.x+=e.dashVx*eff;e.y+=e.dashVy*eff;}
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.4;}
+      }else{
+        e.vx=Math.cos(e.ang)*e.spd*.35;e.vy=Math.sin(e.ang)*e.spd*.35;
+        if(e.dashCd<=0&&d<150){e.dashing=true;e.dashT=.32;e.dashVx=Math.cos(e.ang)*e.spd*4;e.dashVy=Math.sin(e.ang)*e.spd*4;e.dashCd=rnd(1.8,2.8);spark(e.x,e.y,'#f80',4,50);}
+        if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg*.4);e.atkCd=.5;}
+      }
+    } else if(e.type==='ghost'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      // pass through walls — movement handled after AI block
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.9;}
+    } else if(e.type==='bomber'){
+      e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
+      e.fuseT-=eff;
+      if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.8;}
+      if(e.fuseT<=0){e._explode=true;}
     } else if(e.type==='shooter'){
       const s=e.spd,w=70;
       if(d<w-10){e.vx=-Math.cos(e.ang)*s;e.vy=-Math.sin(e.ang)*s;}
@@ -397,18 +420,53 @@ function update(dt){
       if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.7;e.vx-=Math.cos(e.ang)*55;e.vy-=Math.sin(e.ang)*55;}
     }
-    // Flow field: redirect movement through corridors when no LoS
-    if(!hasLoS(e.x,e.y,tgt.x,tgt.y)){
+    // Flow field: redirect movement through corridors when no LoS (skip wall-passers)
+    if(e.type!=='ghost'&&!hasLoS(e.x,e.y,tgt.x,tgt.y)){
       const fi=((e.y/TILE|0)*MAPW+(e.x/TILE|0))*2;
       const fdx=flowField[fi],fdy=flowField[fi+1];
       if(fdx||fdy){const spd=Math.hypot(e.vx,e.vy)||e.spd;const fl=Math.hypot(fdx,fdy);e.vx=fdx/fl*spd;e.vy=fdy/fl*spd;}
       else{if(!e._wanderA||Math.random()<.015)e._wanderA=Math.random()*Math.PI*2;const spd=e.spd*.6;e.vx=Math.cos(e._wanderA)*spd;e.vy=Math.sin(e._wanderA)*spd;}
     }
-    moveObj(e,eff);
+    if(e.type==='ghost'){e.x+=e.vx*eff;e.y+=e.vy*eff;}
+    else if(e.type==='dasher'&&e.dashing){/* already moved */}
+    else moveObj(e,eff);
     // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
     // separation: enemy-player (both directions)
     for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;const npx=p.x-ox/dd*push,npy=p.y-oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
+  }
+
+  // ── Ghost: parry kill ──
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];if(e.type!=='ghost')continue;
+    for(const p of players){
+      if(!p.alive||p.parryT<=0)continue;
+      if(Math.hypot(e.x-p.x,e.y-p.y)<22){
+        enemies.splice(i,1);totalKills++;
+        spark(e.x,e.y,'#adf',12,70);SE.kill();
+        flash('BANISHED!','#adf');break;
+      }
+    }
+  }
+
+  // ── Bomber: explosion ──
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];if(!e._explode)continue;
+    enemies.splice(i,1);totalKills++;
+    const expR=44;
+    spark(e.x,e.y,'#f80',24,140);spark(e.x,e.y,'#f44',12,80);smoke(e.x,e.y);shake=Math.max(shake,6);SE.bossDeath();
+    // damage players
+    for(const p of players){if(p.alive&&Math.hypot(p.x-e.x,p.y-e.y)<expR)damagePlayer(p,Math.round(28*eScale()));}
+    // damage other enemies
+    for(let j=enemies.length-1;j>=0;j--){
+      const e2=enemies[j];if(Math.hypot(e2.x-e.x,e2.y-e.y)<expR){e2.hp-=20*eScale();e2.hit=.2;if(e2.hp<=0){enemies.splice(j,1);totalKills++;spark(e2.x,e2.y,'#f44',6,60);}}
+    }
+    // destroy wall tiles
+    const tr=Math.ceil(expR/TILE),etx=(e.x/TILE)|0,ety=(e.y/TILE)|0;
+    for(let ty=ety-tr;ty<=ety+tr;ty++)for(let tx=etx-tr;tx<=etx+tr;tx++){
+      if(tx<1||ty<1||tx>=MAPW-1||ty>=MAPH-1)continue;
+      if(Math.hypot(tx*TILE+8-e.x,ty*TILE+8-e.y)<expR&&map[ty*MAPW+tx]===1)map[ty*MAPW+tx]=0;
+    }
   }
 
   // ── Gatekeepers ──
