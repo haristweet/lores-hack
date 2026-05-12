@@ -108,8 +108,8 @@ function genMap(){
   const r0=rs[0];const cx=r0.cx*TILE+8,cy=r0.cy*TILE+8;
   for(let i=0;i<players.length;i++){const a=(i/Math.max(1,players.length))*Math.PI*2;players[i].x=cx+Math.cos(a)*10;players[i].y=cy+Math.sin(a)*10;}
   // exit: farthest room
-  let best=rs[0],bd=-1;
-  for(const r of rs){const dx=r.cx*TILE-cx,dy=r.cy*TILE-cy,d=dx*dx+dy*dy;if(d>bd){bd=d;best=r;}}
+  let best=rs[0],bestIdx=0,bd=-1;
+  for(let ri=0;ri<rs.length;ri++){const r=rs[ri];const dx=r.cx*TILE-cx,dy=r.cy*TILE-cy,d=dx*dx+dy*dy;if(d>bd){bd=d;best=r;bestIdx=ri;}}
   exits=[{x:best.cx*TILE+8,y:best.cy*TILE+8}];
   // cores (max 8)
   const nc=Math.min(8,Math.max(1,3+Math.ceil(stage/10)));
@@ -129,7 +129,7 @@ function genMap(){
   gatekeepers=[];poisonPuddles=[];
   if(stage>=10){
     const nGK=Math.min(4,1+((stage-10)/25|0));
-    const used=new Set();used.add(0);// skip starting room
+    const used=new Set();used.add(0);used.add(bestIdx);// skip starting room and exit room
     for(let i=0;i<nGK;i++){
       const ri=rndi(1,rs.length);if(used.has(ri))continue;used.add(ri);
       const r=rs[ri];gatekeepers.push({x:r.cx*TILE+8,y:r.cy*TILE+8,cd:1.5+Math.random()*1.5,parryHits:0});

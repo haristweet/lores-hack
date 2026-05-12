@@ -243,19 +243,21 @@ const PSG=(()=>{
   return{
     play(st){
       this.stop();init();
-      if(AC.state==='suspended')AC.resume();
       const z=zone(st);
       bpm=z.bpmBase+(st%20)*.55; // gentle BPM drift within each zone
-      pat=genPat(st);step=0;nextT=AC.currentTime+.06;
-      seqId=setInterval(sched,25);
+      pat=genPat(st);step=0;
+      const start=()=>{nextT=AC.currentTime+.08;seqId=setInterval(sched,25);};
+      if(AC.state==='suspended'){AC.resume().then(start);}else{start();}
     },
     stop(){if(seqId){clearInterval(seqId);seqId=null;}},
     resume(){if(AC&&AC.state==='suspended')AC.resume();},
     boss(st){
       this.stop();init();
-      if(AC.state==='suspended')AC.resume();
       bpm=172+(st%10)*.8; // fast & slightly varies per boss floor
-      pat=genBossPat(st);step=0;nextT=AC.currentTime+.06;
+      pat=genBossPat(st);step=0;
+      const startB=()=>{nextT=AC.currentTime+.08;};
+      if(AC.state==='suspended'){AC.resume().then(startB);}else{startB();}
+      nextT=AC.currentTime+.08;
       seqId=setInterval(()=>{
         const sd=60/bpm/2;
         while(nextT<AC.currentTime+.18){
