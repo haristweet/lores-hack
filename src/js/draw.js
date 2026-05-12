@@ -329,7 +329,72 @@ function drawEnemy(e){
     ctx.fillStyle=e.pal.dark;ctx.fillRect(x-2,y+3,1,2);ctx.fillRect(x+1,y+3,1,2);
     ctx.fillStyle='#666';for(let i=0;i<4;i++)ctx.fillRect(Math.round(x+Math.cos(e.ang)*(3+i)),Math.round(y+Math.sin(e.ang)*(3+i)),1,1);
     ctx.globalAlpha=.7;pixText(e.fromName,x-4,y-13,'#a44');ctx.globalAlpha=1;
+  } else if(e.type==='runner'){
+    // Tall thin sprinter — small head high, lean body, fast pumping legs
+    ctx.fillStyle=head;ctx.fillRect(x-1,y-7,2,2);           // tiny head up high
+    ctx.fillStyle=body;ctx.fillRect(x-1,y-5,2,6);           // thin body
+    ctx.fillStyle='#f80';ctx.fillRect(x-1,y-6,1,1);         // eye
+    const rl=((e.anim*18)|0)%2;
+    ctx.fillStyle=body;ctx.fillRect(x-2,y+1,1,2+rl);ctx.fillRect(x+1,y+1,1,3-rl); // fast legs
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-3,1,2);ctx.fillRect(x+2,y-4,1,2);        // swinging arms
+  } else if(e.type==='ghost'){
+    // Teardrop / floating blob — bobs up and down, semi-transparent (alpha set above)
+    const bob=Math.round(Math.sin(time*2.8+e.x*.07));
+    ctx.fillStyle=body;
+    ctx.fillRect(x-1,y-9+bob,2,3);   // narrow top
+    ctx.fillRect(x-2,y-7+bob,4,3);   // upper dome
+    ctx.fillRect(x-3,y-4+bob,6,5);   // wide mid blob
+    ctx.fillRect(x-2,y+1+bob,2,2);ctx.fillRect(x,y+1+bob,2,2); // bottom frills
+    ctx.fillStyle=e.hit>0?'#f00':head;ctx.fillRect(x-2,y-3+bob,1,1);ctx.fillRect(x,y-3+bob,1,1); // eyes
+  } else if(e.type==='bomber'){
+    // Fat barrel body with fuse on top
+    ctx.fillStyle='#fa8';ctx.fillRect(x,y-10,1,2);           // fuse spark
+    ctx.fillStyle='#aaa';ctx.fillRect(x,y-8,1,3);            // fuse wire
+    ctx.fillStyle=head;ctx.fillRect(x-2,y-5,3,2);            // small head
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-3,6,7);            // fat barrel
+    ctx.fillStyle='#844';ctx.fillRect(x-3,y,6,1);            // band stripe
+    // X mark danger
+    if(e.hit===0){
+      ctx.fillStyle='#f22';
+      ctx.fillRect(x-2,y-2,1,1);ctx.fillRect(x+1,y-2,1,1);
+      ctx.fillRect(x-1,y-1,1,1);ctx.fillRect(x,y-1,1,1);
+      ctx.fillRect(x-2,y+2,1,1);ctx.fillRect(x+1,y+2,1,1);
+    }
+  } else if(e.type==='splatter'){
+    // Wide amorphous blob with animated drips
+    const dr=((e.anim*4)|0)%3;
+    ctx.fillStyle=body;
+    ctx.fillRect(x-3,y-4,6,4);       // upper blob
+    ctx.fillRect(x-4,y,8,4);         // wide lower mass
+    ctx.fillRect(x-2,y-5,4,2);       // bumpy top
+    ctx.fillStyle=e.hit>0?'#fff':head;
+    ctx.fillRect(x-2,y-3,1,1);ctx.fillRect(x,y-3,1,1); // eyes
+    ctx.fillStyle=body;
+    ctx.fillRect(x-3,y+4,1,1+dr);ctx.fillRect(x-1,y+4,1,1+((dr+1)%3));ctx.fillRect(x+1,y+4,1,1+((dr+2)%3)); // drips
+  } else if(e.type==='dasher'){
+    // Low crouching predator — head pushed forward
+    ctx.fillStyle=head;ctx.fillRect(x+2,y-3,3,2);            // head forward-right
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-1,7,3);            // wide flat body
+    ctx.fillStyle=e.hit>0?'#fff':'#ff4';ctx.fillRect(x+3,y-3,1,1); // forward eye
+    if(e.dashing){
+      ctx.fillStyle=body;ctx.globalAlpha=.45;
+      ctx.fillRect(x-6,y,3,2);ctx.fillRect(x-5,y+1,2,1);    // motion trail
+      ctx.globalAlpha=1;
+    } else {
+      const dl=((e.anim*10)|0)%2;
+      ctx.fillStyle=body;ctx.fillRect(x-3,y+2,2,1+dl);ctx.fillRect(x,y+2,2,2-dl); // crouched legs
+    }
+  } else if(e.type==='poison'){
+    // Mushroom — wide spotted cap + thin stem
+    ctx.fillStyle=head;
+    ctx.fillRect(x-2,y-7,4,2);       // cap top-dome
+    ctx.fillRect(x-3,y-5,6,3);       // wide cap brim
+    ctx.fillStyle=e.hit>0?'#fff':'#2a5'; // spots
+    ctx.fillRect(x-2,y-6,1,1);ctx.fillRect(x,y-5,1,1);ctx.fillRect(x+1,y-6,1,1);
+    ctx.fillStyle='#9c9';ctx.fillRect(x-3,y-2,6,1); // cap underside
+    ctx.fillStyle=body;ctx.fillRect(x-1,y-1,2,4);   // thin stem
   } else {
+    // GRUNT default
     ctx.fillStyle=body;ctx.fillRect(x-2,y-2,4,5);ctx.fillStyle=head;ctx.fillRect(x-2,y-4,4,3);
     ctx.fillStyle='#f00';ctx.fillRect(x-1,y-3,1,1);ctx.fillRect(x,y-3,1,1);
     const reach=Math.sin(e.anim*8);ctx.fillStyle=body;ctx.fillRect(x-3,y-1+reach,1,2);ctx.fillRect(x+2,y-1-reach,1,2);

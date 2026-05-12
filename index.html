@@ -1960,7 +1960,72 @@ function drawEnemy(e){
     ctx.fillStyle=e.pal.dark;ctx.fillRect(x-2,y+3,1,2);ctx.fillRect(x+1,y+3,1,2);
     ctx.fillStyle='#666';for(let i=0;i<4;i++)ctx.fillRect(Math.round(x+Math.cos(e.ang)*(3+i)),Math.round(y+Math.sin(e.ang)*(3+i)),1,1);
     ctx.globalAlpha=.7;pixText(e.fromName,x-4,y-13,'#a44');ctx.globalAlpha=1;
+  } else if(e.type==='runner'){
+    // Tall thin sprinter — small head high, lean body, fast pumping legs
+    ctx.fillStyle=head;ctx.fillRect(x-1,y-7,2,2);           // tiny head up high
+    ctx.fillStyle=body;ctx.fillRect(x-1,y-5,2,6);           // thin body
+    ctx.fillStyle='#f80';ctx.fillRect(x-1,y-6,1,1);         // eye
+    const rl=((e.anim*18)|0)%2;
+    ctx.fillStyle=body;ctx.fillRect(x-2,y+1,1,2+rl);ctx.fillRect(x+1,y+1,1,3-rl); // fast legs
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-3,1,2);ctx.fillRect(x+2,y-4,1,2);        // swinging arms
+  } else if(e.type==='ghost'){
+    // Teardrop / floating blob — bobs up and down, semi-transparent (alpha set above)
+    const bob=Math.round(Math.sin(time*2.8+e.x*.07));
+    ctx.fillStyle=body;
+    ctx.fillRect(x-1,y-9+bob,2,3);   // narrow top
+    ctx.fillRect(x-2,y-7+bob,4,3);   // upper dome
+    ctx.fillRect(x-3,y-4+bob,6,5);   // wide mid blob
+    ctx.fillRect(x-2,y+1+bob,2,2);ctx.fillRect(x,y+1+bob,2,2); // bottom frills
+    ctx.fillStyle=e.hit>0?'#f00':head;ctx.fillRect(x-2,y-3+bob,1,1);ctx.fillRect(x,y-3+bob,1,1); // eyes
+  } else if(e.type==='bomber'){
+    // Fat barrel body with fuse on top
+    ctx.fillStyle='#fa8';ctx.fillRect(x,y-10,1,2);           // fuse spark
+    ctx.fillStyle='#aaa';ctx.fillRect(x,y-8,1,3);            // fuse wire
+    ctx.fillStyle=head;ctx.fillRect(x-2,y-5,3,2);            // small head
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-3,6,7);            // fat barrel
+    ctx.fillStyle='#844';ctx.fillRect(x-3,y,6,1);            // band stripe
+    // X mark danger
+    if(e.hit===0){
+      ctx.fillStyle='#f22';
+      ctx.fillRect(x-2,y-2,1,1);ctx.fillRect(x+1,y-2,1,1);
+      ctx.fillRect(x-1,y-1,1,1);ctx.fillRect(x,y-1,1,1);
+      ctx.fillRect(x-2,y+2,1,1);ctx.fillRect(x+1,y+2,1,1);
+    }
+  } else if(e.type==='splatter'){
+    // Wide amorphous blob with animated drips
+    const dr=((e.anim*4)|0)%3;
+    ctx.fillStyle=body;
+    ctx.fillRect(x-3,y-4,6,4);       // upper blob
+    ctx.fillRect(x-4,y,8,4);         // wide lower mass
+    ctx.fillRect(x-2,y-5,4,2);       // bumpy top
+    ctx.fillStyle=e.hit>0?'#fff':head;
+    ctx.fillRect(x-2,y-3,1,1);ctx.fillRect(x,y-3,1,1); // eyes
+    ctx.fillStyle=body;
+    ctx.fillRect(x-3,y+4,1,1+dr);ctx.fillRect(x-1,y+4,1,1+((dr+1)%3));ctx.fillRect(x+1,y+4,1,1+((dr+2)%3)); // drips
+  } else if(e.type==='dasher'){
+    // Low crouching predator — head pushed forward
+    ctx.fillStyle=head;ctx.fillRect(x+2,y-3,3,2);            // head forward-right
+    ctx.fillStyle=body;ctx.fillRect(x-3,y-1,7,3);            // wide flat body
+    ctx.fillStyle=e.hit>0?'#fff':'#ff4';ctx.fillRect(x+3,y-3,1,1); // forward eye
+    if(e.dashing){
+      ctx.fillStyle=body;ctx.globalAlpha=.45;
+      ctx.fillRect(x-6,y,3,2);ctx.fillRect(x-5,y+1,2,1);    // motion trail
+      ctx.globalAlpha=1;
+    } else {
+      const dl=((e.anim*10)|0)%2;
+      ctx.fillStyle=body;ctx.fillRect(x-3,y+2,2,1+dl);ctx.fillRect(x,y+2,2,2-dl); // crouched legs
+    }
+  } else if(e.type==='poison'){
+    // Mushroom — wide spotted cap + thin stem
+    ctx.fillStyle=head;
+    ctx.fillRect(x-2,y-7,4,2);       // cap top-dome
+    ctx.fillRect(x-3,y-5,6,3);       // wide cap brim
+    ctx.fillStyle=e.hit>0?'#fff':'#2a5'; // spots
+    ctx.fillRect(x-2,y-6,1,1);ctx.fillRect(x,y-5,1,1);ctx.fillRect(x+1,y-6,1,1);
+    ctx.fillStyle='#9c9';ctx.fillRect(x-3,y-2,6,1); // cap underside
+    ctx.fillStyle=body;ctx.fillRect(x-1,y-1,2,4);   // thin stem
   } else {
+    // GRUNT default
     ctx.fillStyle=body;ctx.fillRect(x-2,y-2,4,5);ctx.fillStyle=head;ctx.fillRect(x-2,y-4,4,3);
     ctx.fillStyle='#f00';ctx.fillRect(x-1,y-3,1,1);ctx.fillRect(x,y-3,1,1);
     const reach=Math.sin(e.anim*8);ctx.fillStyle=body;ctx.fillRect(x-3,y-1+reach,1,2);ctx.fillRect(x+2,y-1-reach,1,2);
@@ -2688,25 +2753,66 @@ function iChar(sx,sy,pal,sc,dead=false,aim=0){
 function iEnemy(sx,sy,type,sc){
   ctx.save();ctx.translate(sx,sy);ctx.scale(sc,sc);
   let body,head;
-  if(type==='grunt')   {body='#494';head='#7a7';}
-  else if(type==='runner') {body='#963';head='#c85';}
-  else if(type==='brute')  {body='#722';head='#a44';}
-  else if(type==='shooter'){body='#549';head='#86c';}
-  else if(type==='poison') {body='#362';head='#594';}
+  if(type==='grunt')    {body='#494';head='#7a7';}
+  else if(type==='runner')  {body='#963';head='#c85';}
+  else if(type==='brute')   {body='#722';head='#a44';}
+  else if(type==='shooter') {body='#549';head='#86c';}
+  else if(type==='poison')  {body='#362';head='#594';}
   else if(type==='splatter'){body='#639';head='#96c';}
-  else if(type==='dasher') {body='#a50';head='#c80';}
-  else if(type==='ghost')  {body='#8af';head='#adf';}
-  else if(type==='bomber') {body='#622';head='#944';}
-  ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-2,3,5,1);ctx.globalAlpha=1;
-  if(type==='ghost')ctx.globalAlpha=0.65;
+  else if(type==='dasher')  {body='#a50';head='#c80';}
+  else if(type==='ghost')   {body='#8af';head='#adf';}
+  else if(type==='bomber')  {body='#622';head='#944';}
+  // shadow
+  ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-3,4,6,1);ctx.globalAlpha=1;
   if(type==='brute'){
     ctx.fillStyle=body;ctx.fillRect(-4,-4,8,7);
     ctx.fillStyle=head;ctx.fillRect(-3,-6,6,3);
     ctx.fillStyle='#f00';ctx.fillRect(-2,-5,1,1);ctx.fillRect(1,-5,1,1);
-  }else{
+  } else if(type==='shooter'){
+    ctx.fillStyle=body;ctx.fillRect(-2,-3,4,6);ctx.fillStyle=head;ctx.fillRect(-2,-5,4,3);
+    ctx.fillStyle='#ff0';ctx.fillRect(-1,-4,1,1);ctx.fillRect(0,-4,1,1);
+    ctx.fillStyle='#aaa';ctx.fillRect(2,-1,1,1);ctx.fillRect(3,-1,1,1);ctx.fillRect(4,-1,1,1);
+  } else if(type==='runner'){
+    ctx.fillStyle=head;ctx.fillRect(-1,-7,2,2);
+    ctx.fillStyle=body;ctx.fillRect(-1,-5,2,6);ctx.fillRect(-2,1,1,3);ctx.fillRect(1,1,1,2);
+    ctx.fillStyle='#f80';ctx.fillRect(-1,-6,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,-3,1,2);ctx.fillRect(2,-4,1,2);
+  } else if(type==='ghost'){
+    ctx.globalAlpha=0.65;
+    ctx.fillStyle=body;
+    ctx.fillRect(-1,-9,2,3);ctx.fillRect(-2,-7,4,3);ctx.fillRect(-3,-4,6,5);
+    ctx.fillRect(-2,1,2,2);ctx.fillRect(0,1,2,2);
+    ctx.fillStyle=head;ctx.fillRect(-2,-3,1,1);ctx.fillRect(0,-3,1,1);
+    ctx.globalAlpha=1;
+  } else if(type==='bomber'){
+    ctx.fillStyle='#fa8';ctx.fillRect(0,-10,1,2);
+    ctx.fillStyle='#aaa';ctx.fillRect(0,-8,1,3);
+    ctx.fillStyle=head;ctx.fillRect(-2,-5,3,2);
+    ctx.fillStyle=body;ctx.fillRect(-3,-3,6,7);
+    ctx.fillStyle='#844';ctx.fillRect(-3,0,6,1);
+    ctx.fillStyle='#f22';
+    ctx.fillRect(-2,-2,1,1);ctx.fillRect(1,-2,1,1);ctx.fillRect(-1,-1,1,1);ctx.fillRect(0,-1,1,1);
+  } else if(type==='splatter'){
+    ctx.fillStyle=body;
+    ctx.fillRect(-2,-5,4,2);ctx.fillRect(-3,-4,6,4);ctx.fillRect(-4,0,8,4);
+    ctx.fillStyle=head;ctx.fillRect(-2,-3,1,1);ctx.fillRect(0,-3,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,4,1,2);ctx.fillRect(-1,4,1,3);ctx.fillRect(1,4,1,2);
+  } else if(type==='dasher'){
+    ctx.fillStyle=head;ctx.fillRect(2,-3,3,2);
+    ctx.fillStyle=body;ctx.fillRect(-3,-1,7,3);
+    ctx.fillStyle='#ff4';ctx.fillRect(3,-3,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,2,2,2);ctx.fillRect(0,2,2,2);
+  } else if(type==='poison'){
+    ctx.fillStyle=head;ctx.fillRect(-2,-7,4,2);ctx.fillRect(-3,-5,6,3);
+    ctx.fillStyle='#2a5';ctx.fillRect(-2,-6,1,1);ctx.fillRect(0,-5,1,1);ctx.fillRect(1,-6,1,1);
+    ctx.fillStyle='#9c9';ctx.fillRect(-3,-2,6,1);
+    ctx.fillStyle=body;ctx.fillRect(-1,-1,2,4);
+  } else {
+    // GRUNT
     ctx.fillStyle=body;ctx.fillRect(-2,-2,4,5);
     ctx.fillStyle=head;ctx.fillRect(-2,-4,4,3);
     ctx.fillStyle='#f00';ctx.fillRect(-1,-3,1,1);ctx.fillRect(0,-3,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,-1,1,2);ctx.fillRect(2,-1,1,2);
   }
   ctx.globalAlpha=1;ctx.restore();
 }
