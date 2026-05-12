@@ -132,7 +132,7 @@ function genMap(){
     const used=new Set();used.add(0);// skip starting room
     for(let i=0;i<nGK;i++){
       const ri=rndi(1,rs.length);if(used.has(ri))continue;used.add(ri);
-      const r=rs[ri];gatekeepers.push({x:r.cx*TILE+8,y:r.cy*TILE+8,cd:1.5+Math.random()*1.5});
+      const r=rs[ri];gatekeepers.push({x:r.cx*TILE+8,y:r.cy*TILE+8,cd:1.5+Math.random()*1.5,parryHits:0});
     }
   }
   // cold sleep pods: every 10 floors, one pod

@@ -163,8 +163,22 @@ function update(dt){
       bullets.splice(i,1);continue;
     }
     let hit=false;
-    // gatekeeper absorbs bullets
-    for(const gk of gatekeepers){if((b.x-gk.x)**2+(b.y-gk.y)**2<6*6){spark(b.x,b.y,'#f44',3,40);bullets.splice(i,1);hit=true;break;}}
+    // gatekeeper absorbs bullets (parry bullets deal hits)
+    for(let gi=gatekeepers.length-1;gi>=0;gi--){
+      const gk=gatekeepers[gi];
+      if((b.x-gk.x)**2+(b.y-gk.y)**2<6*6){
+        if(b.parried){
+          gk.parryHits++;
+          spark(b.x,b.y,'#fff',6,60);
+          if(gk.parryHits>=5){
+            spark(gk.x,gk.y,'#f44',16,90);smoke(gk.x,gk.y);
+            shake=Math.max(shake,4);
+            gatekeepers.splice(gi,1);
+          }
+        }else{spark(b.x,b.y,'#f44',3,40);}
+        bullets.splice(i,1);hit=true;break;
+      }
+    }
     if(hit)continue;
     for(let j=enemies.length-1;j>=0;j--){
       const e=enemies[j];const dx=e.x-b.x,dy=e.y-b.y;
@@ -224,7 +238,7 @@ function update(dt){
       if(!p.alive||p.parryT<=0)continue;
       if(Math.hypot(b.x-p.x,b.y-p.y)<18){
         // reflect bullet back as player bullet
-        bullets.push({x:b.x,y:b.y,vx:-b.vx*1.1,vy:-b.vy*1.1,life:1.2,dmg:b.dmg*1.5,owner:p,trail:[]});
+        bullets.push({x:b.x,y:b.y,vx:-b.vx*1.1,vy:-b.vy*1.1,life:1.2,dmg:b.dmg*1.5,owner:p,trail:[],parried:true});
         ebullets.splice(i,1);
         spark(b.x,b.y,'#fff',10,70);SE.clang();
         flash('PARRY!','#fff');
