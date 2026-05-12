@@ -81,11 +81,12 @@ function draw(){
   // GATEKEEPERS
   for(const gk of gatekeepers){
     const pulse=(Math.sin(performance.now()*.003)+1)*.5;
-    ctx.fillStyle='#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
-    ctx.fillStyle='#f44';ctx.globalAlpha=.5+pulse*.5;
+    const flashing=gk.hit>0;
+    ctx.fillStyle=flashing?'#fff':'#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
+    ctx.fillStyle=flashing?'#fff':'#f44';ctx.globalAlpha=flashing?1:.5+pulse*.5;
     ctx.fillRect(gk.x-4,gk.y-4,8,8);
     ctx.globalAlpha=1;
-    ctx.fillStyle='#f88';
+    ctx.fillStyle=flashing?'#fff':'#f88';
     ctx.fillRect(gk.x-1,gk.y-6,2,12);ctx.fillRect(gk.x-6,gk.y-1,12,2);
   }
 

@@ -907,6 +907,7 @@ function update(dt){
         if(b.parried){
           gk.parryHits++;
           spark(b.x,b.y,'#fff',6,60);
+          gk.hit=0.1;
           if(gk.parryHits>=5){
             spark(gk.x,gk.y,'#f44',16,90);smoke(gk.x,gk.y);
             shake=Math.max(shake,4);
@@ -1151,6 +1152,7 @@ function update(dt){
 
   // ── Gatekeepers ──
   for(const gk of gatekeepers){
+    if(gk.hit>0)gk.hit=Math.max(0,gk.hit-eff);
     gk.cd-=eff;
     if(gk.cd<=0){
       gk.cd=2.5;
@@ -1561,11 +1563,12 @@ function draw(){
   // GATEKEEPERS
   for(const gk of gatekeepers){
     const pulse=(Math.sin(performance.now()*.003)+1)*.5;
-    ctx.fillStyle='#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
-    ctx.fillStyle='#f44';ctx.globalAlpha=.5+pulse*.5;
+    const flashing=gk.hit>0;
+    ctx.fillStyle=flashing?'#fff':'#600';ctx.fillRect(gk.x-6,gk.y-6,12,12);
+    ctx.fillStyle=flashing?'#fff':'#f44';ctx.globalAlpha=flashing?1:.5+pulse*.5;
     ctx.fillRect(gk.x-4,gk.y-4,8,8);
     ctx.globalAlpha=1;
-    ctx.fillStyle='#f88';
+    ctx.fillStyle=flashing?'#fff':'#f88';
     ctx.fillRect(gk.x-1,gk.y-6,2,12);ctx.fillRect(gk.x-6,gk.y-1,12,2);
   }
 

@@ -170,6 +170,7 @@ function update(dt){
         if(b.parried){
           gk.parryHits++;
           spark(b.x,b.y,'#fff',6,60);
+          gk.hit=0.1;
           if(gk.parryHits>=5){
             spark(gk.x,gk.y,'#f44',16,90);smoke(gk.x,gk.y);
             shake=Math.max(shake,4);
@@ -414,6 +415,7 @@ function update(dt){
 
   // ── Gatekeepers ──
   for(const gk of gatekeepers){
+    if(gk.hit>0)gk.hit=Math.max(0,gk.hit-eff);
     gk.cd-=eff;
     if(gk.cd<=0){
       gk.cd=2.5;
