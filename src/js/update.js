@@ -143,17 +143,15 @@ function update(dt){
         if(secretWallHits>=25){
           // Destroy secret wall, drop driver or overdrive (50/50)
           map[secretWallPos.ty*MAPW+secretWallPos.tx]=0;
-          const roll=Math.random();
-          if(roll<1/3){
-            driverActive=true;
-            flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');
-          }else if(roll<2/3){
-            overdriveActive=true;
-            flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');
-          }else{
-            vertidriveActive=true;
-            flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');
-          }
+          // Prioritise items not yet obtained
+          const pool=[];
+          if(!driverActive)pool.push('driver');
+          if(!overdriveActive)pool.push('overdrive');
+          if(!vertidriveActive)pool.push('vertidrive');
+          const pick=pool.length?pool[rndi(0,pool.length)]:['driver','overdrive','vertidrive'][rndi(0,3)];
+          if(pick==='driver'){driverActive=true;flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');}
+          else if(pick==='overdrive'){overdriveActive=true;flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');}
+          else{vertidriveActive=true;flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');}
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
           SE.driver();secretWallPos=null;
         }else{
