@@ -279,6 +279,7 @@ function drawEnemy(e){
   else if(e.type==='runner')  {body='#963';head='#c85';}
   else if(e.type==='brute')   {body='#722';head='#a44';}
   else if(e.type==='shooter') {body='#549';head='#86c';}
+  else if(e.type==='poison')  {body='#362';head='#594';}
   else if(e.type==='zombie')  {body=e.pal.body;head='#9a8';}
   else if(e.type==='splatter'){body='#639';head='#96c';}
   else if(e.type==='dasher')  {body=e.dashing?'#f60':'#a50';head=e.dashing?'#ff4':'#c80';}

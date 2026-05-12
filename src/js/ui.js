@@ -58,6 +58,33 @@ function iChar(sx,sy,pal,sc,dead=false,aim=0){
   ctx.restore();
 }
 
+// Draw a simplified enemy sprite for intro pages
+function iEnemy(sx,sy,type,sc){
+  ctx.save();ctx.translate(sx,sy);ctx.scale(sc,sc);
+  let body,head;
+  if(type==='grunt')   {body='#494';head='#7a7';}
+  else if(type==='runner') {body='#963';head='#c85';}
+  else if(type==='brute')  {body='#722';head='#a44';}
+  else if(type==='shooter'){body='#549';head='#86c';}
+  else if(type==='poison') {body='#362';head='#594';}
+  else if(type==='splatter'){body='#639';head='#96c';}
+  else if(type==='dasher') {body='#a50';head='#c80';}
+  else if(type==='ghost')  {body='#8af';head='#adf';}
+  else if(type==='bomber') {body='#622';head='#944';}
+  ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-2,3,5,1);ctx.globalAlpha=1;
+  if(type==='ghost')ctx.globalAlpha=0.65;
+  if(type==='brute'){
+    ctx.fillStyle=body;ctx.fillRect(-4,-4,8,7);
+    ctx.fillStyle=head;ctx.fillRect(-3,-6,6,3);
+    ctx.fillStyle='#f00';ctx.fillRect(-2,-5,1,1);ctx.fillRect(1,-5,1,1);
+  }else{
+    ctx.fillStyle=body;ctx.fillRect(-2,-2,4,5);
+    ctx.fillStyle=head;ctx.fillRect(-2,-4,4,3);
+    ctx.fillStyle='#f00';ctx.fillRect(-1,-3,1,1);ctx.fillRect(0,-3,1,1);
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
 // pixText scaled ×2 (for intro titles)
 function pixBig(str,x,y,c){
   ctx.save();ctx.translate(x,y);ctx.scale(2,2);pixText(str,0,0,c);ctx.restore();
@@ -413,7 +440,44 @@ function drawIntro(){
     ctx.fillStyle='#234';ctx.fillRect(8,113,W-16,1);
     pixText('CHARGE: HOLD→RELEASE=BIG SHOT',10,117,'#fa8');
     pixText('MAX 1.5 SEC  SLOW WHILE CHARGING',10,126,'#fa8');
+    pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 
+  // ── Page 4: ENEMIES I ────────────────────────
+  }else if(introPage===4){
+    pixBig('ENEMIES I',(W-72)/2,18,'#f88');
+    // depth group headers + enemy rows
+    const E1=[
+      {type:'grunt',   col:'#7a7',name:'GRUNT',   desc:'Direct melee chaser',     dep:'D1+'},
+      {type:'runner',  col:'#c85',name:'RUNNER',  desc:'Fast and fragile',         dep:'D1+'},
+      {type:'shooter', col:'#86c',name:'SHOOTER', desc:'Stays back, fires at range',dep:'D1+'},
+      {type:'brute',   col:'#a44',name:'BRUTE',   desc:'Slow, very tanky',         dep:'D5+'},
+      {type:'poison',  col:'#6a6',name:'POISON',  desc:'Leaves toxic puddles',     dep:'D5+'},
+    ];
+    E1.forEach(({type,col,name,desc,dep},i)=>{
+      const ry=34+i*25;
+      iEnemy(14,ry+10,type,3);
+      pixText(name,28,ry+5,col);
+      pixText(desc,28,ry+13,'#566');
+      pixText(dep,W-22,ry+8,'#445');
+    });
+    pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
+
+  // ── Page 5: ENEMIES II ───────────────────────
+  }else if(introPage===5){
+    pixBig('ENEMIES II',(W-80)/2,18,'#f88');
+    const E2=[
+      {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',    dep:'D15+'},
+      {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',   dep:'D25+'},
+      {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',dep:'D30+'},
+      {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse', dep:'D35+'},
+    ];
+    E2.forEach(({type,col,name,desc,dep},i)=>{
+      const ry=34+i*27;
+      iEnemy(14,ry+11,type,3);
+      pixText(name,28,ry+5,col);
+      pixText(desc,28,ry+13,'#566');
+      pixText(dep,W-28,ry+8,'#445');
+    });
     // BACK TO TITLE button
     const bx=W/2-22,by=H-28,bw=44,bh=12;
     const hov=mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh;

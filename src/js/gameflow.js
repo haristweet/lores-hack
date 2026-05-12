@@ -53,7 +53,7 @@ function startGame(){
 // ═══════════════════════════════════════════════
 //  INTRODUCTION SCREEN
 // ═══════════════════════════════════════════════
-const INTRO_PAGES=4;
+const INTRO_PAGES=6;
 
 function startIntro(){
   introActive=true;introPage=0;introT=0;

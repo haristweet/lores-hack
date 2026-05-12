@@ -48,8 +48,8 @@ cv.addEventListener('click',e=>{
   if(attractDemo){stopAttractDemo();return;}
   if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
-    // Page 3: BACK TO TITLE button hit test
-    if(introPage===3){
+    // Page 5 (last): BACK TO TITLE button hit test
+    if(introPage===5){
       const bx=W/2-22,by=H-28,bw=44,bh=12;
       if(mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh){endIntro();return;}
     }
