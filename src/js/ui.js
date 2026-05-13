@@ -378,6 +378,15 @@ function padCfgNav(){
   let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
   if(!gp)return;
   const edge=(k,v)=>{const r=v&&!_padCfgPrev[k];_padCfgPrev[k]=v;return r;};
+  // Snapshot all currently-pressed buttons so no release/re-edge fires after assign or cancel
+  const snapPrev=()=>{
+    _padCfgPrev={};
+    for(let j=0;j<gp.buttons.length;j++)_padCfgPrev['b'+j]=!!(gp.buttons[j]?.pressed||(gp.buttons[j]?.value>.5));
+    _padCfgPrev.cancel=!!(gp.buttons[1]?.pressed);
+    _padCfgPrev.a=!!(gp.buttons[0]?.pressed);
+    _padCfgPrev.b=!!(gp.buttons[1]?.pressed);
+    _padCfgPrev.u=false;_padCfgPrev.d=false;
+  };
   if(padCfgWaiting){
     const ignore=new Set([8,9,12,13,14,15]);
     for(let i=0;i<gp.buttons.length;i++){
@@ -385,10 +394,10 @@ function padCfgNav(){
       if(edge('b'+i,!!(gp.buttons[i]?.pressed||(gp.buttons[i]?.value>.5)))){
         padConfig[PAD_ACT_KEYS[padCfgFocus]]=i;
         savePadConfig();
-        padCfgWaiting=false;_padCfgPrev={};break;
+        padCfgWaiting=false;snapPrev();break;
       }
     }
-    if(edge('cancel',gp.buttons[1]?.pressed)){padCfgWaiting=false;_padCfgPrev={};}
+    if(edge('cancel',gp.buttons[1]?.pressed)){padCfgWaiting=false;snapPrev();}
     return;
   }
   const up=edge('u',(gp.buttons[12]?.pressed)||(gp.axes[1]||0)<-0.5);
