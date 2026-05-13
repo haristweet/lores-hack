@@ -38,6 +38,22 @@ addEventListener('keydown',e=>{
   keys[e.code]=true;
 });
 addEventListener('keyup',e=>keys[e.code]=false);
+
+// ── Intro page gamepad polling ────────────────
+let _introGpPrev={};
+function pollIntroGamepad(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  let gp=null;for(let i=0;i<gps.length;i++)if(gps[i]){gp=gps[i];break;}
+  if(!gp)return;
+  const edge=(k,v)=>{const r=v&&!_introGpPrev[k];_introGpPrev[k]=v;return r;};
+  const ax=gp.axes[0]||0;
+  const dR=edge('dR',(gp.buttons[15]?.pressed)||ax>0.5);
+  const dL=edge('dL',(gp.buttons[14]?.pressed)||ax<-0.5);
+  const back=edge('B',gp.buttons[1]?.pressed);
+  if(dR){introPage++;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;}
+  if(dL){introPage--;if(introPage<0)introPage=0;introT=0;}
+  if(back)endIntro();
+}
 const mouse={x:W/2,y:H/2,down:false};
 function updMouse(e){const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*(W/r.width);mouse.y=(e.clientY-r.top)*(H/r.height);}
 cv.addEventListener('mousemove',e=>{updMouse(e);if(lobbyEl.style.display!=='none')lobbyIdleT=0;});

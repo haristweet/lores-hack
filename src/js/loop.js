@@ -6,6 +6,7 @@ let last=performance.now();
   let dt=Math.min(.05,(now-last)/1000);last=now;
   if(introActive){
     introT+=dt;
+    pollIntroGamepad();
     drawIntro();
   }else if(lobbyEl.style.display!=='none'){
     drawLobbyCanvas(dt);
