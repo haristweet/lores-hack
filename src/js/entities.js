@@ -32,7 +32,8 @@ function makePlayer(idx,ctrl,isHuman){
     parryCd:0,parryT:0,
     edge:{dash:false,fire:false,parry:false},
     rushing:false,
-    kills:0,accXp:0};
+    kills:0,accXp:0,
+    shields:[],shieldAngle:0};
 }
 
 function eScale(){return 1+(stage-1)*.06;}

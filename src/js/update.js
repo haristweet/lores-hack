@@ -38,8 +38,9 @@ function updatePlayer(p,dt){
     const ox=Math.cos(p.aim)*5,oy=Math.sin(p.aim)*5;
     const dmg=(w.dmg+p.level*.4)*.25;
     const angles=driverActive?[p.aim-0.22,p.aim,p.aim+0.22]:[p.aim+rnd(-spread,spread)];
-    for(const a of angles)bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd,vy:Math.sin(a)*w.spd,life:w.range,dmg:dmg*(driverActive?.7:1),owner:p,trail:[]});
-    if(vertidriveActive)bullets.push({x:p.x-ox,y:p.y-oy,vx:Math.cos(p.aim+Math.PI)*w.spd,vy:Math.sin(p.aim+Math.PI)*w.spd,life:w.range,dmg:dmg*.8,owner:p,trail:[]});
+    const lSpd=laserActive?1.5:1,lRange=laserActive?1.6:1;
+    for(const a of angles)bullets.push({x:p.x+ox,y:p.y+oy,vx:Math.cos(a)*w.spd*lSpd,vy:Math.sin(a)*w.spd*lSpd,life:w.range*lRange,dmg:dmg*(driverActive?.7:1)*(laserActive?.8:1),owner:p,trail:[],pierce:laserActive?3:0});
+    if(vertidriveActive)bullets.push({x:p.x-ox,y:p.y-oy,vx:Math.cos(p.aim+Math.PI)*w.spd*lSpd,vy:Math.sin(p.aim+Math.PI)*w.spd*lSpd,life:w.range*lRange,dmg:dmg*.8*(laserActive?.8:1),owner:p,trail:[],pierce:laserActive?3:0});
     p.fireCd=w.fireCd*(driverActive?1.15:1);p.muzzle=.08;
     shake=Math.max(shake,.8);
     p.vx-=Math.cos(p.aim)*7;p.vy-=Math.sin(p.aim)*7;
@@ -57,6 +58,12 @@ function updatePlayer(p,dt){
     }
     p.edge.parry=parB;
   }
+  // CPU auto-parry: activate when a ghost enters close range
+  if(!p.isHuman&&p.parryCd<=0){
+    const ghostClose=enemies.some(e=>e.type==='ghost'&&Math.hypot(e.x-p.x,e.y-p.y)<25);
+    if(ghostClose){p.parryT=.18;p.parryCd=2.0;spark(p.x,p.y,'#adf',5,30);}
+  }
+  p.shieldAngle=(p.shieldAngle+dt*1.8)%(Math.PI*2);
 }
 
 function fireChargeShot(p,t){
@@ -146,9 +153,13 @@ function update(dt){
           if(!driverActive)pool.push('driver');
           if(!overdriveActive)pool.push('overdrive');
           if(!vertidriveActive)pool.push('vertidrive');
-          const pick=pool.length?pool[rndi(0,pool.length)]:['driver','overdrive','vertidrive'][rndi(0,3)];
+          if(!laserActive)pool.push('laser');
+          {const _hp=humanPlayer();if(!_hp||_hp.shields.length<4)pool.push('barrier');}
+          const pick=pool.length?pool[rndi(0,pool.length)]:['driver','overdrive','vertidrive','laser','barrier'][rndi(0,5)];
           if(pick==='driver'){driverActive=true;flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');}
           else if(pick==='overdrive'){overdriveActive=true;flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');}
+          else if(pick==='laser'){laserActive=true;flash('LASER FOUND!','#0ff');flash('PIERCE SHOTS ACTIVE!','#0ff');}
+          else if(pick==='barrier'){const _hp=humanPlayer();if(_hp){_hp.shields.push({hp:3,maxHp:3});flash('BARRIER FOUND!','#4ff');flash('SHIELD ORB x'+_hp.shields.length,'#4ff');}}
           else{vertidriveActive=true;flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');}
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
           SE.driver();secretWallPos=null;
@@ -206,6 +217,7 @@ function update(dt){
               for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
               flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
               if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
+              if(laserActive){laserActive=false;flash('LASER EXPIRED','#888');}
               if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
               if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
               if(!attractDemo)PSG.play(stage); // revert to zone BGM
@@ -233,7 +245,8 @@ function update(dt){
             }
           }
         }
-        hit=true;bullets.splice(i,1);break;
+        if(b.pierce>0){b.pierce--;spark(b.x,b.y,'#0cf',2,35);}
+        else{hit=true;bullets.splice(i,1);break;}
       }
     }
   }
@@ -256,6 +269,23 @@ function update(dt){
       }
     }
     if(parried)continue;
+    // Shield orb: block bullet before player takes damage
+    let shieldHit=false;
+    for(const p of players){
+      if(!p.alive||!p.shields.length)continue;
+      const n=p.shields.length;
+      for(let si=n-1;si>=0;si--){
+        const sang=p.shieldAngle+si*(Math.PI*2/n);
+        const sx=p.x+Math.cos(sang)*10,sy=p.y+Math.sin(sang)*10;
+        if((b.x-sx)**2+(b.y-sy)**2<16){
+          p.shields[si].hp--;spark(sx,sy,'#0ff',4,50);SE.clang();
+          if(p.shields[si].hp<=0){p.shields.splice(si,1);flash('SHIELD BROKEN!','#f88');spark(sx,sy,'#0ff',10,80);shake=Math.max(shake,2);}
+          ebullets.splice(i,1);shieldHit=true;break;
+        }
+      }
+      if(shieldHit)break;
+    }
+    if(shieldHit)continue;
     for(const p of players){
       if(!p.alive)continue;
       const dx=p.x-b.x,dy=p.y-b.y;
@@ -688,7 +718,7 @@ function update(dt){
   for(const pod of pods){
     if(pod.used)continue;
     pod.t+=eff;
-    for(const pl of players){if(!pl.alive)continue;const dx=pl.x-pod.x,dy=pl.y-pod.y;
+    for(const pl of players){if(!pl.alive||!pl.isHuman)continue;const dx=pl.x-pod.x,dy=pl.y-pod.y;
       if(dx*dx+dy*dy<64){
         const deadCPUs=players.filter(p=>!p.alive&&!p.isHuman);
         if(deadCPUs.length===0)break;

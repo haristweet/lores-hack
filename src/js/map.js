@@ -20,7 +20,7 @@ function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
-let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false;
+let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false,laserActive=false;
 
 // ── Flow field for enemy navigation ──────────
 const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile

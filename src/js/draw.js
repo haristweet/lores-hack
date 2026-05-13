@@ -130,7 +130,7 @@ function draw(){
 
   // Player bullets
   for(const b of bullets){
-    const trC=b.owner?b.owner.pal.trail:'#fb4';
+    const trC=b.pierce>0?'#0cf':b.owner?b.owner.pal.trail:'#fb4';
     const trW=b.charge?Math.max(2,Math.ceil((b.r||1.5)*.6)):1;
     for(let i=0;i<b.trail.length;i++){ctx.globalAlpha=(i+1)/b.trail.length*.7;ctx.fillStyle=trC;ctx.fillRect(b.trail[i].x|0,b.trail[i].y|0,trW,trW);}
     ctx.globalAlpha=1;
@@ -140,6 +140,9 @@ function draw(){
       ctx.globalAlpha=0.35;ctx.fillStyle='#ff0';ctx.fillRect(bx2-1,by2-1,bs+2,bs+2);
       ctx.globalAlpha=1;ctx.fillStyle=pw<0.5?'#ff8':'#f80';ctx.fillRect(bx2,by2,bs,bs);
       ctx.fillStyle='#fff';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+    } else if(b.pierce>0){
+      ctx.fillStyle='#0ff';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
+      ctx.fillStyle='#fff';ctx.fillRect(b.x|0,b.y|0,1,1);
     } else {
       ctx.fillStyle='#ffe';ctx.fillRect((b.x|0)-1,(b.y|0)-1,2,2);
     }
@@ -157,6 +160,24 @@ function draw(){
 
   for(const e of enemies)drawEnemy(e);
   for(const p of players)if(p.alive)drawPlayer(p);
+  // Shield orbs
+  for(const p of players){
+    if(!p.alive||!p.shields||!p.shields.length)continue;
+    const n=p.shields.length;
+    for(let si=0;si<n;si++){
+      const sang=p.shieldAngle+si*(Math.PI*2/n);
+      const sx=(p.x+Math.cos(sang)*10)|0,sy=(p.y+Math.sin(sang)*10)|0;
+      const ratio=p.shields[si].hp/p.shields[si].maxHp;
+      // glow
+      ctx.globalAlpha=0.25+ratio*.2;ctx.fillStyle='#0cf';ctx.fillRect(sx-3,sy-3,7,7);
+      // core
+      ctx.globalAlpha=1;
+      ctx.fillStyle=ratio>0.66?'#0ff':ratio>0.33?'#0bb':'#088';
+      ctx.fillRect(sx-1,sy-1,3,3);
+      ctx.fillStyle='#fff';ctx.fillRect(sx,sy,1,1);
+    }
+    ctx.globalAlpha=1;
+  }
 
   // Sparks
   for(const p of particles){if(p.sm)continue;ctx.fillStyle=p.c;ctx.globalAlpha=Math.max(0,p.life/.5);ctx.fillRect(p.x|0,p.y|0,2,2);}
