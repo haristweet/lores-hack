@@ -10,6 +10,7 @@ function startCoffeeBreak(){
   const skits=['chase','victory','bomber','ghost','brute'];
   coffeeBreak={t:0,skit:skits[Math.floor(Math.random()*skits.length)]};
   _cbBtnPrev=false;running=false;
+  PSG.jingle();
 }
 function endCoffeeBreak(){const dbg=coffeeBreak?._debug;coffeeBreak=null;if(!dbg)nextStage();}
 

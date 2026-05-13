@@ -2704,6 +2704,31 @@ const PSG=(()=>{
         st2++;t+=sd;
       }
       return oAC.startRendering();
+    },
+    // Coffee break jingle — Namco early-80s style, G major, 168 BPM
+    // Phrase 1: B4 _ D5 G5 E5 D5 B4 _   (ascend to G5, resolve down)
+    // Phrase 2: G4 B4 D5 E5 G5 A5 G5 _  (run up to A5, land on G5)
+    jingle(){
+      this.stop();init();
+      const bpmJ=168;
+      const mel =[71,null,74,79,76,74,71,null, 67,71,74,76,79,81,79,null];
+      const bass=[43,null,43,null,50,null,50,null, 43,null,43,null,41,null,43,null];
+      const arp =[55,59,62,67,62,59,55,59, 55,59,62,64,67,69,67,64];
+      let jStep=0;
+      const sd=60/bpmJ/2;
+      const play=()=>{
+        while(nextT<AC.currentTime+.18){
+          const i=jStep%16;
+          if(mel[i] !==null)noteOn(midi(mel[i]), 'square',  .16,nextT,sd*.72);
+          if(bass[i]!==null)noteOn(midi(bass[i]),'triangle',.22,nextT,sd*1.4);
+          if(arp[i] !==null)noteOn(midi(arp[i]), 'square',  .06,nextT,sd*.30);
+          if(i%8===0)noiseOn(120, .07,nextT,.06);   // soft kick
+          if(i%4===2)noiseOn(1200,.04,nextT,.025);  // soft snare
+          jStep++;nextT+=sd;
+        }
+      };
+      if(AC.state==='suspended'){AC.resume().then(()=>{nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      else{nextT=AC.currentTime+.08;seqId=setInterval(play,22);}
     }
   };
 })();
@@ -2830,6 +2855,7 @@ function startCoffeeBreak(){
   const skits=['chase','victory','bomber','ghost','brute'];
   coffeeBreak={t:0,skit:skits[Math.floor(Math.random()*skits.length)]};
   _cbBtnPrev=false;running=false;
+  PSG.jingle();
 }
 function endCoffeeBreak(){const dbg=coffeeBreak?._debug;coffeeBreak=null;if(!dbg)nextStage();}
 
