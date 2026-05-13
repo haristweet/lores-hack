@@ -27,7 +27,6 @@ let cfg={humans:1,cpus:0,slots:['KB+M']};
 
 function renderLobby(){
   if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-  PSG.title();
 }
 
 function pollPads(){
@@ -370,4 +369,6 @@ const PSG=(()=>{
     }
   };
 })();
+// Start title music for initial lobby (PSG now defined)
+PSG.title();
 

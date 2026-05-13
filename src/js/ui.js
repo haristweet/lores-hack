@@ -32,8 +32,8 @@ function pauseHandleClick(){
   for(const[k,b]of Object.entries(pauseBtns)){
     if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
       if(k==='resume'){setPause(false);return;}
-      if(k==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();return;}
-      if(k==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();return;}
+      if(k==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();PSG.title();return;}
+      if(k==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();PSG.title();return;}
     }
   }
 }
@@ -748,7 +748,7 @@ function drawGameOver(){
 function goHandleClick(){
   for(const[k,b] of Object.entries(goBtns)){
     if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
-      if(k==='retry'){gameOverState=false;lobbyEl.style.display='flex';renderLobby();}
+      if(k==='retry'){gameOverState=false;lobbyEl.style.display='flex';renderLobby();PSG.title();}
     }
   }
 }
@@ -781,7 +781,7 @@ function drawWin(){
 function winHandleClick(){
   for(const[k,b] of Object.entries(winBtns2)){
     if(mouse.x>=b.x&&mouse.x<b.x+b.w&&mouse.y>=b.y&&mouse.y<b.y+b.h){
-      if(k==='again'){gameWon=false;lobbyEl.style.display='flex';renderLobby();}
+      if(k==='again'){gameWon=false;lobbyEl.style.display='flex';renderLobby();PSG.title();}
     }
   }
 }
@@ -819,16 +819,16 @@ function _ovlPadNav(){
     if(back){setPause(false);_ovlPadFocus='';_ovlPadPrev={};}
     else if(ok){
       if(_ovlPadFocus==='resume'){setPause(false);}
-      else if(_ovlPadFocus==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
-      else if(_ovlPadFocus==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();}
+      else if(_ovlPadFocus==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();PSG.title();}
+      else if(_ovlPadFocus==='quit'){setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();PSG.title();}
       _ovlPadFocus='';_ovlPadPrev={};
     }
   }else if(gameOverState){
     _ovlPadFocus='retry';
-    if(ok||back){gameOverState=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+    if(ok||back){gameOverState=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
   }else if(gameWon){
     _ovlPadFocus='again';
-    if(ok||back){gameWon=false;lobbyEl.style.display='flex';renderLobby();_ovlPadFocus='';_ovlPadPrev={};}
+    if(ok||back){gameWon=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
   }
 }
 
