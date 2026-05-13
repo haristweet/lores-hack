@@ -69,6 +69,7 @@ const INTRO_ENEMIES=[
   {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',       dep:'D25+', nag:'Dying just makes more. Typical.'},
   {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',  dep:'D30+', nag:"Can't even touch it. Typical."},
   {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse',     dep:'D35+', nag:'Always in the blast zone. Typical.'},
+  {type:'gatekeeper',col:'#f44',name:'GATEKEEPER',desc:'Guards the exit. Kill it to pass.',dep:'D10+',nag:"Won't budge until it's dead. Typical."},
   {type:'boss',tier:'green', col:'#833',name:'BOSS',     desc:'Breaks walls, hunts you down',   dep:'D10+', nag:'Just when you cleared the floor. Typical.'},
   {type:'boss',tier:'yellow',col:'#aa8',name:'GOLD BOSS',desc:'+GK throw, 16-way shot',         dep:'D33+', nag:'Now it brings backup. Typical.'},
   {type:'boss',tier:'red',   col:'#f44',name:'RED BOSS', desc:'+Wall-breaking charge dash',     dep:'D66+', nag:'Nowhere left to run. Typical.'},
@@ -111,6 +112,15 @@ function iEnemyLarge(cx,cy,type,sc,t,tier){
     if(!isFinal){const ox=Math.round(Math.cos(t*2.5)*13),oy=Math.round(Math.sin(t*2.5)*13);
       ctx.fillStyle=tier==='yellow'?'#ff8':tier==='red'?'#f44':'#f00';ctx.globalAlpha=.5+pulse*.5;
       ctx.fillRect(ox-1,oy-1,3,3);ctx.globalAlpha=1;}
+    ctx.globalAlpha=1;ctx.restore();return;
+  }
+  // ── Gatekeeper ────────────────────────────────────
+  if(type==='gatekeeper'){
+    const pulse=(Math.sin(t*5)+1)*.5;
+    ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-7,7,14,3);ctx.globalAlpha=1;
+    ctx.fillStyle='#600';ctx.fillRect(-6,-6,12,12);
+    ctx.fillStyle='#f44';ctx.globalAlpha=.5+pulse*.5;ctx.fillRect(-4,-4,8,8);ctx.globalAlpha=1;
+    ctx.fillStyle='#f88';ctx.fillRect(-1,-6,2,12);ctx.fillRect(-6,-1,12,2);
     ctx.globalAlpha=1;ctx.restore();return;
   }
   let body,head;
