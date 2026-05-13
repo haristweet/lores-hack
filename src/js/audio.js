@@ -27,6 +27,7 @@ let cfg={humans:1,cpus:0,slots:['KB+M']};
 
 function renderLobby(){
   if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
+  PSG.title();
 }
 
 function pollPads(){
@@ -240,16 +241,18 @@ const PSG=(()=>{
     }
   }
 
+  let _titleActive=false;
+
   return{
     play(st){
-      this.stop();init();
+      _titleActive=false;this.stop();init();
       const z=zone(st);
       bpm=z.bpmBase+(st%20)*.55; // gentle BPM drift within each zone
       pat=genPat(st);step=0;
       const start=()=>{nextT=AC.currentTime+.08;seqId=setInterval(sched,25);};
       if(AC.state==='suspended'){AC.resume().then(start);}else{start();}
     },
-    stop(){if(seqId){clearInterval(seqId);seqId=null;}},
+    stop(){if(seqId){clearInterval(seqId);seqId=null;}_titleActive=false;},
     resume(){if(AC&&AC.state==='suspended')AC.resume();},
     boss(st){
       this.stop();init();
@@ -312,6 +315,33 @@ const PSG=(()=>{
         st2++;t+=sd;
       }
       return oAC.startRendering();
+    },
+    // Title screen BGM — A dorian, 126 BPM, 16 steps
+    // Melody phrase 1: A4 _ C5 _ E5 D5 C5 _  (ascends to E5, settles)
+    // Melody phrase 2: A4 B4 C5 E5 A5 _ G5 E5 (climbs to A5, resolves down)
+    title(){
+      if(_titleActive)return; // already playing, don't restart on UI redraws
+      _titleActive=true;this.stop();_titleActive=true;init();
+      const bpmT=126;
+      const mel =[69,null,72,null,76,74,72,null, 69,71,72,76,81,null,79,76];
+      const bass=[45,null,45,null,52,null,50,null, 45,null,45,null,52,null,45,null];
+      const arp =[57,60,64,69,72,69,64,60, 57,59,60,64,69,71,72,69];
+      let tStep=0;
+      const sd=60/bpmT/2;
+      const play=()=>{
+        while(nextT<AC.currentTime+.18){
+          const i=tStep%16;
+          if(mel[i] !==null)noteOn(midi(mel[i]), 'square',  .14,nextT,sd*.75);
+          if(bass[i]!==null)noteOn(midi(bass[i]),'triangle',.20,nextT,sd*1.5);
+          if(arp[i] !==null)noteOn(midi(arp[i]), 'square',  .05,nextT,sd*.35);
+          if(i%8===0)noiseOn(100,.08,nextT,.09);    // kick (half-time, every bar)
+          if(i%8===4)noiseOn(1100,.04,nextT,.04);   // snare (half-time)
+          if(i%4===0)noiseOn(5000,.015,nextT,.02);  // hi-hat (quarter notes)
+          tStep++;nextT+=sd;
+        }
+      };
+      if(AC.state==='suspended'){AC.resume().then(()=>{nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      else{nextT=AC.currentTime+.08;seqId=setInterval(play,22);}
     },
     // Coffee break jingle — Namco early-80s style, G major, 168 BPM
     // Phrase 1: B4 _ D5 G5 E5 D5 B4 _   (ascend to G5, resolve down)

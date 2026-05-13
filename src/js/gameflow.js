@@ -99,7 +99,7 @@ function stopAttractDemo(){
   attractDemo=false; attractDemoT=0;
   running=false; gameOverState=false; gameWon=false; bulletTime=null;
   driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
-  PSG.stop();
+  PSG.stop(); // title() will be triggered by renderLobby()
   lobbyIdleT=0;
   lobbyEl.style.display='flex';
   renderLobby();
