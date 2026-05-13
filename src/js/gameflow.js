@@ -69,13 +69,22 @@ function endIntro(){
 // ── Attract Demo ──────────────────────────────
 function startAttractDemo(){
   attractDemo=true; attractDemoT=0;
-  const demoStage=rndi(1,80); // D80+ is for players to discover
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  const godRun=Math.random()<0.01; // 1% chance: full-power showcase
+  const demoStage=godRun?rndi(70,80):rndi(1,80); // D80+ is for players to discover
   players=[];
-  const total=2+rndi(0,3); // 2-4 CPU players
+  const total=godRun?4:2+rndi(0,3); // god run always 4 players
   for(let i=0;i<total;i++){
     players.push(makePlayer(i,new CPUController(randPers()),false));
   }
   for(const p of players){p.level=demoStage;}
+  if(godRun){
+    laserActive=true;driverActive=true;overdriveActive=true;vertidriveActive=true;
+    for(const p of players){
+      p.hp=p.maxHp=999;
+      p.shields=[{hp:3,maxHp:3},{hp:3,maxHp:3},{hp:3,maxHp:3},{hp:3,maxHp:3}];
+    }
+  }
   stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
@@ -89,6 +98,7 @@ function startAttractDemo(){
 function stopAttractDemo(){
   attractDemo=false; attractDemoT=0;
   running=false; gameOverState=false; gameWon=false; bulletTime=null;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
   PSG.stop();
   lobbyIdleT=0;
   lobbyEl.style.display='flex';
