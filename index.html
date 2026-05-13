@@ -89,7 +89,7 @@ addEventListener('keydown',e=>{
   if(attractDemo){stopAttractDemo();e.preventDefault();return;}
   if(coffeeBreak&&coffeeBreak.t>0.5){endCoffeeBreak();e.preventDefault();return;}
   if(gameWon&&endingT<5){endingT=5;e.preventDefault();return;}
-  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
+  if(lobbyEl.style.display!=='none'){lobbyIdleT=0;PSG.title();}
   if(introActive){
     // ── Page 4: enemy gallery — left/right navigate, space advances ──
     if(introPage===4){
@@ -168,7 +168,7 @@ addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('click',e=>{
   if(attractDemo){stopAttractDemo();return;}
-  if(lobbyEl.style.display!=='none')lobbyIdleT=0;
+  if(lobbyEl.style.display!=='none'){lobbyIdleT=0;PSG.title();}
   if(introActive){
     if(introPage===4){
       // BACK TO TITLE button (last enemy)
