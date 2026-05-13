@@ -319,7 +319,7 @@ const PSG=(()=>{
     // Melody phrase 1: A4 _ C5 _ E5 D5 C5 _  (ascends to E5, settles)
     // Melody phrase 2: A4 B4 C5 E5 A5 _ G5 E5 (climbs to A5, resolves down)
     title(){
-      if(_titleActive)return; // already playing, don't restart on UI redraws
+      if(_titleActive&&seqId)return; // already playing; seqId=null means AC was suspended at startup
       _titleActive=true;this.stop();_titleActive=true;init();
       const bpmT=126;
       const mel =[69,null,72,null,76,74,72,null, 69,71,72,76,81,null,79,76];
