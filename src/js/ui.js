@@ -58,6 +58,99 @@ function iChar(sx,sy,pal,sc,dead=false,aim=0){
   ctx.restore();
 }
 
+// ── Enemy gallery data ────────────────────────
+const INTRO_ENEMIES=[
+  {type:'grunt',   col:'#7a7',name:'GRUNT',   desc:'Direct melee chaser',          dep:'D1+'},
+  {type:'runner',  col:'#c85',name:'RUNNER',  desc:'Fast and fragile',              dep:'D1+'},
+  {type:'shooter', col:'#86c',name:'SHOOTER', desc:'Stays back, fires at range',   dep:'D1+'},
+  {type:'brute',   col:'#a44',name:'BRUTE',   desc:'Slow, very tanky',             dep:'D5+'},
+  {type:'poison',  col:'#6a6',name:'POISON',  desc:'Leaves toxic puddles',         dep:'D5+'},
+  {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',        dep:'D15+'},
+  {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',       dep:'D25+'},
+  {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',  dep:'D30+'},
+  {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse',     dep:'D35+'},
+];
+
+// Large animated enemy sprite for gallery (scale applied externally via translate/scale)
+function iEnemyLarge(cx,cy,type,sc,t){
+  ctx.save();ctx.translate(Math.round(cx),Math.round(cy));ctx.scale(sc,sc);
+  let body,head;
+  if(type==='grunt')    {body='#494';head='#7a7';}
+  else if(type==='runner')  {body='#963';head='#c85';}
+  else if(type==='brute')   {body='#722';head='#a44';}
+  else if(type==='shooter') {body='#549';head='#86c';}
+  else if(type==='poison')  {body='#362';head='#594';}
+  else if(type==='splatter'){body='#639';head='#96c';}
+  else if(type==='dasher')  {body='#a50';head='#c80';}
+  else if(type==='ghost')   {body='#8af';head='#adf';}
+  else if(type==='bomber')  {body='#622';head='#944';}
+  // shadow
+  ctx.fillStyle='#000';ctx.globalAlpha=.3;ctx.fillRect(-5,6,10,2);ctx.globalAlpha=1;
+  if(type==='brute'){
+    const sw=Math.round(Math.sin(t*2));
+    ctx.fillStyle=body;ctx.fillRect(-6,-2+sw,2,3);ctx.fillRect(4,-2-sw,2,3); // arms
+    ctx.fillStyle=body;ctx.fillRect(-4,-4,8,7);
+    ctx.fillStyle=head;ctx.fillRect(-3,-6,6,3);
+    ctx.fillStyle='#f00';ctx.fillRect(-2,-5,1,1);ctx.fillRect(1,-5,1,1);
+  } else if(type==='shooter'){
+    const ang=Math.sin(t*1.4)*.6;
+    ctx.fillStyle=body;ctx.fillRect(-2,-3,4,6);ctx.fillStyle=head;ctx.fillRect(-2,-5,4,3);
+    ctx.fillStyle='#ff0';ctx.fillRect(-1,-4,1,1);ctx.fillRect(0,-4,1,1);
+    ctx.fillStyle='#aaa';
+    for(let i=1;i<=3;i++)ctx.fillRect(Math.round(Math.cos(ang)*i*1.5)-1,Math.round(Math.sin(ang)*i*1.5)-2,1,1);
+  } else if(type==='runner'){
+    const rl=((t*18)|0)%2;
+    ctx.fillStyle=head;ctx.fillRect(-1,-7,2,2);
+    ctx.fillStyle=body;ctx.fillRect(-1,-5,2,6);
+    ctx.fillStyle='#f80';ctx.fillRect(-1,-6,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-2,1,1,2+rl);ctx.fillRect(1,1,1,3-rl);
+    ctx.fillStyle=body;ctx.fillRect(-3,-3,1,2);ctx.fillRect(2,-4,1,2);
+  } else if(type==='ghost'){
+    const bob=Math.round(Math.sin(t*2.8));
+    ctx.globalAlpha=0.5+Math.sin(t*4)*.18;
+    ctx.fillStyle=body;
+    ctx.fillRect(-1,-9+bob,2,3);ctx.fillRect(-2,-7+bob,4,3);ctx.fillRect(-3,-4+bob,6,5);
+    ctx.fillRect(-2,1+bob,2,2);ctx.fillRect(0,1+bob,2,2);
+    ctx.fillStyle=head;ctx.fillRect(-2,-3+bob,1,1);ctx.fillRect(0,-3+bob,1,1);
+    ctx.globalAlpha=1;
+  } else if(type==='bomber'){
+    const spk=((t*8)|0)%2;
+    ctx.fillStyle=spk?'#ff0':'#fa8';ctx.fillRect(0,-10,1,2);
+    ctx.fillStyle='#aaa';ctx.fillRect(0,-8,1,3);
+    ctx.fillStyle=head;ctx.fillRect(-2,-5,3,2);
+    ctx.fillStyle=body;ctx.fillRect(-3,-3,6,7);
+    ctx.fillStyle='#844';ctx.fillRect(-3,0,6,1);
+    ctx.fillStyle='#f22';
+    ctx.fillRect(-2,-2,1,1);ctx.fillRect(1,-2,1,1);ctx.fillRect(-1,-1,1,1);ctx.fillRect(0,-1,1,1);
+  } else if(type==='splatter'){
+    const dr=((t*4)|0)%3;
+    ctx.fillStyle=body;
+    ctx.fillRect(-2,-5,4,2);ctx.fillRect(-3,-4,6,4);ctx.fillRect(-4,0,8,4);
+    ctx.fillStyle=head;ctx.fillRect(-2,-3,1,1);ctx.fillRect(0,-3,1,1);
+    ctx.fillStyle=body;
+    ctx.fillRect(-3,4,1,1+dr);ctx.fillRect(-1,4,1,1+((dr+1)%3));ctx.fillRect(1,4,1,1+((dr+2)%3));
+  } else if(type==='dasher'){
+    const dl=((t*10)|0)%2;
+    ctx.fillStyle=head;ctx.fillRect(2,-3,3,2);
+    ctx.fillStyle=body;ctx.fillRect(-3,-1,7,3);
+    ctx.fillStyle='#ff4';ctx.fillRect(3,-3,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,2,2,1+dl);ctx.fillRect(0,2,2,2-dl);
+  } else if(type==='poison'){
+    const bob=Math.round(Math.sin(t*1.8)*.7);
+    ctx.fillStyle=head;ctx.fillRect(-2,-7+bob,4,2);ctx.fillRect(-3,-5+bob,6,3);
+    ctx.fillStyle='#2a5';ctx.fillRect(-2,-6+bob,1,1);ctx.fillRect(0,-5+bob,1,1);ctx.fillRect(1,-6+bob,1,1);
+    ctx.fillStyle='#9c9';ctx.fillRect(-3,-2+bob,6,1);
+    ctx.fillStyle=body;ctx.fillRect(-1,-1,2,4);
+  } else {
+    // GRUNT
+    const reach=Math.round(Math.sin(t*3));
+    ctx.fillStyle=body;ctx.fillRect(-2,-2,4,5);ctx.fillStyle=head;ctx.fillRect(-2,-4,4,3);
+    ctx.fillStyle='#f00';ctx.fillRect(-1,-3,1,1);ctx.fillRect(0,-3,1,1);
+    ctx.fillStyle=body;ctx.fillRect(-3,-1+reach,1,2);ctx.fillRect(2,-1-reach,1,2);
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
 // Draw a simplified enemy sprite for intro pages
 function iEnemy(sx,sy,type,sc){
   ctx.save();ctx.translate(sx,sy);ctx.scale(sc,sc);
@@ -483,48 +576,43 @@ function drawIntro(){
     pixText('MAX 1.5 SEC  SLOW WHILE CHARGING',10,133,'#fa8');
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 
-  // ── Page 4: ENEMIES I ────────────────────────
+  // ── Page 4: ENEMY GALLERY ────────────────────
   }else if(introPage===4){
-    pixBig('ENEMIES I',(W-72)/2,18,'#f88');
-    // depth group headers + enemy rows
-    const E1=[
-      {type:'grunt',   col:'#7a7',name:'GRUNT',   desc:'Direct melee chaser',     dep:'D1+'},
-      {type:'runner',  col:'#c85',name:'RUNNER',  desc:'Fast and fragile',         dep:'D1+'},
-      {type:'shooter', col:'#86c',name:'SHOOTER', desc:'Stays back, fires at range',dep:'D1+'},
-      {type:'brute',   col:'#a44',name:'BRUTE',   desc:'Slow, very tanky',         dep:'D5+'},
-      {type:'poison',  col:'#6a6',name:'POISON',  desc:'Leaves toxic puddles',     dep:'D5+'},
-    ];
-    E1.forEach(({type,col,name,desc,dep},i)=>{
-      const ry=34+i*25;
-      iEnemy(14,ry+10,type,3);
-      pixText(name,28,ry+5,col);
-      pixText(desc,28,ry+13,'#566');
-      pixText(dep,W-22,ry+8,'#445');
-    });
-    pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
-
-  // ── Page 5: ENEMIES II ───────────────────────
-  }else if(introPage===5){
-    pixBig('ENEMIES II',(W-80)/2,18,'#f88');
-    const E2=[
-      {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',    dep:'D15+'},
-      {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',   dep:'D25+'},
-      {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',dep:'D30+'},
-      {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse', dep:'D35+'},
-    ];
-    E2.forEach(({type,col,name,desc,dep},i)=>{
-      const ry=34+i*27;
-      iEnemy(14,ry+11,type,3);
-      pixText(name,28,ry+5,col);
-      pixText(desc,28,ry+13,'#566');
-      pixText(dep,W-28,ry+8,'#445');
-    });
-    // BACK TO TITLE button
-    const bx=W/2-30,by=H-28,bw=60,bh=12;
-    const hov=mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh;
-    ctx.fillStyle=hov?'#0ff':'#081820';
-    ctx.fillRect(bx,by,bw,bh);
-    pixText('BACK TO TITLE',bx+4,by+3,hov?'#000':'#0ff');
+    const ei=INTRO_ENEMIES[introEnemyIdx];
+    // Subtle background color wash
+    ctx.fillStyle=ei.col;ctx.globalAlpha=.07;ctx.fillRect(0,14,W,H-14);ctx.globalAlpha=1;
+    // Enemy name (big, centered)
+    const nw=ei.name.length*8;
+    pixBig(ei.name,Math.round((W-nw)/2),18,ei.col);
+    // Depth badge (top right of name area)
+    pixText(ei.dep,W-ei.dep.length*4-6,22,'#445');
+    // Large animated sprite (center)
+    iEnemyLarge(W/2,82,ei.type,6,introT);
+    // Description (centered below sprite)
+    const dw=ei.desc.length*4;
+    pixText(ei.desc,Math.round((W-dw)/2),128,'#8ab');
+    // Left / Right navigation arrows
+    const isFirst=introEnemyIdx===0,isLast=introEnemyIdx===INTRO_ENEMIES.length-1;
+    ctx.globalAlpha=isFirst?.18:.7;
+    pixText('◄',6,79,'#0cf'); // ◄
+    ctx.globalAlpha=isLast?.18:.7;
+    pixText('►',W-10,79,'#0cf'); // ►
+    ctx.globalAlpha=1;
+    // Enemy index dots
+    const dotN=INTRO_ENEMIES.length,dotW=dotN*8-3;
+    for(let i=0;i<dotN;i++){
+      ctx.fillStyle=i===introEnemyIdx?ei.col:'#234';
+      ctx.fillRect(Math.round((W-dotW)/2)+i*8,H-18,5,3);
+    }
+    // BACK TO TITLE button (last enemy) or hint
+    if(isLast){
+      const bx=W/2-30,by=H-28,bw=60,bh=12;
+      const hov=mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh;
+      ctx.fillStyle=hov?'#0ff':'#081820';ctx.fillRect(bx,by,bw,bh);
+      pixText('BACK TO TITLE',bx+4,by+3,hov?'#000':'#0ff');
+    }else{
+      pixText('SPACE : NEXT',(W-48)/2,H-28,'#345');
+    }
   }
 }
 

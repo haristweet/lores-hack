@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════
 const keys={};
 let paused=false,debug=false,introActive=false,introPage=0,introT=0;
+let introEnemyIdx=0; // index within enemy gallery (page 4)
 let podSelectState=null,_podPadPrev={};
 let padConfigActive=false,padCfgFocus=0,padCfgWaiting=false,_padCfgPrev={};
 const pauseEl=document.getElementById('pause');
@@ -15,8 +16,31 @@ addEventListener('keydown',e=>{
   if(attractDemo){stopAttractDemo();e.preventDefault();return;}
   if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
+    // ── Page 4: enemy gallery — left/right navigate, space advances ──
+    if(introPage===4){
+      if(e.code==='ArrowRight'||e.code==='KeyD'){
+        if(introEnemyIdx<INTRO_ENEMIES.length-1){introEnemyIdx++;introT=0;}
+        else endIntro();
+        e.preventDefault();return;
+      }
+      if(e.code==='ArrowLeft'||e.code==='KeyA'){
+        if(introEnemyIdx>0){introEnemyIdx--;introT=0;}
+        else{introPage=3;introT=0;}
+        e.preventDefault();return;
+      }
+      if(e.code==='Space'||e.code==='Enter'){
+        if(introEnemyIdx<INTRO_ENEMIES.length-1){introEnemyIdx++;introT=0;}
+        else endIntro();
+        e.preventDefault();return;
+      }
+      if(e.code==='Escape'){endIntro();e.preventDefault();return;}
+      return;
+    }
     if(e.code==='Space'||e.code==='Enter'){
-      introPage++;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;e.preventDefault();return;
+      introPage++;
+      if(introPage===4)introEnemyIdx=0; // reset gallery on entry
+      if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;
+      introT=0;e.preventDefault();return;
     }
     if(e.code==='Escape'){endIntro();e.preventDefault();return;}
     return;
@@ -50,8 +74,13 @@ function pollIntroGamepad(){
   const dR=edge('dR',(gp.buttons[15]?.pressed)||ax>0.5);
   const dL=edge('dL',(gp.buttons[14]?.pressed)||ax<-0.5);
   const back=edge('B',gp.buttons[1]?.pressed);
-  if(dR){introPage++;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;}
-  if(dL){introPage--;if(introPage<0)introPage=0;introT=0;}
+  if(introPage===4){
+    if(dR){if(introEnemyIdx<INTRO_ENEMIES.length-1){introEnemyIdx++;introT=0;}else endIntro();}
+    if(dL){if(introEnemyIdx>0){introEnemyIdx--;introT=0;}else{introPage=3;introT=0;}}
+  }else{
+    if(dR){introPage++;if(introPage===4)introEnemyIdx=0;if(introPage>=INTRO_PAGES)introPage=INTRO_PAGES-1;introT=0;}
+    if(dL){introPage--;if(introPage<0)introPage=0;introT=0;}
+  }
   if(back)endIntro();
 }
 const mouse={x:W/2,y:H/2,down:false};
@@ -64,12 +93,23 @@ cv.addEventListener('click',e=>{
   if(attractDemo){stopAttractDemo();return;}
   if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
-    // Page 5 (last): BACK TO TITLE button hit test
-    if(introPage===5){
-      const bx=W/2-22,by=H-28,bw=44,bh=12;
-      if(mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh){endIntro();return;}
+    if(introPage===4){
+      // BACK TO TITLE button (last enemy)
+      if(introEnemyIdx===INTRO_ENEMIES.length-1){
+        const bx=W/2-30,by=H-28,bw=60,bh=12;
+        if(mouse.x>=bx&&mouse.x<=bx+bw&&mouse.y>=by&&mouse.y<=by+bh){endIntro();return;}
+      }
+      // click left half = prev, right half = next
+      if(mouse.x<W/2){
+        if(introEnemyIdx>0){introEnemyIdx--;introT=0;}
+      }else{
+        if(introEnemyIdx<INTRO_ENEMIES.length-1){introEnemyIdx++;introT=0;}
+        else endIntro();
+      }
+      return;
     }
     introPage++;
+    if(introPage===4)introEnemyIdx=0;
     if(introPage>=INTRO_PAGES){introPage=INTRO_PAGES-1;}
     introT=0;
     return;
@@ -79,4 +119,3 @@ cv.addEventListener('click',e=>{
   if(gameOverState){goHandleClick();return;}
   if(gameWon){winHandleClick();return;}
 });
-
