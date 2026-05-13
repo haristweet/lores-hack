@@ -657,12 +657,12 @@ function makeEnemy(type,x,y){
   const sc=eScale();
   const b={type,x,y,vx:0,vy:0,atkCd:0,hit:0,ang:0,anim:Math.random()*10,_dead:false};
   if(type==='grunt') {b.hp=3*sc;b.spd=22+stage*.1;b.r=3;b.dmg=8*sc;}
-  else if(type==='runner'){b.hp=2*sc;b.spd=42+stage*.15;b.r=2.5;b.dmg=6*sc;}
+  else if(type==='runner'){b.hp=2*sc;b.spd=42+stage*.15;b.r=3.5;b.dmg=6*sc;}
   else if(type==='brute') {b.hp=10*sc;b.spd=14+stage*.08;b.r=5;b.dmg=18*sc;}
-  else if(type==='shooter'){b.hp=3*sc;b.spd=14+stage*.08;b.r=3;b.dmg=10*sc;b.range=70;}
+  else if(type==='shooter'){b.hp=3*sc;b.spd=14+stage*.08;b.r=4;b.dmg=10*sc;b.range=70;}
   else if(type==='poison')  {b.hp=4*sc;b.spd=11+stage*.07;b.r=3;b.dmg=5*sc;b.pudCd=0;}
   else if(type==='splatter'){b.hp=7*sc;b.spd=18+stage*.09;b.r=4;b.dmg=10*sc;}
-  else if(type==='dasher')  {b.hp=4*sc;b.spd=18+stage*.09;b.r=3;b.dmg=16*sc;b.dashCd=rnd(1.8,2.8);b.dashing=false;b.dashVx=0;b.dashVy=0;b.dashT=0;}
+  else if(type==='dasher')  {b.hp=4*sc;b.spd=18+stage*.09;b.r=4;b.dmg=16*sc;b.dashCd=rnd(1.8,2.8);b.dashing=false;b.dashVx=0;b.dashVy=0;b.dashT=0;}
   else if(type==='ghost')   {b.hp=1;b.spd=28+stage*.1;b.r=3;b.dmg=12*sc;}
   else if(type==='bomber')  {b.hp=6*sc;b.spd=14+stage*.06;b.r=4;b.dmg=4*sc;b.fuseT=4+Math.random();}
   return b;
