@@ -2857,7 +2857,7 @@ function startCoffeeBreak(){
   _cbBtnPrev=false;running=false;
   PSG.jingle();
 }
-function endCoffeeBreak(){const dbg=coffeeBreak?._debug;coffeeBreak=null;if(!dbg)nextStage();}
+function endCoffeeBreak(){const dbg=coffeeBreak?._debug;coffeeBreak=null;if(dbg)PSG.stop();else nextStage();}
 
 // ── Helpers ──────────────────────────────────
 const _GY=105; // sprite center y (ground at _GY+8)
