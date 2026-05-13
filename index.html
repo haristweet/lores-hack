@@ -991,6 +991,8 @@ function update(dt){
               // restore any devoured cores (partial refund)
               const refund=Math.min(coresNeeded-coresCollected,2);
               if(refund>0){coresCollected+=refund;flash('CORE RECOVERED +'+refund,'#0ff');}
+              // open exit if cores already done
+              if(coresCollected>=coresNeeded&&!exitOpen){exitOpen=true;flash('EXIT ONLINE','#ff0');}
             }
           }
           // zombie drops bonus
@@ -1427,7 +1429,8 @@ function update(dt){
       if(dx*dx+dy*dy<64){cores.splice(i,1);coresCollected++;flash('CORE '+coresCollected+'/'+coresNeeded,'#0ff');break;}
     }
   }
-  if(!monsterHouse&&!exitOpen&&coresCollected>=coresNeeded){exitOpen=true;flash('EXIT ONLINE','#ff0');}
+  {const _bossAlive=enemies.some(e=>e.type==='boss');
+  if(!monsterHouse&&!exitOpen&&coresCollected>=coresNeeded&&!_bossAlive){exitOpen=true;flash('EXIT ONLINE','#ff0');}}
 
   // ── Cold sleep pods ──
   // Update active pod selection
@@ -1611,6 +1614,8 @@ function nextStage(){
       flash('★ BOSS APPROACHES ★','#f44');
       const _bMsg={green:'WALL-BREAKER INCOMING',yellow:'GK-THROWER INCOMING',red:'JUGGERNAUT INCOMING',final:'THE FINAL TERROR'}[b._tier]||'BOSS INCOMING';
       flash(_bMsg,'#f88');
+      flash('DEFEAT THE BOSS TO OPEN THE EXIT!','#fa0');
+      if(exitOpen){exitOpen=false;}
       shake=Math.max(shake,3);
       if(!attractDemo)PSG.boss(stage);
     },1200);
