@@ -60,6 +60,8 @@ addEventListener('keydown',e=>{
     if(e.code==='Semicolon'){enemies.length=0;flash('ENEMIES CLEARED','#f80');return;} // ; kill enemies
     if(e.code==='KeyM'){for(const p of players){p.hp=p.maxHp=9999;p.iframe=.5;}flash('GOD MODE','#f0f');return;} // M max HP
     if(e.code==='KeyB'){const b=makeBoss();const h=humanPlayer();if(h){b.x=h.x+80;b.y=h.y;}enemies.push(b);flash('★ BOSS SPAWNED','#f44');return;} // B spawn boss
+    if(e.code==='KeyC'){const sk=['chase','victory','bomber','ghost','brute'];const cur=coffeeBreak?sk.indexOf(coffeeBreak.skit):-1;const nxt=sk[(cur+1)%sk.length];coffeeBreak={t:0,skit:nxt,_debug:true};_cbBtnPrev=false;flash('CB: '+nxt.toUpperCase(),'#0ff');return;} // C cycle coffee break
+    if(e.code==='KeyE'){gameWon=true;endingT=0;running=false;winMsg='DEBUG PREVIEW';flash('ENDING PREVIEW','#ff0');return;} // E ending preview
   }
   keys[e.code]=true;
 });

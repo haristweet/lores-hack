@@ -11,7 +11,7 @@ function startCoffeeBreak(){
   coffeeBreak={t:0,skit:skits[Math.floor(Math.random()*skits.length)]};
   _cbBtnPrev=false;running=false;
 }
-function endCoffeeBreak(){coffeeBreak=null;nextStage();}
+function endCoffeeBreak(){const dbg=coffeeBreak?._debug;coffeeBreak=null;if(!dbg)nextStage();}
 
 // ── Helpers ──────────────────────────────────
 const _GY=105; // sprite center y (ground at _GY+8)
