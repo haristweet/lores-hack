@@ -2774,7 +2774,7 @@ function endIntro(){
 // ── Attract Demo ──────────────────────────────
 function startAttractDemo(){
   attractDemo=true; attractDemoT=0;
-  const demoStage=rndi(1,100);
+  const demoStage=rndi(1,80); // D80+ is for players to discover
   players=[];
   const total=2+rndi(0,3); // 2-4 CPU players
   for(let i=0;i<total;i++){
