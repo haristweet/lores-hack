@@ -60,20 +60,59 @@ function iChar(sx,sy,pal,sc,dead=false,aim=0){
 
 // ── Enemy gallery data ────────────────────────
 const INTRO_ENEMIES=[
-  {type:'grunt',   col:'#7a7',name:'GRUNT',   desc:'Direct melee chaser',          dep:'D1+'},
-  {type:'runner',  col:'#c85',name:'RUNNER',  desc:'Fast and fragile',              dep:'D1+'},
-  {type:'shooter', col:'#86c',name:'SHOOTER', desc:'Stays back, fires at range',   dep:'D1+'},
-  {type:'brute',   col:'#a44',name:'BRUTE',   desc:'Slow, very tanky',             dep:'D5+'},
-  {type:'poison',  col:'#6a6',name:'POISON',  desc:'Leaves toxic puddles',         dep:'D5+'},
-  {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',        dep:'D15+'},
-  {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',       dep:'D25+'},
-  {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',  dep:'D30+'},
-  {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse',     dep:'D35+'},
+  {type:'grunt',   col:'#7a7',name:'GRUNT',   desc:'Direct melee chaser',          dep:'D1+',  nag:'Comes in swarms. Typical.'},
+  {type:'runner',  col:'#c85',name:'RUNNER',  desc:'Fast and fragile',              dep:'D1+',  nag:'Gone before you can aim. Typical.'},
+  {type:'shooter', col:'#86c',name:'SHOOTER', desc:'Stays back, fires at range',   dep:'D1+',  nag:'Always finds a sightline. Typical.'},
+  {type:'brute',   col:'#a44',name:'BRUTE',   desc:'Slow, very tanky',             dep:'D5+',  nag:'Takes forever to drop. Typical.'},
+  {type:'poison',  col:'#6a6',name:'POISON',  desc:'Leaves toxic puddles',         dep:'D5+',  nag:'Floor covered in goo. Typical.'},
+  {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',        dep:'D15+', nag:'Charge comes out of nowhere. Typical.'},
+  {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',       dep:'D25+', nag:'Dying just makes more. Typical.'},
+  {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',  dep:'D30+', nag:"Can't even touch it. Typical."},
+  {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse',     dep:'D35+', nag:'Always in the blast zone. Typical.'},
+  {type:'boss',tier:'green', col:'#833',name:'BOSS',     desc:'Breaks walls, hunts you down',   dep:'D10+', nag:'Just when you cleared the floor. Typical.'},
+  {type:'boss',tier:'yellow',col:'#aa8',name:'GOLD BOSS',desc:'+GK throw, 16-way shot',         dep:'D33+', nag:'Now it brings backup. Typical.'},
+  {type:'boss',tier:'red',   col:'#f44',name:'RED BOSS', desc:'+Wall-breaking charge dash',     dep:'D66+', nag:'Nowhere left to run. Typical.'},
+  {type:'boss',tier:'final', col:'#a0f',name:'???',      desc:'?????',                           dep:'D99',  nag:'?????'},
 ];
 
 // Large animated enemy sprite for gallery (scale applied externally via translate/scale)
-function iEnemyLarge(cx,cy,type,sc,t){
+function iEnemyLarge(cx,cy,type,sc,t,tier){
   ctx.save();ctx.translate(Math.round(cx),Math.round(cy));ctx.scale(sc,sc);
+  // ── Boss ──────────────────────────────────────────────
+  if(type==='boss'){
+    const isFinal=tier==='final';
+    let _bc,_hc,_belt,_eye;
+    if(isFinal)            {_bc='#0d0b18';_hc='#0d0b18';_belt='#0d0b18';_eye='#0d0b18';}
+    else if(tier==='red')  {_bc='#c22';_hc='#811';_belt='#f44';_eye='#f66';}
+    else if(tier==='yellow'){_bc='#886';_hc='#553';_belt='#aa8';_eye='#ff8';}
+    else                   {_bc='#622';_hc='#411';_belt='#833';_eye='#f00';}
+    const pulse=Math.abs(Math.sin(t*5));
+    // Final boss: glow aura
+    if(isFinal){ctx.fillStyle='#1a0030';ctx.globalAlpha=.4+pulse*.2;ctx.fillRect(-18,-18,36,36);ctx.globalAlpha=1;}
+    // Shadow
+    ctx.fillStyle='#000';ctx.globalAlpha=.45;ctx.fillRect(-10,10,20,4);ctx.globalAlpha=1;
+    // Extra appendages (red/final)
+    if(tier==='red'||isFinal){ctx.fillStyle=_bc;ctx.fillRect(-15,-2,6,4);ctx.fillRect(9,-2,6,4);}
+    // Spikes top/bottom (final only)
+    if(isFinal){ctx.fillStyle=_bc;ctx.fillRect(-2,-15,4,6);ctx.fillRect(-2,9,4,6);}
+    // Fists
+    ctx.fillStyle=_bc;ctx.fillRect(-13,-4,5,5);ctx.fillRect(8,-4,5,5);
+    // Body + belt
+    ctx.fillStyle=_bc;ctx.fillRect(-6,-6,12,14);
+    ctx.fillStyle=_belt;ctx.fillRect(-6,1,12,2);
+    // Head
+    ctx.fillStyle=_hc;ctx.fillRect(-5,-11,10,6);
+    // Eyes
+    if(!isFinal){ctx.fillStyle=_eye;ctx.globalAlpha=0.6+pulse*.4;ctx.fillRect(-4,-9,3,2);ctx.fillRect(1,-9,3,2);ctx.globalAlpha=1;}
+    // Legs
+    const lb=((t*7)|0)%2;
+    ctx.fillStyle=isFinal?'#0d0b18':'#400';ctx.fillRect(-5,8,4,4-lb);ctx.fillRect(1,8,4,3+lb);
+    // Orbiting gem (non-final only)
+    if(!isFinal){const ox=Math.round(Math.cos(t*2.5)*13),oy=Math.round(Math.sin(t*2.5)*13);
+      ctx.fillStyle=tier==='yellow'?'#ff8':tier==='red'?'#f44':'#f00';ctx.globalAlpha=.5+pulse*.5;
+      ctx.fillRect(ox-1,oy-1,3,3);ctx.globalAlpha=1;}
+    ctx.globalAlpha=1;ctx.restore();return;
+  }
   let body,head;
   if(type==='grunt')    {body='#494';head='#7a7';}
   else if(type==='runner')  {body='#963';head='#c85';}
@@ -586,11 +625,15 @@ function drawIntro(){
     pixBig(ei.name,Math.round((W-nw)/2),18,ei.col);
     // Depth badge (top right of name area)
     pixText(ei.dep,W-ei.dep.length*4-6,22,'#445');
-    // Large animated sprite (center)
-    iEnemyLarge(W/2,82,ei.type,6,introT);
+    // Large animated sprite (center) — bosses rendered smaller to avoid overflow
+    const isBoss=ei.type==='boss';
+    const sc=isBoss?4:6,spriteCy=isBoss?76:82;
+    iEnemyLarge(W/2,spriteCy,ei.type,sc,introT,ei.tier);
     // Description (centered below sprite)
     const dw=ei.desc.length*4;
-    pixText(ei.desc,Math.round((W-dw)/2),128,'#8ab');
+    pixText(ei.desc,Math.round((W-dw)/2),122,'#8ab');
+    // Nag line ("Typical." flavor text)
+    pixText(ei.nag,Math.round((W-ei.nag.length*4)/2),131,'#567');
     // Left / Right navigation arrows
     const isFirst=introEnemyIdx===0,isLast=introEnemyIdx===INTRO_ENEMIES.length-1;
     ctx.globalAlpha=isFirst?.18:.7;
