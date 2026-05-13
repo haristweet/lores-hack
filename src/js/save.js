@@ -39,6 +39,7 @@ function loadGame(){
   let data;
   try{data=JSON.parse(raw);}catch(e){clearSave();return false;}
   if(data.v!==1){clearSave();return false;}
+  clearSave(); // Roguelike rule: resume is one-shot — no going back on death
 
   // Restore cfg
   cfg.cpus=data.cfg.cpus;cfg.slots=data.cfg.slots;
