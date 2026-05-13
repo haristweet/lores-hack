@@ -17,6 +17,7 @@ const NPC_PALS=[
   {body:'#b8860b',head:'#ffe4b5',dark:'#7a5800'},
 ];
 let bulletTime=null; // {timer,victimName,victimPal}
+let endingT=0;       // D100 ending cinematic timer
 
 // ═══════════════════════════════════════════════
 //  ENTITY FACTORIES

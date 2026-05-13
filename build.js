@@ -12,6 +12,7 @@ const SECTIONS = [
   'save',
   'audio',
   'gameflow',
+  'coffeebreak',
   'ui',
   'loop',
 ];

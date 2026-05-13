@@ -746,6 +746,7 @@ function update(dt){
     for(const pl of players){if(!pl.alive||!pl.isHuman)continue;const dx=pl.x-ex.x,dy=pl.y-ex.y;
       if(dx*dx+dy*dy<80){
         if(stage===MAX_DEPTH){/* screw handled below */}
+        else if(stage%10===0&&!attractDemo){startCoffeeBreak();return;}
         else{nextStage();return;}
       }
     }
@@ -895,7 +896,7 @@ function gameOver(){
   gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
 function gameCleared(){
-  PSG.stop();clearSave();running=false;gameWon=true;
+  PSG.stop();clearSave();running=false;gameWon=true;endingT=0;
   if(!attractDemo)_saveBest();
   winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
 }

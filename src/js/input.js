@@ -14,6 +14,8 @@ function setPause(v){
 }
 addEventListener('keydown',e=>{
   if(attractDemo){stopAttractDemo();e.preventDefault();return;}
+  if(coffeeBreak&&coffeeBreak.t>0.5){endCoffeeBreak();e.preventDefault();return;}
+  if(gameWon&&endingT<5){endingT=5;e.preventDefault();return;}
   if(lobbyEl.style.display!=='none')lobbyIdleT=0;
   if(introActive){
     // ── Page 4: enemy gallery — left/right navigate, space advances ──

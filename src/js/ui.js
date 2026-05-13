@@ -763,6 +763,7 @@ function winBtnPri(key,label,x,y,w,h,col){
   winBtns2[key]={x,y,w,h};
 }
 function drawWin(){
+  if(endingT<5){drawEndingIntro(endingT);return;}
   ctx.fillStyle='rgba(0,0,0,0.82)';ctx.fillRect(0,0,W,H);
   for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.18)';ctx.fillRect(0,sy,W,2);}
   const pulse=0.85+Math.sin(performance.now()/400)*0.15;
