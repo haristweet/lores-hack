@@ -893,7 +893,12 @@ function updatePlayer(p,dt){
       // Dash-cancel parry: 1-frame window after dash ends → massive damage
       if(p._dashJustEnded){
         for(const e of enemies){
-          if(Math.hypot(e.x-p.x,e.y-p.y)<35){e.hp-=200;e.hit=.15;spark(e.x,e.y,'#ff0',14,110);}
+          if(Math.hypot(e.x-p.x,e.y-p.y)<35){
+            const fa=Math.atan2(e.y-p.y,e.x-p.x);
+            e.hp-=200;e.hit=.15;
+            e._flungVx=Math.cos(fa)*240;e._flungVy=Math.sin(fa)*240;e._flung=0.8;
+            spark(e.x,e.y,'#ff0',14,110);
+          }
         }
         p._dcpFlash=0.12;
         shake=Math.max(shake,3);
@@ -1411,6 +1416,26 @@ function update(dt){
         enemies.splice(i,1);totalKills++;
         spark(e.x,e.y,'#adf',12,70);SE.kill();
         flash('BANISHED!','#adf');break;
+      }
+    }
+  }
+
+  // ── Flung enemies (dash-cancel parry knockback + chain collision) ──
+  for(const e of enemies){
+    if(!e._flung||e._flung<=0)continue;
+    e._flung-=dt;
+    e._flungVx*=Math.max(0,1-dt*5);e._flungVy*=Math.max(0,1-dt*5);
+    const nx=e.x+e._flungVx*dt,ny=e.y+e._flungVy*dt;
+    if(hitsWall(nx,ny,e.r)){e._flung=0;e._flungVx=0;e._flungVy=0;}
+    else{e.x=nx;e.y=ny;}
+    // Chain: bowl into other enemies
+    for(const t2 of enemies){
+      if(t2===e||t2._flung>0)continue;
+      if(Math.hypot(t2.x-e.x,t2.y-e.y)<e.r+t2.r+1){
+        const ca=Math.atan2(t2.y-e.y,t2.x-e.x);
+        t2.hp-=80;t2.hit=.15;
+        t2._flungVx=Math.cos(ca)*130;t2._flungVy=Math.sin(ca)*130;t2._flung=0.5;
+        spark(t2.x,t2.y,'#f80',8,80);shake=Math.max(shake,2);
       }
     }
   }
