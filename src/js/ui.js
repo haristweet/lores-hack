@@ -418,7 +418,7 @@ function padCfgNav(){
 }
 
 function drawLobbyCanvas(dt){
-  if(padConfigActive){drawPadConfig();padCfgNav();return;}
+  if(padConfigActive){Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);drawPadConfig();padCfgNav();return;}
   lobbyT+=dt;
   lobbyIdleT+=dt;
   if(lobbyIdleT>10)startAttractDemo();
