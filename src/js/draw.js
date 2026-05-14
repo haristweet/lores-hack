@@ -232,6 +232,7 @@ function drawPlayer(p){
   ctx.fillStyle='#000';ctx.globalAlpha=.4;ctx.fillRect(x-3,y+2,6,2);ctx.globalAlpha=1;
   let bc=p.pal.body;
   if(p.iframe>0&&((time*30)|0)%2===0)bc='#fff';
+  if(p._dcpFlash>0){ctx.fillStyle='#fff';ctx.globalAlpha=0.85;ctx.fillRect(x-4,y-6,8,10);ctx.globalAlpha=1;bc='#fff';}
   ctx.fillStyle=bc;ctx.fillRect(x-2,y-3,4,6);
   ctx.fillStyle=p.pal.head;ctx.fillRect(x-2,y-5,4,3);
   ctx.fillStyle='#000';ctx.fillRect(x-1,y-4,1,1);ctx.fillRect(x,y-4,1,1);

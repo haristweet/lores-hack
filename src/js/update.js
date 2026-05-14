@@ -7,7 +7,8 @@ function updatePlayer(p,dt){
   let{x:mx,y:my}=p.controller.move(p);
   const ml=Math.hypot(mx,my);if(ml>1){mx/=ml;my/=ml;}
   let spd=p.spd;
-  p.dashCd=Math.max(0,p.dashCd-dt);p.dashT=Math.max(0,p.dashT-dt);
+  p.dashCd=Math.max(0,p.dashCd-dt);const _prevDashT=p.dashT;p.dashT=Math.max(0,p.dashT-dt);
+  p._dashJustEnded=_prevDashT>0&&p.dashT===0;
   const db=p.controller.dash(p);
   if(db&&!p.edge.dash&&p.dashCd<=0&&(mx||my)){p.dashT=.18;p.dashCd=overdriveActive?.18:1.2;p.iframe=Math.max(p.iframe,.18);smoke(p.x,p.y);}
   p.edge.dash=db;
@@ -47,6 +48,7 @@ function updatePlayer(p,dt){
   }
   p.iframe=Math.max(0,p.iframe-dt);
   p.muzzle=Math.max(0,p.muzzle-dt);
+  if(p._dcpFlash>0)p._dcpFlash=Math.max(0,p._dcpFlash-dt);
   // Parry
   p.parryCd=Math.max(0,p.parryCd-dt);
   p.parryT=Math.max(0,p.parryT-dt);
@@ -55,6 +57,15 @@ function updatePlayer(p,dt){
     if(parB&&!p.edge.parry&&p.parryCd<=0){
       p.parryT=.18;p.parryCd=1.5;
       spark(p.x,p.y,'#fff',5,35);
+      // Dash-cancel parry: 1-frame window after dash ends → massive damage
+      if(p._dashJustEnded){
+        for(const e of enemies){
+          if(Math.hypot(e.x-p.x,e.y-p.y)<35){e.hp-=200;e.hit=.15;spark(e.x,e.y,'#ff0',14,110);}
+        }
+        p._dcpFlash=0.12;
+        shake=Math.max(shake,3);
+        flash('DASH PARRY!','#ff0');
+      }
     }
     p.edge.parry=parB;
   }
