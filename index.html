@@ -3708,13 +3708,14 @@ function drawIntro(){
       ['WALK','SHIFT+MOUSE'],
       ['PAUSE','ESC'],
     ];
+    const bn=i=>PAD_BTN_NAMES[i]??'BTN'+i;
     const PAD=[
       ['','L-STICK'],
       ['','R-STICK'],
-      ['','RT TRIGGER'],
-      ['','LT (HOLD)'],
-      ['','LB'],
-      ['','L3 (STICK)'],
+      ['',bn(padConfig.fire)],
+      ['',bn(padConfig.charge)+' (HOLD)'],
+      ['',bn(padConfig.dash)],
+      ['',bn(padConfig.parry)],
       ['','---'],
       ['','START'],
     ];
