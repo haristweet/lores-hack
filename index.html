@@ -3282,6 +3282,7 @@ function startMusicPlay(){
 function stopMusicPlay(){
   musicPlayMode=false;
   PSG.title();
+  lobbyEl.style.display='flex';renderLobby();
 }
 function _mpChangeSong(dir){
   musicPlaySong=(musicPlaySong+dir+MUSIC_SONGS.length)%MUSIC_SONGS.length;
