@@ -249,7 +249,7 @@ const PSG=(()=>{
       bpm=z.bpmBase+(st%20)*.55; // gentle BPM drift within each zone
       pat=genPat(st);step=0;
       const start=()=>{if(seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(sched,25);};
-      if(AC.state==='suspended'){AC.resume().then(start);}else{start();}
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(!seqId)start();});}else{start();}
     },
     stop(){if(seqId){clearInterval(seqId);seqId=null;}_titleActive=false;},
     resume(){if(AC&&AC.state==='suspended')AC.resume();},
@@ -258,7 +258,7 @@ const PSG=(()=>{
       bpm=172+(st%10)*.8; // fast & slightly varies per boss floor
       pat=genBossPat(st);step=0;
       const startB=()=>{nextT=AC.currentTime+.08;};
-      if(AC.state==='suspended'){AC.resume().then(startB);}else{startB();}
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(!seqId)startB();});}else{startB();}
       nextT=AC.currentTime+.08;
       seqId=setInterval(()=>{
         const sd=60/bpm/2;
@@ -339,8 +339,8 @@ const PSG=(()=>{
           tStep++;nextT+=sd;
         }
       };
-      if(AC.state==='suspended'){AC.resume().then(()=>{if(!_titleActive)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
-      else{nextT=AC.currentTime+.08;seqId=setInterval(play,22);}
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(!_titleActive||seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      else{if(!seqId){nextT=AC.currentTime+.08;seqId=setInterval(play,22);}}
     },
     // Coffee break jingle — Namco early-80s style, G major, 168 BPM
     // Phrase 1: B4 _ D5 G5 E5 D5 B4 _   (ascend to G5, resolve down)
@@ -364,8 +364,8 @@ const PSG=(()=>{
           jStep++;nextT+=sd;
         }
       };
-      if(AC.state==='suspended'){AC.resume().then(()=>{nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
-      else{nextT=AC.currentTime+.08;seqId=setInterval(play,22);}
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      else{if(!seqId){nextT=AC.currentTime+.08;seqId=setInterval(play,22);}}
     }
   };
 })();
