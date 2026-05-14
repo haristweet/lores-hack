@@ -905,6 +905,7 @@ function updatePlayer(p,dt){
         p._dcpFlash=0.12;
         shake=Math.max(shake,3);
         flash('DASH PARRY!','#ff0');
+        SE.dashParry();
         _hasDashParried=true;
       }
     }
@@ -2561,7 +2562,30 @@ const SE=(()=>{
     osc2.connect(g2);g2.connect(c.destination);
     osc2.start(t);osc2.stop(t+.8);
   }
-  return{clang,driver,kill,bossDeath,npcFall};
+  function dashParry(){
+    // Sharp impact burst + rising power zing
+    const c=ctx(),t=c.currentTime;
+    // Impact noise (metallic crack)
+    const sz=Math.ceil(c.sampleRate*.045),buf=c.createBuffer(1,sz,c.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;
+    const src=c.createBufferSource();src.buffer=buf;
+    const flt=c.createBiquadFilter();flt.type='bandpass';flt.frequency.value=1400;flt.Q.value=2.5;
+    const ng=c.createGain();ng.gain.setValueAtTime(.4,t);ng.gain.exponentialRampToValueAtTime(.001,t+.07);
+    src.connect(flt);flt.connect(ng);ng.connect(c.destination);src.start(t);src.stop(t+.07);
+    // Rising power tone (the "zing")
+    const osc=c.createOscillator(),g=c.createGain();
+    osc.type='square';
+    osc.frequency.setValueAtTime(200,t);osc.frequency.exponentialRampToValueAtTime(1200,t+.2);
+    g.gain.setValueAtTime(.22,t);g.gain.exponentialRampToValueAtTime(.001,t+.24);
+    osc.connect(g);g.connect(c.destination);osc.start(t);osc.stop(t+.24);
+    // High shimmer (sparkle layer)
+    const osc2=c.createOscillator(),g2=c.createGain();
+    osc2.type='triangle';
+    osc2.frequency.setValueAtTime(480,t);osc2.frequency.exponentialRampToValueAtTime(2400,t+.18);
+    g2.gain.setValueAtTime(.1,t);g2.gain.exponentialRampToValueAtTime(.001,t+.2);
+    osc2.connect(g2);g2.connect(c.destination);osc2.start(t);osc2.stop(t+.2);
+  }
+  return{clang,driver,kill,bossDeath,npcFall,dashParry};
 })();
 
 // ═══════════════════════════════════════════════

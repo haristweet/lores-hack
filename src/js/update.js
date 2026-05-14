@@ -72,6 +72,7 @@ function updatePlayer(p,dt){
         p._dcpFlash=0.12;
         shake=Math.max(shake,3);
         flash('DASH PARRY!','#ff0');
+        SE.dashParry();
         _hasDashParried=true;
       }
     }
