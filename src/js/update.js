@@ -835,6 +835,7 @@ function damagePlayer(p,d){
       // trigger bullet time
       bulletTime={timer:3.5,victimName:p.pal.name,victimPal:p.pal};
       setTimeout(()=>{if(bulletTime)flash('ZOMBIE RISING','#f44');},500);
+      if(!attractDemo)saveGame(); // lock in death immediately — quit+continue can't undo it
     }
     enemies.push(makeZombie(p));
     flash(p.pal.name+' TURNED!','#f44');
