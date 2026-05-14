@@ -634,8 +634,37 @@ function drawIntro(){
     pixText('MAX 1.5 SEC  SLOW WHILE CHARGING',10,133,'#fa8');
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 
-  // ── Page 4: ENEMY GALLERY ────────────────────
+  // ── Page 4: POWER-UPS ────────────────────────
   }else if(introPage===4){
+    pixBig('POWER-UPS',Math.round((W-72)/2),7,'#ffd700');
+    pixText('FIND THE CRACKED WALL — SHOOT IT 25 TIMES',Math.round((W-172)/2),20,'#567');
+    ctx.fillStyle='#234';ctx.fillRect(8,28,W-16,1);
+    // weapon rows: [col, name, description, note]
+    const WPS=[
+      ['#ffd700','DRIVER',    '3-WAY SHOT (L/F/R)',       'BOSS→GONE'],
+      ['#f80',   'OVERDRIVE', 'RAPID FIRE + FAST DASH',   'PERMANENT'],
+      ['#f0f',   'VERTIDRIVE','3-WAY SHOT (U/F/D)',        'PERMANENT'],
+      ['#0ff',   'LASER',     'SHOTS PIERCE 3 ENEMIES',   'BOSS→GONE'],
+      ['#4ff',   'BARRIER',   'SHIELD ORB (3 HP, MAX 4)', 'PERMANENT'],
+    ];
+    WPS.forEach(([col,name,desc,note],i)=>{
+      const y=33+i*17;
+      // color square
+      ctx.fillStyle=col;ctx.fillRect(10,y,5,6);
+      // name
+      pixText(name,20,y,col);
+      // description
+      pixText(desc,20,y+8,'#789');
+      // note (right-aligned)
+      const nc=note.includes('GONE')?'#888':'#4a8';
+      pixText(note,W-4-note.length*4,y,nc);
+    });
+    ctx.fillStyle='#234';ctx.fillRect(8,123,W-16,1);
+    pixText('ONLY ONE WEAPON PER RUN — CHOOSE WISELY',Math.round((W-160)/2),127,'#456');
+    pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
+
+  // ── Page 5: ENEMY GALLERY ────────────────────
+  }else if(introPage===5){
     const ei=INTRO_ENEMIES[introEnemyIdx];
     // Subtle background color wash
     ctx.fillStyle=ei.col;ctx.globalAlpha=.07;ctx.fillRect(0,14,W,H-14);ctx.globalAlpha=1;
