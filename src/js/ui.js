@@ -68,7 +68,7 @@ const INTRO_ENEMIES=[
   {type:'dasher',  col:'#c80',name:'DASHER',  desc:'Charges when in range',        dep:'D15+', nag:'Charge comes out of nowhere. Typical.'},
   {type:'splatter',col:'#96c',name:'SPLATTER',desc:'Splits into 2 on death',       dep:'D25+', nag:'Dying just makes more. Typical.'},
   {type:'ghost',   col:'#adf',name:'GHOST',   desc:'Bullets pass right through!',  dep:'D30+', nag:"Can't even touch it. Typical."},
-  {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-sec fuse',     dep:'D35+', nag:'Always in the blast zone. Typical.'},
+  {type:'bomber',  col:'#f66',name:'BOMBER',  desc:'Explodes on a 4-5 sec fuse',   dep:'D35+', nag:'Always in the blast zone. Typical.'},
   {type:'gatekeeper',col:'#f44',name:'GATEKEEPER',desc:'Guards the exit. Kill it to pass.',dep:'D10+',nag:"Won't budge until it's dead. Typical."},
   {type:'boss',tier:'green', col:'#833',name:'BOSS',     desc:'Breaks walls, hunts you down',   dep:'D10+', nag:'Just when you cleared the floor. Typical.'},
   {type:'boss',tier:'yellow',col:'#aa8',name:'GOLD BOSS',desc:'+GK throw, 16-way shot',         dep:'D33+', nag:'Now it brings backup. Typical.'},
@@ -617,7 +617,7 @@ function drawIntro(){
       ['','RT TRIGGER'],
       ['','LT (HOLD)'],
       ['','LB'],
-      ['','R3 (STICK)'],
+      ['','L3 (STICK)'],
       ['','---'],
       ['','START'],
     ];
@@ -642,8 +642,8 @@ function drawIntro(){
     // weapon rows: [col, name, description, note]
     const WPS=[
       ['#ffd700','DRIVER',    '3-WAY SHOT (L/F/R)',       'BOSS→GONE'],
-      ['#f80',   'OVERDRIVE', 'RAPID FIRE + FAST DASH',   'PERMANENT'],
-      ['#f0f',   'VERTIDRIVE','3-WAY SHOT (U/F/D)',        'PERMANENT'],
+      ['#f80',   'OVERDRIVE', 'FAST DASH RECHARGE',        'PERMANENT'],
+      ['#f0f',   'VERTIDRIVE','BACK SHOT ADDED',           'PERMANENT'],
       ['#0ff',   'LASER',     'SHOTS PIERCE 3 ENEMIES',   'BOSS→GONE'],
       ['#4ff',   'BARRIER',   'SHIELD ORB (3 HP, MAX 4)', 'PERMANENT'],
     ];
@@ -660,7 +660,7 @@ function drawIntro(){
       pixText(note,W-4-note.length*4,y,nc);
     });
     ctx.fillStyle='#234';ctx.fillRect(8,123,W-16,1);
-    pixText('ONLY ONE WEAPON PER RUN — CHOOSE WISELY',Math.round((W-160)/2),127,'#456');
+    pixText('WEAPONS STACK — CLEAR THE WALL EACH FLOOR',Math.round((W-172)/2),127,'#456');
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 
   // ── Page 5: ENEMY GALLERY ────────────────────

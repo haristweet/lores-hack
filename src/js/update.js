@@ -155,7 +155,8 @@ function update(dt){
           if(!vertidriveActive)pool.push('vertidrive');
           if(!laserActive)pool.push('laser');
           {const _hp=humanPlayer();if(!_hp||_hp.shields.length<4)pool.push('barrier');}
-          const pick=pool.length?pool[rndi(0,pool.length)]:['driver','overdrive','vertidrive','laser','barrier'][rndi(0,5)];
+          const _fbHp=humanPlayer();const _fbPool=['driver','overdrive','vertidrive','laser'];if(!_fbHp||_fbHp.shields.length<4)_fbPool.push('barrier');
+          const pick=pool.length?pool[rndi(0,pool.length)]:_fbPool[rndi(0,_fbPool.length)];
           if(pick==='driver'){driverActive=true;flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');}
           else if(pick==='overdrive'){overdriveActive=true;flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');}
           else if(pick==='laser'){laserActive=true;flash('LASER FOUND!','#0ff');flash('PIERCE SHOTS ACTIVE!','#0ff');}
