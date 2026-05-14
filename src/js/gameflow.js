@@ -37,7 +37,7 @@ function startGame(){
     }
   }
 
-  stage=1;totalKills=0;gameWon=false;gameOverState=false;
+  stage=1;totalKills=0;gameWon=false;gameOverState=false;_hasDashParried=false;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;

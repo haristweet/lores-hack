@@ -2,13 +2,14 @@
 // ═══════════════════════════════════════════════
 //  COFFEE BREAK  (boss floor intermission)
 // ═══════════════════════════════════════════════
-let coffeeBreak=null;
+let coffeeBreak=null,_hasDashParried=false;
 const CB_DUR=5.5;
 const CB_NEXT=7.5; // skit ends at CB_DUR, "next depth" shown until CB_NEXT
 let _cbBtnPrev=false,_endGpPrev=false;
 
 function startCoffeeBreak(){
   const skits=['chase','victory','bomber','ghost','brute'];
+  if(_hasDashParried)skits.push('dashparry');
   coffeeBreak={t:0,skit:skits[Math.floor(Math.random()*skits.length)]};
   _cbBtnPrev=false;running=false;
   PSG.jingle();
@@ -141,6 +142,48 @@ function _cbBrute(t){
   if(t>=3.2)_cbBubble('CLOSE!!',px-5,gy-24,'#0ff');
 }
 
+// ── Skit F: DASH PARRY ───────────────────────
+// Player dashes in, parries at the last frame, runner blasts away
+function _cbDashParry(t){
+  const gy=_GY;
+  const pPal=players.find(p=>p.isHuman)?.pal??P_PAL[0];
+  const IMPACT_X=155;
+  const px=t<1.5?30+t*83:IMPACT_X;
+  const pDash=t<1.5;
+  const pParry=t>=1.5&&t<2.3;
+  const pFlash=t>=1.5&&t<1.8;
+  // Motion lines during dash
+  if(pDash){
+    ctx.fillStyle='#adf';ctx.globalAlpha=0.25;
+    for(let i=0;i<4;i++)ctx.fillRect((px-10-i*7)|0,gy-2+i,6,1);
+    ctx.globalAlpha=1;
+  }
+  _cbF(()=>drawPlayer(_cbP(px,gy,0,pPal,{
+    dashT:pDash?.1:0,parryT:pParry?.18:0,_dcpFlash:pFlash?.1:0,vx:pDash?28:0
+  })));
+  // Runner charges from right → gets blasted right
+  const rImpact=IMPACT_X+12;
+  if(t<1.6){
+    const rx=t<1.5?W-30-t*88:rImpact;
+    _cbF(()=>drawEnemy(_cbE('runner',rx,gy,Math.PI,{hit:t>=1.5?.15:0,vx:t<1.5?-28:0})));
+  }else{
+    const rx=rImpact+(t-1.6)*260;
+    if(rx<W+20)_cbF(()=>drawEnemy(_cbE('runner',rx,gy,0,{hit:.2,anim:coffeeBreak.t*8,vx:40})));
+  }
+  // White flash on impact
+  if(t>=1.5&&t<1.85){
+    ctx.fillStyle='#fff';ctx.globalAlpha=Math.max(0,1-(t-1.5)/.35)*.7;
+    ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
+  }
+  // Impact sparks
+  _cbSparks(rImpact,gy,t-1.5,.9,14,'#ff0','#fff',90);
+  _cbSparks(rImpact,gy,Math.max(0,t-2.0),.7,8,'#f80','#ff0',50);
+  // Bubbles
+  if(t<1.2)_cbBubble('!!',W-70,gy-24,'#f44');
+  if(t>=2.1&&t<5.5)_cbBubble('DASH PARRY!',105,gy-30,'#ff0');
+  if(t>=3.5)_cbBubble('PERFECT!',108,gy-42,'#0ff');
+}
+
 // ── Main coffee break draw ────────────────────
 function drawCoffeeBreak(){
   const cb=coffeeBreak,t=cb.t;
@@ -153,7 +196,7 @@ function drawCoffeeBreak(){
   ctx.globalAlpha=1;
   ctx.fillStyle='#333';ctx.fillRect(10,_GY+8,W-20,1);
   if(t<CB_DUR){
-    ({chase:_cbChase,victory:_cbVictory,bomber:_cbBomber,ghost:_cbGhost,brute:_cbBrute}[cb.skit]??_cbChase)(t);
+    ({chase:_cbChase,victory:_cbVictory,bomber:_cbBomber,ghost:_cbGhost,brute:_cbBrute,dashparry:_cbDashParry}[cb.skit]??_cbChase)(t);
     if(t>1){
       ctx.globalAlpha=0.35+Math.sin(t*4)*.15;
       pixText('ANY KEY TO SKIP',Math.round((W-60)/2),H-9,'#445');
