@@ -13,6 +13,7 @@ function setPause(v){
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
+  if(padConfigActive){if(e.code==='Escape'){padConfigActive=false;}e.preventDefault();return;}
   if(musicPlayMode){
     if(e.code==='ArrowRight'||e.code==='KeyD'){_mpChangeSong(1);e.preventDefault();return;}
     if(e.code==='ArrowLeft'||e.code==='KeyA'){_mpChangeSong(-1);e.preventDefault();return;}

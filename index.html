@@ -86,6 +86,7 @@ function setPause(v){
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
+  if(padConfigActive){if(e.code==='Escape'){padConfigActive=false;}e.preventDefault();return;}
   if(musicPlayMode){
     if(e.code==='ArrowRight'||e.code==='KeyD'){_mpChangeSong(1);e.preventDefault();return;}
     if(e.code==='ArrowLeft'||e.code==='KeyA'){_mpChangeSong(-1);e.preventDefault();return;}
@@ -3730,6 +3731,13 @@ function drawPadConfig(){
     pixText('B : CANCEL',Math.floor((W-40)/2),140,'#456');
   }else{
     pixText('A:SET   B:BACK',Math.floor((W-56)/2),126,'#456');
+  }
+  // No gamepad warning
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  const hasGp=Array.from(gps).some(g=>g);
+  if(!hasGp){
+    ctx.fillStyle='#200';ctx.fillRect(0,H-18,W,18);
+    pixText('NO GAMEPAD — ESC TO EXIT',Math.floor((W-96)/2),H-11,'#f44');
   }
 }
 function padCfgNav(){

@@ -372,6 +372,13 @@ function drawPadConfig(){
   }else{
     pixText('A:SET   B:BACK',Math.floor((W-56)/2),126,'#456');
   }
+  // No gamepad warning
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  const hasGp=Array.from(gps).some(g=>g);
+  if(!hasGp){
+    ctx.fillStyle='#200';ctx.fillRect(0,H-18,W,18);
+    pixText('NO GAMEPAD — ESC TO EXIT',Math.floor((W-96)/2),H-11,'#f44');
+  }
 }
 function padCfgNav(){
   const gps=navigator.getGamepads?navigator.getGamepads():[];
