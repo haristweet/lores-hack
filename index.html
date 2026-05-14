@@ -2951,7 +2951,7 @@ function _cbVictory(t){
   const px=t<2?50+t*50:150;
   _cbF(()=>drawPlayer(_cbP(px,gy,t<2?0:-Math.PI/2,pPal,{vx:t<2?20:0})));
   allies.forEach((al,i)=>{
-    const ax=t<2?(W-50-i*20)-t*50:cx+(i+1)*18;
+    const ax=t<2?(W-70+i*20)-t*50:cx+(i+1)*18;
     _cbF(()=>drawPlayer(_cbP(ax,gy,t<2?Math.PI:-Math.PI/2,al.pal,{idx:al.idx,vx:t<2?-20:0})));
   });
   // Sparkle ring
