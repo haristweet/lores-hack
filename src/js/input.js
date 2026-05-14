@@ -13,10 +13,19 @@ function setPause(v){
   if(!v)PSG.resume();
 }
 addEventListener('keydown',e=>{
+  if(musicPlayMode){
+    if(e.code==='ArrowRight'||e.code==='KeyD'){_mpChangeSong(1);e.preventDefault();return;}
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){_mpChangeSong(-1);e.preventDefault();return;}
+    if(e.code==='Escape'){stopMusicPlay();e.preventDefault();return;}
+    e.preventDefault();return;
+  }
   if(attractDemo){stopAttractDemo();e.preventDefault();return;}
   if(coffeeBreak&&coffeeBreak.t>0.5){endCoffeeBreak();e.preventDefault();return;}
   if(gameWon&&endingT<5){endingT=5;e.preventDefault();return;}
-  if(lobbyEl.style.display!=='none'){lobbyIdleT=0;PSG.title();}
+  if(lobbyEl.style.display!=='none'){
+    lobbyIdleT=0;PSG.title();
+    if(e.code==='KeyM'){lobbyEl.style.display='none';startMusicPlay();e.preventDefault();return;}
+  }
   if(introActive){
     // ── Page 4: enemy gallery — left/right navigate, space advances ──
     if(introPage===5){

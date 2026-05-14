@@ -4,7 +4,9 @@
 let last=performance.now();
 (function loop(now){
   let dt=Math.min(.05,(now-last)/1000);last=now;
-  if(introActive){
+  if(musicPlayMode){
+    drawMusicPlay(dt);
+  }else if(introActive){
     introT+=dt;
     pollIntroGamepad();
     drawIntro();
