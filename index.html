@@ -135,7 +135,7 @@ addEventListener('keydown',e=>{
   if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}
   if(debug&&running){
-    if(e.code==='BracketRight'){nextStage();return;}        // ] next floor
+    if(e.code==='BracketRight'){if(stage<MAX_DEPTH)nextStage();return;}        // ] next floor
     if(e.code==='BracketLeft'){stage=99;nextStage();return;} // [ jump to D100
     if(e.code==='Backslash'){if(fog)fog.fill(1);return;}   // \ reveal all
     if(e.code==='Equal'){coresCollected=coresNeeded;exitOpen=true;flash('ALL CORES','#ff0');return;} // = give cores
