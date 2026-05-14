@@ -1685,6 +1685,7 @@ function nextStage(){
     flash('!! MONSTER HOUSE !!','#f44');
     flash('EXTERMINATE ALL','#f88');
     shake=Math.max(shake,4);
+    if(!attractDemo)PSG.mhouse(stage);
     setTimeout(()=>{
       if(!running)return;
       const count=Math.min(40,Math.round(20+stage*.2));
@@ -2768,6 +2769,31 @@ const PSG=(()=>{
       };
       if(AC.state==='suspended'){AC.resume().then(()=>{if(seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
       else{if(!seqId){nextT=AC.currentTime+.08;seqId=setInterval(play,22);}}
+    },
+    // Monster House BGM — D minor, 190 BPM, panic / chase feel
+    mhouse(st){
+      this.stop();init();
+      const bpmM=190+(st||1)*.05;
+      // D minor: D=38/50/62, F=41/53/65, G=43/55/67, A=45/57/69, Bb=46/58/70, C=48/60/72
+      const mel =[74,null,72,69, 70,67,null,65, 67,69,70,null, 72,74,null,72];
+      const bass=[38,null,38,null, 45,null,43,null, 38,null,38,null, 41,null,40,null];
+      const arp =[62,65,69,72, 69,65,62,60, 62,65,70,72, 70,65,62,60];
+      let mhStep=0;
+      const sd=60/bpmM/2;
+      const play=()=>{
+        while(nextT<AC.currentTime+.18){
+          const i=mhStep%16;
+          if(mel[i] !==null)noteOn(midi(mel[i]), 'square',  .18,nextT,sd*.65);
+          if(bass[i]!==null)noteOn(midi(bass[i]),'triangle',.25,nextT,sd*1.3);
+          if(arp[i] !==null)noteOn(midi(arp[i]), 'square',  .07,nextT,sd*.28);
+          if(i%4===0)noiseOn(140,.09,nextT,.05);   // kick every beat
+          if(i%8===4)noiseOn(1400,.06,nextT,.022); // snare
+          if(i%2===1)noiseOn(800,.02,nextT,.015);  // hihat
+          mhStep++;nextT+=sd;
+        }
+      };
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      else{if(!seqId){nextT=AC.currentTime+.08;seqId=setInterval(play,22);}}
     }
   };
 })();
@@ -3136,6 +3162,7 @@ const MUSIC_SONGS=[
   {label:'ZONE 4',      play:()=>PSG.play(61)},
   {label:'ZONE 5',      play:()=>PSG.play(81)},
   {label:'BOSS',        play:()=>PSG.boss(10)},
+  {label:'MONSTER HOUSE',play:()=>PSG.mhouse(1)},
 ];
 const _MP_ENEMIES=['grunt','runner','shooter','bomber','ghost','brute'];
 const _MP_GY=110;

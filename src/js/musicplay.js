@@ -14,6 +14,7 @@ const MUSIC_SONGS=[
   {label:'ZONE 4',      play:()=>PSG.play(61)},
   {label:'ZONE 5',      play:()=>PSG.play(81)},
   {label:'BOSS',        play:()=>PSG.boss(10)},
+  {label:'MONSTER HOUSE',play:()=>PSG.mhouse(1)},
 ];
 const _MP_ENEMIES=['grunt','runner','shooter','bomber','ghost','brute'];
 const _MP_GY=110;

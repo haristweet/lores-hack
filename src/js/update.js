@@ -852,6 +852,7 @@ function nextStage(){
     flash('!! MONSTER HOUSE !!','#f44');
     flash('EXTERMINATE ALL','#f88');
     shake=Math.max(shake,4);
+    if(!attractDemo)PSG.mhouse(stage);
     setTimeout(()=>{
       if(!running)return;
       const count=Math.min(40,Math.round(20+stage*.2));
