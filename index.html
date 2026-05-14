@@ -2640,7 +2640,7 @@ const PSG=(()=>{
       const z=zone(st);
       bpm=z.bpmBase+(st%20)*.55; // gentle BPM drift within each zone
       pat=genPat(st);step=0;
-      const start=()=>{nextT=AC.currentTime+.08;seqId=setInterval(sched,25);};
+      const start=()=>{if(seqId)return;nextT=AC.currentTime+.08;seqId=setInterval(sched,25);};
       if(AC.state==='suspended'){AC.resume().then(start);}else{start();}
     },
     stop(){if(seqId){clearInterval(seqId);seqId=null;}_titleActive=false;},
@@ -2731,7 +2731,7 @@ const PSG=(()=>{
           tStep++;nextT+=sd;
         }
       };
-      if(AC.state==='suspended'){AC.resume().then(()=>{nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
+      if(AC.state==='suspended'){AC.resume().then(()=>{if(!_titleActive)return;nextT=AC.currentTime+.08;seqId=setInterval(play,22);});}
       else{nextT=AC.currentTime+.08;seqId=setInterval(play,22);}
     },
     // Coffee break jingle — Namco early-80s style, G major, 168 BPM
