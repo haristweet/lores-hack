@@ -147,6 +147,9 @@ function drawCoffeeBreak(){
   for(let sy=0;sy<H;sy+=4){ctx.fillStyle='rgba(0,0,24,0.14)';ctx.fillRect(0,sy,W,2);}
   const dStr='DEPTH '+(stage-1)+' CLEARED';
   pixBig(dStr,Math.round((W-dStr.length*8)/2),7,'#ff0');
+  ctx.globalAlpha=0.6+Math.sin(t*3)*.4;
+  pixBig('COFFEE  BREAK',Math.round((W-104)/2),18,'#f80');
+  ctx.globalAlpha=1;
   ctx.fillStyle='#333';ctx.fillRect(10,_GY+8,W-20,1);
   ({chase:_cbChase,victory:_cbVictory,bomber:_cbBomber,ghost:_cbGhost,brute:_cbBrute}[cb.skit]??_cbChase)(t);
   if(t>1){
