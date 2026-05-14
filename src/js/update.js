@@ -63,7 +63,9 @@ function updatePlayer(p,dt){
           if(Math.hypot(e.x-p.x,e.y-p.y)<35){
             const fa=Math.atan2(e.y-p.y,e.x-p.x);
             e.hp-=200;e.hit=.15;
-            e._flungVx=Math.cos(fa)*240;e._flungVy=Math.sin(fa)*240;e._flung=0.8;
+            if(e.type!=='boss'){
+              e._flungVx=Math.cos(fa)*240;e._flungVy=Math.sin(fa)*240;e._flung=0.8;
+            }
             spark(e.x,e.y,'#ff0',14,110);
           }
         }
