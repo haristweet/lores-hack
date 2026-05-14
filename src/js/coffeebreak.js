@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════
 let coffeeBreak=null;
 const CB_DUR=5.5;
+const CB_NEXT=7.5; // skit ends at CB_DUR, "next depth" shown until CB_NEXT
 let _cbBtnPrev=false,_endGpPrev=false;
 
 function startCoffeeBreak(){
@@ -151,10 +152,22 @@ function drawCoffeeBreak(){
   pixBig('COFFEE  BREAK',Math.round((W-104)/2),18,'#f80');
   ctx.globalAlpha=1;
   ctx.fillStyle='#333';ctx.fillRect(10,_GY+8,W-20,1);
-  ({chase:_cbChase,victory:_cbVictory,bomber:_cbBomber,ghost:_cbGhost,brute:_cbBrute}[cb.skit]??_cbChase)(t);
-  if(t>1){
-    ctx.globalAlpha=0.35+Math.sin(t*4)*.15;
-    pixText('ANY KEY TO SKIP',Math.round((W-60)/2),H-9,'#445');
+  if(t<CB_DUR){
+    ({chase:_cbChase,victory:_cbVictory,bomber:_cbBomber,ghost:_cbGhost,brute:_cbBrute}[cb.skit]??_cbChase)(t);
+    if(t>1){
+      ctx.globalAlpha=0.35+Math.sin(t*4)*.15;
+      pixText('ANY KEY TO SKIP',Math.round((W-60)/2),H-9,'#445');
+      ctx.globalAlpha=1;
+    }
+  }else{
+    // "next depth" phase (2 sec)
+    const nt=t-CB_DUR;
+    const a=Math.min(1,nt/.4); // fade in
+    const nStr='LET\'S GO  DEPTH '+(stage);
+    ctx.globalAlpha=a*(0.85+Math.sin(nt*5)*.15);
+    pixBig(nStr,Math.round((W-nStr.length*8)/2),_GY-20,'#0ff');
+    ctx.globalAlpha=a;
+    pixText('▶▶',Math.round(W/2-8),_GY-6,'#0cf');
     ctx.globalAlpha=1;
   }
   // Gamepad skip (edge-detect)
@@ -164,7 +177,7 @@ function drawCoffeeBreak(){
     if(any&&!_cbBtnPrev){endCoffeeBreak();return;}
     _cbBtnPrev=any;
   }
-  if(t>=CB_DUR)endCoffeeBreak();
+  if(t>=CB_NEXT)endCoffeeBreak();
 }
 
 // ═══════════════════════════════════════════════
