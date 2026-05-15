@@ -421,7 +421,7 @@ let monkeyMode=false,_monkeyOrigCtrl=null;
 class ClearAIController{
   constructor(orig){
     this._orig=orig;this.type=orig.type;this.label=orig.label;
-    this._aim=0;
+    this._aim=0;this._stuckF=0;this._sPX=null;this._sPY=null;
   }
   _nearest(p){
     let best=null,bd=Infinity;
@@ -441,6 +441,23 @@ class ClearAIController{
     return{x:0,y:0};
   }
   move(p){
+    // Stuck detection: if barely moved for many frames, rotate escape direction
+    if(this._sPX!==null){
+      const moved=Math.hypot(p.x-this._sPX,p.y-this._sPY);
+      if(moved<0.5)this._stuckF++;else this._stuckF=0;
+    }
+    this._sPX=p.x;this._sPY=p.y;
+    const dir=this._computeDir(p);
+    if(this._stuckF>10){
+      // Rotate the desired direction by increasing amounts until we escape
+      const base=Math.atan2(dir.y||0.001,dir.x||0.001);
+      const rot=((this._stuckF/12|0)%8)*(Math.PI/4);
+      const a=base+rot;
+      return{x:Math.cos(a),y:Math.sin(a)};
+    }
+    return dir;
+  }
+  _computeDir(p){
     this._px=p.x;this._py=p.y;
     const ce=this._nearest(p);
     const boss=enemies.find(e=>e.type==='boss');
