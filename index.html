@@ -444,7 +444,14 @@ class ClearAIController{
     this._px=p.x;this._py=p.y;
     const ce=this._nearest(p);
     const boss=enemies.find(e=>e.type==='boss');
-    // 1. Exit open → dash there
+    const nearCount=enemies.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)<48).length;
+    const lowHP=p.hp<p.maxHp*.3;
+    // 0. Emergency: low HP or surrounded → flee
+    if((lowHP||nearCount>=3)&&ce){
+      const dx=p.x-ce.e.x,dy=p.y-ce.e.y,d=Math.hypot(dx,dy);
+      return d>0?{x:dx/d,y:dy/d}:{x:0,y:1};
+    }
+    // 1. Exit open → go there
     if(exitOpen&&exits[0])return this._moveToward(exits[0].x,exits[0].y,p);
     // 2. Boss → focus
     if(boss){const dx=boss.x-p.x,dy=boss.y-p.y,d=Math.hypot(dx,dy);
@@ -462,7 +469,6 @@ class ClearAIController{
     }
     // 5. All cores done → kill remaining enemies (approach if no LOS)
     if(ce){return this._los(p,ce.e.x,ce.e.y)?this._fight(ce):this._moveToward(ce.e.x,ce.e.y,p);}
-    // 6. Loose pickups
     if(item)return this._moveToward(item.x,item.y,p);
     return{x:0,y:0};
   }
@@ -476,6 +482,9 @@ class ClearAIController{
     return !!(ce&&ce.d<120&&this._los(p,ce.e.x,ce.e.y));
   }
   dash(p){
+    // Dash away when surrounded or low HP
+    const nearCount=enemies.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)<44).length;
+    if(nearCount>=2||p.hp<p.maxHp*.25)return true;
     // Dash to exit when far
     if(exitOpen&&exits[0]&&Math.hypot(exits[0].x-p.x,exits[0].y-p.y)>80)return true;
     // Occasionally dash toward enemy
