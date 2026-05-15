@@ -72,6 +72,7 @@ addEventListener('keydown',e=>{
     if(e.code==='KeyB'){const b=makeBoss();const h=humanPlayer();if(h){b.x=h.x+80;b.y=h.y;}enemies.push(b);flash('★ BOSS SPAWNED','#f44');return;} // B spawn boss
     if(e.code==='KeyC'){const sk=['chase','victory','bomber','ghost','brute','dashparry'];const cur=coffeeBreak?sk.indexOf(coffeeBreak.skit):-1;const nxt=sk[(cur+1)%sk.length];coffeeBreak={t:0,skit:nxt,_debug:true};_cbBtnPrev=false;PSG.jingle();flash('CB: '+nxt.toUpperCase(),'#0ff');return;} // C cycle coffee break
     if(e.code==='KeyE'){gameWon=true;endingT=0;running=false;winMsg='DEBUG PREVIEW';flash('ENDING PREVIEW','#ff0');return;} // E ending preview
+    if(e.code==='KeyR'){localStorage.removeItem('lores_best');flash('RECORD CLEARED','#f0f');return;} // R reset record
   }
   keys[e.code]=true;
 });

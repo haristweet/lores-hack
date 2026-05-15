@@ -555,6 +555,7 @@ function drawHUD(){
     'B SPAWN BOSS',
     'C CYCLE COFFEE BREAK',
     'E ENDING PREVIEW',
+    'R RESET RECORD',
   ];
   const pw=dl.reduce((m,s)=>Math.max(m,s.length),0)*4+6;
   const ph=dl.length*7+6;
