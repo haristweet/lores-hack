@@ -543,21 +543,23 @@ function drawIntro(){
     pixText('P2',44, 74,'#f66');
     pixText('P3',W/2-6,74,'#6c6');
     pixText('P4',W-60,74,'#fc4');
+    pixText('P2',44, 90,'#f66');
+    pixText('BODYGUARD',28,98,'#8a9');
+    pixText('EXIT RADAR',28,106,'#6af');
+    pixText('P3',W/2-6,90,'#6c6');
+    pixText('SNIPER',W/2-12,98,'#8a9');
+    pixText('MAP REVEAL',W/2-20,106,'#6af');
+    pixText('P4',W-60,90,'#fc4');
+    pixText('BERSERKER',W-74,98,'#8a9');
+    pixText('ENEMY RADAR',W-78,106,'#6af');
+    ctx.fillStyle='#234';ctx.fillRect(8,114,W-16,1);
     const L1=[
-      'UP TO 3 CPU ALLIES JOIN YOU',
-      'EACH ADDS MINIMAP INTEL:',
-      '',
-      'PROSPECTOR  ITEM RADAR',
-      'SNIPER      MAP REVEAL',
-      'BODY GUARD  EXIT RADAR',
-      'BERSERKER   ENEMY RADAR',
-      'MOODY       SHIFTS EACH FLOOR',
+      'EACH ALLY ADDS MINIMAP INTEL',
+      'SET NUMBER OF ALLIES IN LOBBY',
     ];
     L1.forEach((l,i)=>{
-      if(!l)return;
       const x=Math.round((W-l.length*4)/2);
-      const c=i<2?'#ccc':i===7?'#fa8':'#8a9';
-      pixText(l,x,82+i*9,c);
+      pixText(l,x,118+i*9,'#ccc');
     });
     pixText('CLICK OR SPACE : NEXT',(W-84)/2,H-18,'#445');
 

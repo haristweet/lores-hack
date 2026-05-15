@@ -10,7 +10,7 @@ function startGame(){
     if(isHuman){
       const slot=cfg.slots[0]||'KB+M';
       ctrl=slot==='GAMEPAD'?new PadController():new KMController();
-    }else ctrl=new CPUController(randPers());
+    }else ctrl=new CPUController(['bodyguard','sniper','berserker'][i-1]);
     players.push(makePlayer(i,ctrl,isHuman));
   }
   // Roulette animation for Moody CPUs, instant reveal for others
