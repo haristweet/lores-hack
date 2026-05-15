@@ -197,27 +197,64 @@ class CPUController{
   reload(){return false;}
 }
 
-// ── Monkey Controller ────────────────────────
+// ── Auto Play Controller (seriously tries to clear) ──
 let monkeyMode=false,_monkeyOrigCtrl=null;
-class MonkeyController{
+class ClearAIController{
   constructor(orig){
     this._orig=orig;this.type=orig.type;this.label=orig.label;
-    this._t=0;this._mx=0;this._my=0;this._ang=0;
+    this._aim=0;
   }
-  _upd(){
-    const now=performance.now();
-    if(now-this._t>350){
-      this._t=now;
-      const a=Math.random()*Math.PI*2;
-      this._mx=Math.cos(a);this._my=Math.sin(a);
-      this._ang=Math.random()*Math.PI*2;
+  _nearest(p){
+    let best=null,bd=Infinity;
+    for(const e of enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;best=e;}}
+    return best?{e:best,d:bd}:null;
+  }
+  move(p){
+    // 1. Exit open → go directly
+    if(exitOpen&&exits[0]){
+      const dx=exits[0].x-p.x,dy=exits[0].y-p.y,d=Math.hypot(dx,dy);
+      if(d>8)return{x:dx/d,y:dy/d};
     }
+    // 2. Enemies → hold fighting distance
+    const ce=this._nearest(p);
+    if(ce){
+      const WANT=65,dx=ce.e.x-p.x,dy=ce.e.y-p.y,d=ce.d;
+      if(d>WANT+10)return{x:dx/d,y:dy/d};
+      if(d<WANT-10)return{x:-dx/d,y:-dy/d};
+      return{x:0,y:0};
+    }
+    // 3. Cores / pickups
+    const item=nearItem(p.x,p.y);
+    if(item){const dx=item.x-p.x,dy=item.y-p.y,d=Math.hypot(dx,dy);if(d>8)return{x:dx/d,y:dy/d};}
+    return{x:0,y:0};
   }
-  move(){this._upd();return{x:this._mx,y:this._my};}
-  aim(){return this._ang;}
-  fire(){return Math.random()<.55;}
-  dash(){return Math.random()<.07;}
-  parry(){return Math.random()<.04;}
-  charge(){return Math.random()<.08;}
+  aim(p){
+    const ce=this._nearest(p);
+    if(ce)this._aim=Math.atan2(ce.e.y-p.y,ce.e.x-p.x);
+    return this._aim;
+  }
+  fire(p){
+    const ce=this._nearest(p);
+    return !!(ce&&ce.d<130&&!exitOpen);
+  }
+  dash(p){
+    // Dash to exit when far
+    if(exitOpen&&exits[0]&&Math.hypot(exits[0].x-p.x,exits[0].y-p.y)>80)return true;
+    // Occasionally dash toward enemy
+    const ce=this._nearest(p);
+    return !!(ce&&ce.d>90&&Math.random()<.12);
+  }
+  parry(p){
+    // Ghost nearby → parry
+    if(enemies.some(e=>e.type==='ghost'&&Math.hypot(e.x-p.x,e.y-p.y)<28))return true;
+    // Dash-cancel parry when enemies clustered
+    if(p._dashJustEnded&&enemies.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)<35).length>=2)return true;
+    return false;
+  }
+  charge(p){
+    // Charge for boss / brute
+    const ce=this._nearest(p);
+    return !!(ce&&(ce.e.type==='boss'||ce.e.type==='brute')&&ce.d<100&&Math.random()<.25);
+  }
 }
 // ═══════════════════════════════════════════════

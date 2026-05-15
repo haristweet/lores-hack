@@ -556,7 +556,7 @@ function drawHUD(){
     'C CYCLE COFFEE BREAK',
     'E ENDING PREVIEW',
     'R RESET RECORD',
-    monkeyMode?'K MONKEY MODE [ON]':'K MONKEY MODE',
+    monkeyMode?'K AUTO PLAY [ON]':'K AUTO PLAY',
   ];
   const pw=dl.reduce((m,s)=>Math.max(m,s.length),0)*4+6;
   const ph=dl.length*7+6;

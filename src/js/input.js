@@ -77,10 +77,10 @@ addEventListener('keydown',e=>{
       monkeyMode=!monkeyMode;
       const h=humanPlayer();
       if(h){
-        if(monkeyMode){_monkeyOrigCtrl=h.controller;h.controller=new MonkeyController(h.controller);}
+        if(monkeyMode){_monkeyOrigCtrl=h.controller;h.controller=new ClearAIController(h.controller);}
         else{h.controller=_monkeyOrigCtrl||h.controller._orig;_monkeyOrigCtrl=null;}
       }
-      flash(monkeyMode?'MONKEY MODE ON':'MONKEY MODE OFF','#f0f');return;
+      flash(monkeyMode?'AUTO PLAY ON':'AUTO PLAY OFF','#f0f');return;
     }
   }
   keys[e.code]=true;
