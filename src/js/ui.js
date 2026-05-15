@@ -413,7 +413,7 @@ function padCfgNav(){
   const back=edge('b',gp.buttons[1]?.pressed);
   if(up)padCfgFocus=Math.max(0,padCfgFocus-1);
   if(dn)padCfgFocus=Math.min(PAD_ACT_KEYS.length-1,padCfgFocus+1);
-  if(ok){padCfgWaiting=true;_padCfgPrev={};}
+  if(ok){padCfgWaiting=true;snapPrev();}
   if(back){padConfigActive=false;_padCfgPrev={};}
 }
 
