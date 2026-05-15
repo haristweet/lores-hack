@@ -209,23 +209,34 @@ class ClearAIController{
     for(const e of enemies){const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;best=e;}}
     return best?{e:best,d:bd}:null;
   }
+  _moveToward(tx,ty,p){const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy);return d>8?{x:dx/d,y:dy/d}:{x:0,y:0};}
+  _fight(ce){
+    const WANT=65,dx=ce.e.x-this._px,dy=ce.e.y-this._py,d=ce.d;
+    if(d>WANT+10)return{x:dx/d,y:dy/d};
+    if(d<WANT-10)return{x:-dx/d,y:-dy/d};
+    return{x:0,y:0};
+  }
   move(p){
-    // 1. Exit open → go directly
-    if(exitOpen&&exits[0]){
-      const dx=exits[0].x-p.x,dy=exits[0].y-p.y,d=Math.hypot(dx,dy);
-      if(d>8)return{x:dx/d,y:dy/d};
-    }
-    // 2. Enemies → hold fighting distance
+    this._px=p.x;this._py=p.y;
     const ce=this._nearest(p);
-    if(ce){
-      const WANT=65,dx=ce.e.x-p.x,dy=ce.e.y-p.y,d=ce.d;
-      if(d>WANT+10)return{x:dx/d,y:dy/d};
-      if(d<WANT-10)return{x:-dx/d,y:-dy/d};
-      return{x:0,y:0};
-    }
-    // 3. Cores / pickups
+    const boss=enemies.find(e=>e.type==='boss');
+    // 1. Exit open → dash there
+    if(exitOpen&&exits[0])return this._moveToward(exits[0].x,exits[0].y,p);
+    // 2. Boss → focus
+    if(boss){const dx=boss.x-p.x,dy=boss.y-p.y,d=Math.hypot(dx,dy);
+      if(d>80)return{x:dx/d,y:dy/d};if(d<50)return{x:-dx/d,y:-dy/d};return{x:0,y:0};}
+    // 3. Monster house: must kill all enemies
+    if(monsterHouse&&!monsterHouseCleared){return ce?this._fight(ce):{x:0,y:0};}
+    // 4. Normal floor: cores first, only fight if enemy is right in the way
     const item=nearItem(p.x,p.y);
-    if(item){const dx=item.x-p.x,dy=item.y-p.y,d=Math.hypot(dx,dy);if(d>8)return{x:dx/d,y:dy/d};}
+    if(item&&coresCollected<coresNeeded){
+      if(ce&&ce.d<36)return this._fight(ce); // enemy too close → fight first
+      return this._moveToward(item.x,item.y,p);
+    }
+    // 5. All cores done → kill remaining enemies
+    if(ce)return this._fight(ce);
+    // 6. Loose pickups
+    if(item)return this._moveToward(item.x,item.y,p);
     return{x:0,y:0};
   }
   aim(p){
@@ -234,8 +245,9 @@ class ClearAIController{
     return this._aim;
   }
   fire(p){
+    // Always shoot nearby enemies regardless of current objective
     const ce=this._nearest(p);
-    return !!(ce&&ce.d<130&&!exitOpen);
+    return !!(ce&&ce.d<120);
   }
   dash(p){
     // Dash to exit when far
