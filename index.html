@@ -444,10 +444,11 @@ class ClearAIController{
     this._px=p.x;this._py=p.y;
     const ce=this._nearest(p);
     const boss=enemies.find(e=>e.type==='boss');
-    const nearCount=enemies.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)<48).length;
-    const lowHP=p.hp<p.maxHp*.3;
-    // 0. Emergency: low HP or surrounded → flee
-    if((lowHP||nearCount>=3)&&ce){
+    const nearCount=enemies.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)<44).length;
+    const lowHP=p.hp<p.maxHp*.25;
+    // 0. Emergency: truly surrounded (4+ enemies close) OR low HP AND multiple enemies
+    const shouldFlee=nearCount>=4||(lowHP&&nearCount>=2);
+    if(shouldFlee&&ce){
       const dx=p.x-ce.e.x,dy=p.y-ce.e.y,d=Math.hypot(dx,dy);
       return d>0?{x:dx/d,y:dy/d}:{x:0,y:1};
     }
