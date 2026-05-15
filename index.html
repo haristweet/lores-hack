@@ -429,6 +429,11 @@ class ClearAIController{
     return best?{e:best,d:bd}:null;
   }
   _moveToward(tx,ty,p){const dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy);return d>8?{x:dx/d,y:dy/d}:{x:0,y:0};}
+  _los(p,tx,ty){
+    const steps=12,dx=(tx-p.x)/steps,dy=(ty-p.y)/steps;
+    for(let i=1;i<steps;i++){if(solid(p.x+dx*i,p.y+dy*i))return false;}
+    return true;
+  }
   _fight(ce){
     const WANT=65,dx=ce.e.x-this._px,dy=ce.e.y-this._py,d=ce.d;
     if(d>WANT+10)return{x:dx/d,y:dy/d};
@@ -445,15 +450,18 @@ class ClearAIController{
     if(boss){const dx=boss.x-p.x,dy=boss.y-p.y,d=Math.hypot(dx,dy);
       if(d>80)return{x:dx/d,y:dy/d};if(d<50)return{x:-dx/d,y:-dy/d};return{x:0,y:0};}
     // 3. Monster house: must kill all enemies
-    if(monsterHouse&&!monsterHouseCleared){return ce?this._fight(ce):{x:0,y:0};}
-    // 4. Normal floor: cores first, only fight if enemy is right in the way
+    if(monsterHouse&&!monsterHouseCleared){
+      if(ce){return this._los(p,ce.e.x,ce.e.y)?this._fight(ce):this._moveToward(ce.e.x,ce.e.y,p);}
+      return{x:0,y:0};
+    }
+    // 4. Normal floor: cores first, only fight if enemy is close AND has LOS
     const item=nearItem(p.x,p.y);
     if(item&&coresCollected<coresNeeded){
-      if(ce&&ce.d<36)return this._fight(ce); // enemy too close → fight first
+      if(ce&&ce.d<36&&this._los(p,ce.e.x,ce.e.y))return this._fight(ce);
       return this._moveToward(item.x,item.y,p);
     }
-    // 5. All cores done → kill remaining enemies
-    if(ce)return this._fight(ce);
+    // 5. All cores done → kill remaining enemies (approach if no LOS)
+    if(ce){return this._los(p,ce.e.x,ce.e.y)?this._fight(ce):this._moveToward(ce.e.x,ce.e.y,p);}
     // 6. Loose pickups
     if(item)return this._moveToward(item.x,item.y,p);
     return{x:0,y:0};
@@ -464,9 +472,8 @@ class ClearAIController{
     return this._aim;
   }
   fire(p){
-    // Always shoot nearby enemies regardless of current objective
     const ce=this._nearest(p);
-    return !!(ce&&ce.d<120);
+    return !!(ce&&ce.d<120&&this._los(p,ce.e.x,ce.e.y));
   }
   dash(p){
     // Dash to exit when far
