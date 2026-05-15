@@ -197,4 +197,27 @@ class CPUController{
   reload(){return false;}
 }
 
+// ── Monkey Controller ────────────────────────
+let monkeyMode=false,_monkeyOrigCtrl=null;
+class MonkeyController{
+  constructor(orig){
+    this._orig=orig;this.type=orig.type;this.label=orig.label;
+    this._t=0;this._mx=0;this._my=0;this._ang=0;
+  }
+  _upd(){
+    const now=performance.now();
+    if(now-this._t>350){
+      this._t=now;
+      const a=Math.random()*Math.PI*2;
+      this._mx=Math.cos(a);this._my=Math.sin(a);
+      this._ang=Math.random()*Math.PI*2;
+    }
+  }
+  move(){this._upd();return{x:this._mx,y:this._my};}
+  aim(){return this._ang;}
+  fire(){return Math.random()<.55;}
+  dash(){return Math.random()<.07;}
+  parry(){return Math.random()<.04;}
+  charge(){return Math.random()<.08;}
+}
 // ═══════════════════════════════════════════════

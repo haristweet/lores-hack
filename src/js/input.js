@@ -73,6 +73,15 @@ addEventListener('keydown',e=>{
     if(e.code==='KeyC'){const sk=['chase','victory','bomber','ghost','brute','dashparry'];const cur=coffeeBreak?sk.indexOf(coffeeBreak.skit):-1;const nxt=sk[(cur+1)%sk.length];coffeeBreak={t:0,skit:nxt,_debug:true};_cbBtnPrev=false;PSG.jingle();flash('CB: '+nxt.toUpperCase(),'#0ff');return;} // C cycle coffee break
     if(e.code==='KeyE'){gameWon=true;endingT=0;running=false;winMsg='DEBUG PREVIEW';flash('ENDING PREVIEW','#ff0');return;} // E ending preview
     if(e.code==='KeyR'){localStorage.removeItem('lores_best');flash('RECORD CLEARED','#f0f');return;} // R reset record
+    if(e.code==='KeyK'){ // K monkey mode
+      monkeyMode=!monkeyMode;
+      const h=humanPlayer();
+      if(h){
+        if(monkeyMode){_monkeyOrigCtrl=h.controller;h.controller=new MonkeyController(h.controller);}
+        else{h.controller=_monkeyOrigCtrl||h.controller._orig;_monkeyOrigCtrl=null;}
+      }
+      flash(monkeyMode?'MONKEY MODE ON':'MONKEY MODE OFF','#f0f');return;
+    }
   }
   keys[e.code]=true;
 });

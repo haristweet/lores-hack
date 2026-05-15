@@ -146,6 +146,15 @@ addEventListener('keydown',e=>{
     if(e.code==='KeyC'){const sk=['chase','victory','bomber','ghost','brute','dashparry'];const cur=coffeeBreak?sk.indexOf(coffeeBreak.skit):-1;const nxt=sk[(cur+1)%sk.length];coffeeBreak={t:0,skit:nxt,_debug:true};_cbBtnPrev=false;PSG.jingle();flash('CB: '+nxt.toUpperCase(),'#0ff');return;} // C cycle coffee break
     if(e.code==='KeyE'){gameWon=true;endingT=0;running=false;winMsg='DEBUG PREVIEW';flash('ENDING PREVIEW','#ff0');return;} // E ending preview
     if(e.code==='KeyR'){localStorage.removeItem('lores_best');flash('RECORD CLEARED','#f0f');return;} // R reset record
+    if(e.code==='KeyK'){ // K monkey mode
+      monkeyMode=!monkeyMode;
+      const h=humanPlayer();
+      if(h){
+        if(monkeyMode){_monkeyOrigCtrl=h.controller;h.controller=new MonkeyController(h.controller);}
+        else{h.controller=_monkeyOrigCtrl||h.controller._orig;_monkeyOrigCtrl=null;}
+      }
+      flash(monkeyMode?'MONKEY MODE ON':'MONKEY MODE OFF','#f0f');return;
+    }
   }
   keys[e.code]=true;
 });
@@ -407,6 +416,29 @@ class CPUController{
   reload(){return false;}
 }
 
+// ── Monkey Controller ────────────────────────
+let monkeyMode=false,_monkeyOrigCtrl=null;
+class MonkeyController{
+  constructor(orig){
+    this._orig=orig;this.type=orig.type;this.label=orig.label;
+    this._t=0;this._mx=0;this._my=0;this._ang=0;
+  }
+  _upd(){
+    const now=performance.now();
+    if(now-this._t>350){
+      this._t=now;
+      const a=Math.random()*Math.PI*2;
+      this._mx=Math.cos(a);this._my=Math.sin(a);
+      this._ang=Math.random()*Math.PI*2;
+    }
+  }
+  move(){this._upd();return{x:this._mx,y:this._my};}
+  aim(){return this._ang;}
+  fire(){return Math.random()<.55;}
+  dash(){return Math.random()<.07;}
+  parry(){return Math.random()<.04;}
+  charge(){return Math.random()<.08;}
+}
 // ═══════════════════════════════════════════════
 
 //  WALL PALETTES (10 tiers, every 10 depths)
@@ -2341,6 +2373,7 @@ function drawHUD(){
     'C CYCLE COFFEE BREAK',
     'E ENDING PREVIEW',
     'R RESET RECORD',
+    monkeyMode?'K MONKEY MODE [ON]':'K MONKEY MODE',
   ];
   const pw=dl.reduce((m,s)=>Math.max(m,s.length),0)*4+6;
   const ph=dl.length*7+6;
