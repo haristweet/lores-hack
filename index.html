@@ -2017,14 +2017,31 @@ function drawPlayer(p){
   let bc=p.pal.body;
   if(p.iframe>0&&((time*30)|0)%2===0)bc='#fff';
   if(p._dcpFlash>0){ctx.fillStyle='#fff';ctx.globalAlpha=0.85;ctx.fillRect(x-4,y-6,8,10);ctx.globalAlpha=1;bc='#fff';}
-  ctx.fillStyle=bc;ctx.fillRect(x-2,y-3,4,6);
-  ctx.fillStyle=p.pal.head;ctx.fillRect(x-2,y-5,4,3);
+  const pers=p.controller?.personality;
+  // Body — bodyguard is 1px wider
+  const bw=pers==='bodyguard'?5:4;
+  ctx.fillStyle=bc;ctx.fillRect(x-Math.floor(bw/2),y-3,bw,6);
+  // Head — berserker is 1px wider
+  const hw=pers==='berserker'?5:4;
+  ctx.fillStyle=p.pal.head;ctx.fillRect(x-Math.floor(hw/2),y-5,hw,3);
   ctx.fillStyle='#000';ctx.fillRect(x-1,y-4,1,1);ctx.fillRect(x,y-4,1,1);
+  // Berserker: angry brow pixel
+  if(pers==='berserker'){ctx.fillStyle='#000';ctx.fillRect(x-2,y-5,1,1);ctx.fillRect(x+1,y-5,1,1);}
   const moving=(p.vx*p.vx+p.vy*p.vy)>2,bob=moving?((time*16+p.idx*3)|0)%2:0;
-  ctx.fillStyle=p.pal.dark;ctx.fillRect(x-2,y+3,1,2-bob);ctx.fillRect(x+1,y+3,1,1+bob);
+  ctx.fillStyle=p.pal.dark;ctx.fillRect(x-Math.floor(bw/2),y+3,1,2-bob);ctx.fillRect(x+Math.floor(bw/2)-1,y+3,1,1+bob);
   const gx=x+Math.cos(a)*3,gy=y+Math.sin(a)*3;
+  // Gun length — sniper longer, berserker shorter
+  const gLen=pers==='sniper'?8:pers==='berserker'?3:5;
   ctx.fillStyle='#aaa';
-  for(let i=0;i<5;i++){ctx.fillRect(Math.round(gx+Math.cos(a)*i),Math.round(gy+Math.sin(a)*i),1,1);}
+  for(let i=0;i<gLen;i++){ctx.fillRect(Math.round(gx+Math.cos(a)*i),Math.round(gy+Math.sin(a)*i),1,1);}
+  // Bodyguard: small shield marker on off-hand side
+  if(pers==='bodyguard'){
+    const sa=a+Math.PI/2;
+    ctx.fillStyle='#89b';ctx.globalAlpha=0.9;
+    ctx.fillRect(Math.round(x+Math.cos(sa)*3),Math.round(y+Math.sin(sa)*3)-1,1,3);
+    ctx.fillRect(Math.round(x+Math.cos(sa)*3)-1,Math.round(y+Math.sin(sa)*3),3,1);
+    ctx.globalAlpha=1;
+  }
   if(p.muzzle>0){const mx=gx+Math.cos(a)*5,my=gy+Math.sin(a)*5;ctx.fillStyle='#ffb';ctx.fillRect(Math.round(mx)-1,Math.round(my)-1,3,3);ctx.fillStyle='#fff';ctx.fillRect(Math.round(mx),Math.round(my),1,1);}
   // Charge aura
   if(p.chargeT>0.05){
