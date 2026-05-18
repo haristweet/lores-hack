@@ -141,7 +141,28 @@ const SE=(()=>{
     g2.gain.setValueAtTime(.1,t);g2.gain.exponentialRampToValueAtTime(.001,t+.2);
     osc2.connect(g2);g2.connect(c.destination);osc2.start(t);osc2.stop(t+.2);
   }
-  return{clang,driver,kill,bossDeath,npcFall,dashParry};
+  function revive(){
+    // Rare item jingle — warm rising arpeggio with shimmer tail
+    const c=ctx(),t=c.currentTime;
+    [330,440,550,660,880,1100].forEach((hz,i)=>{
+      const osc=c.createOscillator(),g=c.createGain();
+      osc.type='triangle';
+      osc.frequency.value=hz;
+      const s=t+i*.09;
+      g.gain.setValueAtTime(.18,s);g.gain.exponentialRampToValueAtTime(.001,s+.28);
+      osc.connect(g);g.connect(c.destination);
+      osc.start(s);osc.stop(s+.28);
+    });
+    // Shimmer tail
+    const osc2=c.createOscillator(),g2=c.createGain();
+    osc2.type='sine';
+    osc2.frequency.setValueAtTime(1320,t+.55);
+    osc2.frequency.exponentialRampToValueAtTime(2640,t+1.1);
+    g2.gain.setValueAtTime(.09,t+.55);g2.gain.exponentialRampToValueAtTime(.001,t+1.1);
+    osc2.connect(g2);g2.connect(c.destination);
+    osc2.start(t+.55);osc2.stop(t+1.1);
+  }
+  return{clang,driver,kill,bossDeath,npcFall,dashParry,revive};
 })();
 
 // ═══════════════════════════════════════════════

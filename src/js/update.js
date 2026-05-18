@@ -150,7 +150,7 @@ function update(dt){
     // Offset reward if it would land on the exit
     let rpx=cx,rpy=cy;
     if(exits[0]&&Math.hypot(exits[0].x-cx,exits[0].y-cy)<TILE*2)rpy=cy-TILE*2.5;
-    if(Math.random()<0.03){pickups.push({type:'revive',x:rpx,y:rpy,t:0});flash('!! CLEARED !!','#ff0');flash('★ REVIVE ITEM DROPPED ★','#fa0');}
+    if(Math.random()<0.03){pickups.push({type:'revive',x:rpx,y:rpy,t:0});SE.revive();flash('!! CLEARED !!','#ff0');flash('★ REVIVE ITEM DROPPED ★','#fa0');}
     else{flash('!! CLEARED !!','#ff0');}
     shake=Math.max(shake,5);
     spark(cx,cy,'#ff0',24,160);spark(cx,cy,'#fff',12,100);
