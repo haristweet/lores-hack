@@ -1,6 +1,9 @@
 // ═══════════════════════════════════════════════
 //  GAME LIFECYCLE
 // ═══════════════════════════════════════════════
+let runTimer=0,runTimerActive=false;
+function _fmtTime(s){const m=Math.floor(s/60)|0,ss=Math.floor(s%60)|0;return(m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+
 function startGame(){
   // Build players
   players=[];
@@ -38,6 +41,7 @@ function startGame(){
   }
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;_hasDashParried=false;
+  runTimer=0;runTimerActive=true;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=true;laserActive=false;

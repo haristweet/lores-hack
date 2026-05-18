@@ -106,6 +106,7 @@ function fireChargeShot(p,t){
 
 function update(dt){
   time+=dt;
+  if(runTimerActive&&!gameOverState&&!gameWon)runTimer+=dt;
   if(!running)return;
   callCooldown=Math.max(0,callCooldown-dt);
   callAggroTimer=Math.max(0,callAggroTimer-dt);
@@ -950,13 +951,20 @@ function _saveBest(){
 }
 function gameOver(){
   PSG.stop();clearSave();
+  runTimerActive=false;
   gameOverState=true;_goT=0;
   const newRecord=!attractDemo&&_saveBest();
   gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
 function gameCleared(){
   PSG.stop();clearSave();running=false;gameWon=true;endingT=0;
-  if(!attractDemo)_saveBest();
-  winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
+  runTimerActive=false;
+  if(!attractDemo){
+    _saveBest();
+    const prevBest=+(localStorage.getItem('lores_best_time')||0);
+    if(prevBest===0||runTimer<prevBest)localStorage.setItem('lores_best_time',runTimer.toFixed(2));
+  }
+  const survived=players.filter(p=>p.alive&&!p.isHuman).length;
+  winMsg='KILLS '+totalKills+' / ALLIES '+survived+' SURVIVED / '+_fmtTime(runTimer);
 }
 

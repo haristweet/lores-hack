@@ -441,8 +441,9 @@ function drawLobbyCanvas(dt){
   pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
   // best depth badge
   const bestD=+(localStorage.getItem('lores_best')||0);
-  if(bestD>0){
-    const bs='BEST: '+bestD;
+  const bestT=+(localStorage.getItem('lores_best_time')||0);
+  if(bestD>0||bestT>0){
+    const bs=(bestD>0?'BEST D:'+bestD:'')+(bestD>0&&bestT>0?' ':'' )+(bestT>0?'TIME:'+_fmtTime(bestT):'');
     pixText(bs,Math.round((W-bs.length*4)/2),70,'#08f');
   }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
@@ -819,12 +820,21 @@ function drawWin(){
   pixBig('CLEARED!!',Math.floor((W-72)/2),28,'#ff0');
   ctx.restore();
   pixText('THE SCREW IS YOURS',Math.floor((W-72)/2),48,'#fc8');
-  if(winMsg)pixText(winMsg,Math.max(4,Math.floor((W-winMsg.length*4)/2)),60,'#fa8');
-  ctx.fillStyle='#ff0';ctx.fillRect(40,72,W-80,1);
+  if(winMsg)pixText(winMsg,Math.max(4,Math.floor((W-winMsg.length*4)/2)),58,'#fa8');
+  // Clear time
+  const clearT='TIME  '+_fmtTime(runTimer);
+  pixText(clearT,Math.floor((W-clearT.length*4)/2),68,'#ff0');
+  const btRaw=+(localStorage.getItem('lores_best_time')||0);
+  if(btRaw>0){
+    const isNewBT=runTimer<=btRaw+0.05;
+    const btStr=(isNewBT?'BEST! ':'BEST  ')+_fmtTime(btRaw);
+    pixText(btStr,Math.floor((W-btStr.length*4)/2),76,isNewBT?'#0ff':'#456');
+  }
+  ctx.fillStyle='#ff0';ctx.fillRect(40,85,W-80,1);
   const bw=72,bx=Math.floor(W/2-bw/2);
   Object.keys(winBtns2).forEach(k=>delete winBtns2[k]);
-  winBtnPri('again','PLAY AGAIN',bx,80,bw,13,'#ff8');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),102,'#445');
+  winBtnPri('again','PLAY AGAIN',bx,93,bw,13,'#ff8');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),115,'#445');
 }
 function winHandleClick(){
   for(const[k,b] of Object.entries(winBtns2)){

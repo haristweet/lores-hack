@@ -1057,6 +1057,7 @@ function fireChargeShot(p,t){
 
 function update(dt){
   time+=dt;
+  if(runTimerActive&&!gameOverState&&!gameWon)runTimer+=dt;
   if(!running)return;
   callCooldown=Math.max(0,callCooldown-dt);
   callAggroTimer=Math.max(0,callAggroTimer-dt);
@@ -1901,14 +1902,21 @@ function _saveBest(){
 }
 function gameOver(){
   PSG.stop();clearSave();
+  runTimerActive=false;
   gameOverState=true;_goT=0;
   const newRecord=!attractDemo&&_saveBest();
   gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
 function gameCleared(){
   PSG.stop();clearSave();running=false;gameWon=true;endingT=0;
-  if(!attractDemo)_saveBest();
-  winMsg='DEPTH '+stage+' / KILLS '+totalKills+' / ALLIES '+players.filter(p=>p.alive&&!p.isHuman).length+' SURVIVED';
+  runTimerActive=false;
+  if(!attractDemo){
+    _saveBest();
+    const prevBest=+(localStorage.getItem('lores_best_time')||0);
+    if(prevBest===0||runTimer<prevBest)localStorage.setItem('lores_best_time',runTimer.toFixed(2));
+  }
+  const survived=players.filter(p=>p.alive&&!p.isHuman).length;
+  winMsg='KILLS '+totalKills+' / ALLIES '+survived+' SURVIVED / '+_fmtTime(runTimer);
 }
 
 
@@ -2427,6 +2435,8 @@ function drawHUD(){
   const stageStr=stage+'/'+MAX_DEPTH,coreStr=coresCollected+'/'+coresNeeded;
   pixText('D'+stageStr,W-4-(stageStr.length+1)*4,6,'#0ff');
   pixText(exitOpen?'EXIT!':coreStr,W-4-coreStr.length*4,14,exitOpen?'#ff0':'#8cf');
+  // Timer (bottom-right)
+  if(runTimerActive||runTimer>0){const ts=_fmtTime(runTimer);pixText(ts,W-4-ts.length*4,H-8,'#568');}
 
   // Messages
   const maxMsg=Math.min(messages.length,5);
@@ -3047,6 +3057,9 @@ PSG.title();
 // ═══════════════════════════════════════════════
 //  GAME LIFECYCLE
 // ═══════════════════════════════════════════════
+let runTimer=0,runTimerActive=false;
+function _fmtTime(s){const m=Math.floor(s/60)|0,ss=Math.floor(s%60)|0;return(m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+
 function startGame(){
   // Build players
   players=[];
@@ -3084,6 +3097,7 @@ function startGame(){
   }
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;_hasDashParried=false;
+  runTimer=0;runTimerActive=true;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=true;laserActive=false;
@@ -3980,8 +3994,9 @@ function drawLobbyCanvas(dt){
   pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
   // best depth badge
   const bestD=+(localStorage.getItem('lores_best')||0);
-  if(bestD>0){
-    const bs='BEST: '+bestD;
+  const bestT=+(localStorage.getItem('lores_best_time')||0);
+  if(bestD>0||bestT>0){
+    const bs=(bestD>0?'BEST D:'+bestD:'')+(bestD>0&&bestT>0?' ':'' )+(bestT>0?'TIME:'+_fmtTime(bestT):'');
     pixText(bs,Math.round((W-bs.length*4)/2),70,'#08f');
   }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
@@ -4358,12 +4373,21 @@ function drawWin(){
   pixBig('CLEARED!!',Math.floor((W-72)/2),28,'#ff0');
   ctx.restore();
   pixText('THE SCREW IS YOURS',Math.floor((W-72)/2),48,'#fc8');
-  if(winMsg)pixText(winMsg,Math.max(4,Math.floor((W-winMsg.length*4)/2)),60,'#fa8');
-  ctx.fillStyle='#ff0';ctx.fillRect(40,72,W-80,1);
+  if(winMsg)pixText(winMsg,Math.max(4,Math.floor((W-winMsg.length*4)/2)),58,'#fa8');
+  // Clear time
+  const clearT='TIME  '+_fmtTime(runTimer);
+  pixText(clearT,Math.floor((W-clearT.length*4)/2),68,'#ff0');
+  const btRaw=+(localStorage.getItem('lores_best_time')||0);
+  if(btRaw>0){
+    const isNewBT=runTimer<=btRaw+0.05;
+    const btStr=(isNewBT?'BEST! ':'BEST  ')+_fmtTime(btRaw);
+    pixText(btStr,Math.floor((W-btStr.length*4)/2),76,isNewBT?'#0ff':'#456');
+  }
+  ctx.fillStyle='#ff0';ctx.fillRect(40,85,W-80,1);
   const bw=72,bx=Math.floor(W/2-bw/2);
   Object.keys(winBtns2).forEach(k=>delete winBtns2[k]);
-  winBtnPri('again','PLAY AGAIN',bx,80,bw,13,'#ff8');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),102,'#445');
+  winBtnPri('again','PLAY AGAIN',bx,93,bw,13,'#ff8');
+  pixText('ESC : LOBBY',Math.floor((W-44)/2),115,'#445');
 }
 function winHandleClick(){
   for(const[k,b] of Object.entries(winBtns2)){
