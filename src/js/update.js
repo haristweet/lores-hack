@@ -240,7 +240,7 @@ function update(dt){
             }else{
               for(let k=0;k<3;k++)pickups.push({type:'health',x:e.x+rnd(-16,16),y:e.y+rnd(-16,16),t:0});
               flash('★ BOSS SLAIN ★','#ff0');shake=Math.max(shake,5);
-              if(driverActive){driverActive=false;flash('DRIVER EXPIRED','#888');}
+              if(driverActive){flash('DRIVER STILL ACTIVE!','#ffd700');}
               if(laserActive){laserActive=false;flash('LASER EXPIRED','#888');}
               if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
               if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
