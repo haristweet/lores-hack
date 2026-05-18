@@ -1511,7 +1511,11 @@ function update(dt){
       continue; // skip standard moveObj + enemy separation
     } else {
       e.vx=Math.cos(e.ang)*e.spd;e.vy=Math.sin(e.ang)*e.spd;
-      if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){e.vx=Math.cos(e.ang+Math.PI/2)*e.spd*.6;e.vy=Math.sin(e.ang+Math.PI/2)*e.spd*.6;}
+      if(hitsWall(e.x+e.vx*.05,e.y+e.vy*.05,e.r)){
+        const _a2=e.ang+Math.PI/2,_a3=e.ang-Math.PI/2,_s=e.spd;
+        if(!hitsWall(e.x+Math.cos(_a2)*_s*.05,e.y+Math.sin(_a2)*_s*.05,e.r)){e.vx=Math.cos(_a2)*_s*.6;e.vy=Math.sin(_a2)*_s*.6;}
+        else{e.vx=Math.cos(_a3)*_s*.6;e.vy=Math.sin(_a3)*_s*.6;}
+      }
       if(d<e.r+tgt.r+1&&e.atkCd<=0){damagePlayer(tgt,e.dmg);e.atkCd=.7;e.vx-=Math.cos(e.ang)*55;e.vy-=Math.sin(e.ang)*55;}
     }
     // Flow field: redirect movement through corridors when no LoS (skip wall-passers)
@@ -1525,7 +1529,7 @@ function update(dt){
     else if(e.type==='dasher'&&e.dashing){/* already moved */}
     else moveObj(e,eff);
     // separation: enemy-enemy
-    for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;}}
+    for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;const nx=e.x+ox/dd*push,ny=e.y+oy/dd*push;if(!hitsWall(nx,ny,e.r)){e.x=nx;e.y=ny;}}}
     // separation: enemy-player (both directions)
     for(const p of players){if(!p.alive)continue;const ox=e.x-p.x,oy=e.y-p.y,dd=Math.hypot(ox,oy),mn=e.r+p.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;e.x+=ox/dd*push;e.y+=oy/dd*push;const npx=p.x-ox/dd*push,npy=p.y-oy/dd*push;if(!hitsWall(npx,npy,p.r)){p.x=npx;p.y=npy;}}}
   }
