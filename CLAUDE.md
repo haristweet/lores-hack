@@ -53,3 +53,6 @@ AI運用5原則
 1. `node build.js` でビルド確認
 2. `git add -A && git commit -m "..."` 
 3. `git push` でGitHub Pagesへ自動デプロイ
+
+## プロジェクト固有ルール
+- **commit & push はユーザー確認不要**。実装完了後そのまま実行する。
