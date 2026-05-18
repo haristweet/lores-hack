@@ -582,7 +582,7 @@ function update(dt){
     const _em=Math.hypot(e.x-(e._wpX??e.x),e.y-(e._wpY??e.y));
     e._wpX=e.x;e._wpY=e.y;
     if(_em<0.5){e._stuckT=(e._stuckT||0)+eff;}else{e._stuckT=0;}
-    if(e._stuckT>30){
+    if(e._stuckT>30&&!tutorialActive){
       const _tiles=[];for(let ty=1;ty<MAPH-1;ty++)for(let tx=1;tx<MAPW-1;tx++){const cx=tx*TILE+TILE/2,cy=ty*TILE+TILE/2;if(!hitsWall(cx,cy,e.r)&&players.every(p=>Math.hypot(p.x-cx,p.y-cy)>60))_tiles.push({x:cx,y:cy});}
       if(_tiles.length){const t=_tiles[Math.random()*_tiles.length|0];smoke(e.x,e.y);e.x=t.x;e.y=t.y;smoke(e.x,e.y);}
       e._stuckT=0;

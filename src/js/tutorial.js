@@ -11,8 +11,8 @@ const _TUT_GATE_XS=[11,21,31,41,51];
 const _TUT_STEPS=[
   {label:'MOVE',   key:'WASD / ARROW KEYS',        sub:'Walk around the room'},
   {label:'SHOOT',  key:'AIM+CLICK / RIGHT STICK',  sub:'Defeat the enemy!'},
-  {label:'DASH',   key:'SHIFT / R2 + direction',   sub:'Dash through the gap!'},
-  {label:'PARRY',  key:'DASH into an enemy bullet', sub:'Deflect the shot!'},
+  {label:'DASH',   key:'SPACE or F / R2 + direction', sub:'Dash through the gap!'},
+  {label:'PARRY',  key:'DASH into enemy bullet',     sub:'Deflect the shot!'},
   {label:'CALL',   key:'TAB / SELECT',             sub:'Call your CPU allies!'},
   {label:'WEAPON', key:'Shoot the golden wall',    sub:'3 hits to reveal a weapon!'},
 ];
@@ -42,7 +42,7 @@ function genTutorialMap(){
     if(map[i]===0&&Math.random()<0.05)map[i]=2;
 
   rooms_=[];exits=[];cores=[];pods=[];screwObj=null;
-  coresNeeded=0;coresCollected=0;exitOpen=false;
+  coresNeeded=1;coresCollected=0;exitOpen=false; // coresNeeded=1 prevents auto-exit-open
 }
 
 function startTutorial(){
@@ -76,14 +76,15 @@ function startTutorial(){
   cpu.x=sx-14;cpu.y=sy+10;
   _tutStartX=sx;_tutStartY=sy;
 
-  // Stationary dummy enemy in room 1
+  // Dummy enemy in room 1 — moves naturally (easier to shoot when it approaches)
   const dummy=makeEnemy('grunt',16*TILE+8,9*TILE+8);
-  dummy.hp=3;dummy.spd=0;dummy._tutDummy=true;
+  dummy.hp=3;dummy._tutDummy=true;
   enemies.push(dummy);
 
-  // Stationary turret (shooter) in room 3
+  // Stationary turret (shooter) in room 3 — very high HP so it can't be killed
   const turret=makeEnemy('shooter',36*TILE+8,9*TILE+8);
   turret.spd=0;turret._tutTurret=true;
+  turret.hp=turret.maxHp=999;
   enemies.push(turret);
 
   // Secret wall pre-hit 22/25 → 3 shots needed

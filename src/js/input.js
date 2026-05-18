@@ -20,7 +20,7 @@ addEventListener('keydown',e=>{
     if(e.code==='Escape'){stopMusicPlay();e.preventDefault();return;}
     e.preventDefault();return;
   }
-  if(tutorialActive){endTutorial();e.preventDefault();return;}
+  if(e.code==='Escape'&&tutorialActive){endTutorial();e.preventDefault();return;}
   if(attractDemo){stopAttractDemo();e.preventDefault();return;}
   if(coffeeBreak&&coffeeBreak.t>0.5){endCoffeeBreak();e.preventDefault();return;}
   if(gameWon&&endingT<5){endingT=5;e.preventDefault();return;}
