@@ -15,6 +15,7 @@ const SECTIONS = [
   'coffeebreak',
   'musicplay',
   'ui',
+  'tutorial',
   'loop',
 ];
 

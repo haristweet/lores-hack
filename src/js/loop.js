@@ -12,6 +12,12 @@ let last=performance.now();
     drawIntro();
   }else if(lobbyEl.style.display!=='none'){
     drawLobbyCanvas(dt);
+  }else if(tutorialActive){
+    if(!paused)update(dt);
+    draw();
+    updateTutorial(dt);
+    drawTutorialOverlay();
+    if(paused)drawPause();
   }else{
     if(!paused)update(dt);
     draw();
