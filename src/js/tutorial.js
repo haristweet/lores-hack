@@ -80,7 +80,7 @@ function startTutorial(){
   human.x=sx;human.y=sy;
   cpu.x=sx-14;cpu.y=sy+10;
   _tutStartX=sx;_tutStartY=sy;
-  _dvdX=60;_dvdY=60;_dvdVx=70;_dvdVy=55;_dvdColorIdx=0;
+  _dvdX=60;_dvdY=80;_dvdVx=70;_dvdVy=55;_dvdColorIdx=0;
 
   // Dummy enemy in room 1 — moves naturally (easier to shoot when it approaches)
   const dummy=makeEnemy('grunt',16*TILE+8,9*TILE+8);
@@ -143,10 +143,11 @@ function updateTutorial(dt){
   _dvdX+=_dvdVx*dt;
   _dvdY+=_dvdVy*dt;
   let bounced=false;
+  const _dvdTop=24,_dvdBot=H-10-_DVD_H;
   if(_dvdX<=0){_dvdX=0;_dvdVx=Math.abs(_dvdVx);bounced=true;}
   if(_dvdX+_DVD_W>=W){_dvdX=W-_DVD_W;_dvdVx=-Math.abs(_dvdVx);bounced=true;}
-  if(_dvdY<=0){_dvdY=0;_dvdVy=Math.abs(_dvdVy);bounced=true;}
-  if(_dvdY+_DVD_H>=H){_dvdY=H-_DVD_H;_dvdVy=-Math.abs(_dvdVy);bounced=true;}
+  if(_dvdY<=_dvdTop){_dvdY=_dvdTop;_dvdVy=Math.abs(_dvdVy);bounced=true;}
+  if(_dvdY>=_dvdBot){_dvdY=_dvdBot;_dvdVy=-Math.abs(_dvdVy);bounced=true;}
   if(bounced)_dvdColorIdx=(_dvdColorIdx+1)%_DVD_COLORS.length;
 
   const hp=humanPlayer();if(!hp)return;
