@@ -5,21 +5,24 @@ let tutorialActive=false,tutStep=0,tutT=0;
 let _tutStartX=0,_tutStartY=0;
 let _tutDashed=false,_tutPrevCallCd=0;
 let _tutSecretSet=false,_tutCompleteT=0;
+let _tutCharged=false,_tutWasCharging=false;
 
 // DVD bouncer
 const _DVD_COLORS=['#f44','#f80','#ff0','#0f0','#0ff','#08f','#f0f','#fff'];
-let _dvdX=60,_dvdY=60,_dvdVx=70,_dvdVy=55,_dvdColorIdx=0;
+let _dvdX=60,_dvdY=80,_dvdVx=70,_dvdVy=55,_dvdColorIdx=0;
 const _DVD_W=32,_DVD_H=6; // "TUTORIAL" 8chars×4px wide, ~6px tall
 
-const _TUT_GATE_XS=[11,21,31,41,51];
+// step → gate x (null = no gate, share previous room)
+const _TUT_GATE_XS=[11,null,21,31,41,51];
 
 const _TUT_STEPS=[
-  {label:'MOVE',   key:'WASD / ARROW KEYS',        sub:'Walk around the room'},
-  {label:'SHOOT',  key:'AIM+CLICK / RIGHT STICK',  sub:'Defeat the enemy!'},
-  {label:'DASH',   key:'SPACE or F / R2 + direction', sub:'Dash through the gap!'},
-  {label:'PARRY',  key:'DASH into enemy bullet',     sub:'Deflect the shot!'},
-  {label:'CALL',   key:'TAB / SELECT',             sub:'Call your CPU allies!'},
-  {label:'WEAPON', key:'Shoot the golden wall',    sub:'3 hits to reveal a weapon!'},
+  {label:'MOVE',   key:'WASD / ARROW KEYS',              sub:'Walk around the room'},
+  {label:'SHOOT',  key:'AIM+CLICK / RIGHT STICK',        sub:'Defeat the enemy!'},
+  {label:'CHARGE', key:'HOLD RIGHT CLICK or E / L2+AIM', sub:'Hold to charge, release to fire!'},
+  {label:'DASH',   key:'SPACE or F / R2 + direction',    sub:'Dash through the gap!'},
+  {label:'PARRY',  key:'DASH into enemy bullet',         sub:'Deflect the shot!'},
+  {label:'CALL',   key:'TAB / SELECT',                   sub:'Call your CPU allies!'},
+  {label:'WEAPON', key:'Shoot the golden wall',          sub:'3 hits to reveal a weapon!'},
 ];
 
 function genTutorialMap(){
@@ -33,13 +36,13 @@ function genTutorialMap(){
       for(let x=x0;x<=x1;x++)
         map[y*MAPW+x]=0;
 
-  // DASH room (room 2: x=22-30): pillars, leave y=9-10 open
+  // DASH room (room 3: x=22-30): pillars, leave y=9-10 open
   for(let x=24;x<=27;x++){
     for(let y=5;y<=8;y++) map[y*MAPW+x]=1;
     for(let y=11;y<=14;y++) map[y*MAPW+x]=1;
   }
 
-  // Secret wall tile in room 5 (x=56, y=9-10) — re-wall after carve
+  // Secret wall tile in room 6 (x=56, y=9-10) — re-wall after carve
   map[9*MAPW+56]=1;map[10*MAPW+56]=1;
 
   // Floor variation
@@ -54,6 +57,7 @@ function startTutorial(){
   tutorialActive=true;tutStep=0;tutT=0;
   _tutDashed=false;_tutPrevCallCd=0;
   _tutSecretSet=false;_tutCompleteT=0;
+  _tutCharged=false;_tutWasCharging=false;
   _hasDashParried=false;
 
   stage=1;totalKills=0;gameWon=false;gameOverState=false;
@@ -87,7 +91,7 @@ function startTutorial(){
   dummy.hp=3;dummy._tutDummy=true;
   enemies.push(dummy);
 
-  // Stationary turret (shooter) in room 3 — very high HP so it can't be killed
+  // Stationary turret (shooter) in room 4 — very high HP so it can't be killed
   const turret=makeEnemy('shooter',36*TILE+8,9*TILE+8);
   turret.spd=0;turret._tutTurret=true;
   turret.hp=turret.maxHp=999;
@@ -105,21 +109,19 @@ function startTutorial(){
   lobbyEl.style.display='none';
 }
 
-function _tutOpenGate(step){
-  const gx=_TUT_GATE_XS[step];
+function _tutOpenGate(gx){
   for(let gy=9;gy<=10;gy++){map[gy*MAPW+gx]=0;fog[gy*MAPW+gx]=1;}
 }
 
 function _tutAdvance(){
   const hp=humanPlayer();
-  if(tutStep<5){
-    _tutOpenGate(tutStep);
-    flash(_TUT_STEPS[tutStep].label+': CLEAR!','#0f0');
-    if(hp)spark(hp.x,hp.y,'#0f0',12,90);
-  }
+  const gx=tutStep<_TUT_GATE_XS.length?_TUT_GATE_XS[tutStep]:null;
+  if(gx!=null)_tutOpenGate(gx);
+  flash(_TUT_STEPS[tutStep].label+': CLEAR!','#0f0');
+  if(hp)spark(hp.x,hp.y,'#0f0',12,90);
   tutStep++;tutT=0;
-  _tutPrevCallCd=callCooldown; // sync so new TAB press is needed for step 4
-  if(tutStep>=6){
+  _tutPrevCallCd=callCooldown; // sync so new TAB press is needed for CALL step
+  if(tutStep>=7){
     localStorage.setItem('tut_done','1');
     flash('TUTORIAL COMPLETE!','#ff0');
     if(hp)spark(hp.x,hp.y,'#ff0',24,130);
@@ -132,7 +134,7 @@ function updateTutorial(dt){
   // Safety net: prevent game-over interrupting tutorial
   if(!running||gameOverState){running=true;gameOverState=false;_goT=0;}
 
-  if(tutStep>=6){
+  if(tutStep>=7){
     _tutCompleteT-=dt;
     if(_tutCompleteT<=0)endTutorial();
     return;
@@ -159,17 +161,23 @@ function updateTutorial(dt){
     case 1: // SHOOT — dummy killed
       if(!enemies.some(e=>e._tutDummy))_tutAdvance();
       break;
-    case 2: // DASH
+    case 2: // CHARGE — hold then release
+      if(!_tutCharged){
+        if(hp.chargeT>0.2)_tutWasCharging=true;
+        if(_tutWasCharging&&hp.chargeT===0){_tutCharged=true;_tutAdvance();}
+      }
+      break;
+    case 3: // DASH
       if(hp.dashT>0&&!_tutDashed){_tutDashed=true;_tutAdvance();}
       break;
-    case 3: // PARRY
+    case 4: // PARRY
       if(_hasDashParried)_tutAdvance();
       break;
-    case 4: // CALL THEM
+    case 5: // CALL THEM
       if(_tutPrevCallCd<=0&&callCooldown>0)_tutAdvance();
       _tutPrevCallCd=callCooldown;
       break;
-    case 5: // SECRET WALL — cleared when secretWallPos becomes null
+    case 6: // SECRET WALL — cleared when secretWallPos becomes null
       if(_tutSecretSet&&!secretWallPos)_tutAdvance();
       break;
   }
@@ -186,7 +194,7 @@ function endTutorial(){
 
 function drawTutorialOverlay(){
   // Complete screen
-  if(tutStep>=6){
+  if(tutStep>=7){
     ctx.save();
     ctx.fillStyle='rgba(0,0,0,0.6)';
     ctx.fillRect(0,H/2-18,W,36);
@@ -212,10 +220,10 @@ function drawTutorialOverlay(){
   ctx.fillStyle='rgba(0,0,20,0.85)';
   ctx.fillRect(0,0,W,22);
 
-  // Progress dots (6 steps)
-  const dotTotalW=6*9-2;
+  // Progress dots (7 steps)
+  const dotTotalW=7*9-2;
   const dotX0=Math.floor((W-dotTotalW)/2);
-  for(let i=0;i<6;i++){
+  for(let i=0;i<7;i++){
     ctx.fillStyle=i<tutStep?'#0f0':i===tutStep?'#ff0':'#224';
     ctx.fillRect(dotX0+i*9,3,7,4);
   }
@@ -231,10 +239,11 @@ function drawTutorialOverlay(){
   ctx.restore();
 
   // ── Arrow → pointing to next gate (when off-screen right) ──
-  if(tutStep<5){
+  const gx=tutStep<_TUT_GATE_XS.length?_TUT_GATE_XS[tutStep]:null;
+  if(gx!=null){
     const hp=humanPlayer();
     if(hp){
-      const gatePixX=_TUT_GATE_XS[tutStep]*TILE+8;
+      const gatePixX=gx*TILE+8;
       const screenX=gatePixX-(camX-W/2);
       if(screenX>W-16){
         const blink=(performance.now()/400|0)%2===0;
@@ -252,7 +261,7 @@ function drawTutorialOverlay(){
   }
 
   // ── Golden highlight box around secret wall ──
-  if(tutStep===5){
+  if(tutStep===6){
     const wallPixX=56*TILE+8,wallPixY=9*TILE+8;
     const sx=wallPixX-(camX-W/2),sy_=wallPixY-(camY-H/2);
     const blink=(performance.now()/300|0)%2===0;
