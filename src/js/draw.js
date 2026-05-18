@@ -514,7 +514,7 @@ function drawHUD(){
   pixText('D'+stageStr,W-4-(stageStr.length+1)*4,6,'#0ff');
   pixText(exitOpen?'EXIT!':coreStr,W-4-coreStr.length*4,14,exitOpen?'#ff0':'#8cf');
   // Timer (bottom-right)
-  if(runTimerActive||runTimer>0){const ts=_fmtTime(runTimer);pixText(ts,W-4-ts.length*4,H-8,'#568');}
+  if(!attractDemo&&(runTimerActive||runTimer>0)){const ts=_fmtTime(runTimer);pixText(ts,W-4-ts.length*4,H-8,'#568');}
 
   // Messages
   const maxMsg=Math.min(messages.length,5);

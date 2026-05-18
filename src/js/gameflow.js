@@ -89,6 +89,7 @@ function startAttractDemo(){
       p.shields=[{hp:3,maxHp:3},{hp:3,maxHp:3},{hp:3,maxHp:3},{hp:3,maxHp:3}];
     }
   }
+  runTimer=0;runTimerActive=false;
   stage=demoStage; totalKills=0; gameWon=false; gameOverState=false;
   monsterHouse=false; monsterHouseCleared=false; mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
