@@ -8,7 +8,7 @@ let _tutSecretSet=false,_tutCompleteT=0;
 
 // DVD bouncer
 const _DVD_COLORS=['#f44','#f80','#ff0','#0f0','#0ff','#08f','#f0f','#fff'];
-let _dvdX=80,_dvdY=80,_dvdVx=28,_dvdVy=20,_dvdColorIdx=0;
+let _dvdX=60,_dvdY=60,_dvdVx=70,_dvdVy=55,_dvdColorIdx=0;
 const _DVD_W=32,_DVD_H=6; // "TUTORIAL" 8chars×4px wide, ~6px tall
 
 const _TUT_GATE_XS=[11,21,31,41,51];
@@ -80,7 +80,7 @@ function startTutorial(){
   human.x=sx;human.y=sy;
   cpu.x=sx-14;cpu.y=sy+10;
   _tutStartX=sx;_tutStartY=sy;
-  _dvdX=80;_dvdY=80;_dvdVx=28;_dvdVy=20;_dvdColorIdx=0;
+  _dvdX=60;_dvdY=60;_dvdVx=70;_dvdVy=55;_dvdColorIdx=0;
 
   // Dummy enemy in room 1 — moves naturally (easier to shoot when it approaches)
   const dummy=makeEnemy('grunt',16*TILE+8,9*TILE+8);
@@ -199,7 +199,7 @@ function drawTutorialOverlay(){
 
   // ── DVD bouncer ──
   ctx.save();
-  ctx.globalAlpha=0.18;
+  ctx.globalAlpha=0.45;
   pixText('TUTORIAL',Math.floor(_dvdX),Math.floor(_dvdY),_DVD_COLORS[_dvdColorIdx]);
   ctx.globalAlpha=1;
   ctx.restore();
