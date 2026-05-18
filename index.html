@@ -4031,7 +4031,7 @@ function lobbyHandleClick(){
       if(k.startsWith('cpu')){cfg.cpus=+k[3];return;}
       if(k==='kbm'){cfg.slots[0]='KB+M';return;}
       if(k==='pad'){cfg.slots[0]='GAMEPAD';return;}
-      if(k==='start'){if(!localStorage.getItem('tut_done')){startTutorial();}else{startGame();}return;}
+      if(k==='start'){startGame();return;}
       if(k==='cont'){loadGame();return;}
       if(k==='how'){startIntro();return;}
       if(k==='tut'){startTutorial();return;}
