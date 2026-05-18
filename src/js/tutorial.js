@@ -6,6 +6,11 @@ let _tutStartX=0,_tutStartY=0;
 let _tutDashed=false,_tutPrevCallCd=0;
 let _tutSecretSet=false,_tutCompleteT=0;
 
+// DVD bouncer
+const _DVD_COLORS=['#f44','#f80','#ff0','#0f0','#0ff','#08f','#f0f','#fff'];
+let _dvdX=80,_dvdY=80,_dvdVx=28,_dvdVy=20,_dvdColorIdx=0;
+const _DVD_W=32,_DVD_H=6; // "TUTORIAL" 8chars×4px wide, ~6px tall
+
 const _TUT_GATE_XS=[11,21,31,41,51];
 
 const _TUT_STEPS=[
@@ -75,6 +80,7 @@ function startTutorial(){
   human.x=sx;human.y=sy;
   cpu.x=sx-14;cpu.y=sy+10;
   _tutStartX=sx;_tutStartY=sy;
+  _dvdX=80;_dvdY=80;_dvdVx=28;_dvdVy=20;_dvdColorIdx=0;
 
   // Dummy enemy in room 1 — moves naturally (easier to shoot when it approaches)
   const dummy=makeEnemy('grunt',16*TILE+8,9*TILE+8);
@@ -132,6 +138,17 @@ function updateTutorial(dt){
     return;
   }
   tutT+=dt;
+
+  // DVD bouncer update
+  _dvdX+=_dvdVx*dt;
+  _dvdY+=_dvdVy*dt;
+  let bounced=false;
+  if(_dvdX<=0){_dvdX=0;_dvdVx=Math.abs(_dvdVx);bounced=true;}
+  if(_dvdX+_DVD_W>=W){_dvdX=W-_DVD_W;_dvdVx=-Math.abs(_dvdVx);bounced=true;}
+  if(_dvdY<=0){_dvdY=0;_dvdVy=Math.abs(_dvdVy);bounced=true;}
+  if(_dvdY+_DVD_H>=H){_dvdY=H-_DVD_H;_dvdVy=-Math.abs(_dvdVy);bounced=true;}
+  if(bounced)_dvdColorIdx=(_dvdColorIdx+1)%_DVD_COLORS.length;
+
   const hp=humanPlayer();if(!hp)return;
 
   switch(tutStep){
@@ -179,6 +196,13 @@ function drawTutorialOverlay(){
     ctx.restore();
     return;
   }
+
+  // ── DVD bouncer ──
+  ctx.save();
+  ctx.globalAlpha=0.18;
+  pixText('TUTORIAL',Math.floor(_dvdX),Math.floor(_dvdY),_DVD_COLORS[_dvdColorIdx]);
+  ctx.globalAlpha=1;
+  ctx.restore();
 
   const step=_TUT_STEPS[tutStep];
 
