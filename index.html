@@ -1528,6 +1528,15 @@ function update(dt){
     if(e.type==='ghost'){e.x+=e.vx*eff;e.y+=e.vy*eff;}
     else if(e.type==='dasher'&&e.dashing){/* already moved */}
     else moveObj(e,eff);
+    // Stuck warp: if barely moved for 30s, teleport to random open tile
+    const _em=Math.hypot(e.x-(e._wpX??e.x),e.y-(e._wpY??e.y));
+    e._wpX=e.x;e._wpY=e.y;
+    if(_em<0.5){e._stuckT=(e._stuckT||0)+eff;}else{e._stuckT=0;}
+    if(e._stuckT>30){
+      const _tiles=[];for(let ty=1;ty<MAPH-1;ty++)for(let tx=1;tx<MAPW-1;tx++){const cx=tx*TILE+TILE/2,cy=ty*TILE+TILE/2;if(!hitsWall(cx,cy,e.r)&&players.every(p=>Math.hypot(p.x-cx,p.y-cy)>60))_tiles.push({x:cx,y:cy});}
+      if(_tiles.length){const t=_tiles[Math.random()*_tiles.length|0];smoke(e.x,e.y);e.x=t.x;e.y=t.y;smoke(e.x,e.y);}
+      e._stuckT=0;
+    }
     // separation: enemy-enemy
     for(const o of enemies){if(o===e)continue;const ox=e.x-o.x,oy=e.y-o.y,dd=Math.hypot(ox,oy),mn=e.r+o.r;if(dd>0&&dd<mn){const push=(mn-dd)*.5;const nx=e.x+ox/dd*push,ny=e.y+oy/dd*push;if(!hitsWall(nx,ny,e.r)){e.x=nx;e.y=ny;}}}
     // separation: enemy-player (both directions)
