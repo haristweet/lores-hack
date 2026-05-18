@@ -417,10 +417,7 @@ function padCfgNav(){
   if(back){padConfigActive=false;_padCfgPrev={};}
 }
 
-let _tutAutoChecked=false;
 function drawLobbyCanvas(dt){
-  // First-time auto-launch tutorial
-  if(!_tutAutoChecked){_tutAutoChecked=true;if(!localStorage.getItem('tut_done')){startTutorial();return;}}
   if(padConfigActive){Object.keys(lobbyBtns).forEach(k=>delete lobbyBtns[k]);drawPadConfig();padCfgNav();return;}
   lobbyT+=dt;
   lobbyIdleT+=dt;
@@ -495,7 +492,7 @@ function lobbyHandleClick(){
       if(k.startsWith('cpu')){cfg.cpus=+k[3];return;}
       if(k==='kbm'){cfg.slots[0]='KB+M';return;}
       if(k==='pad'){cfg.slots[0]='GAMEPAD';return;}
-      if(k==='start'){startGame();return;}
+      if(k==='start'){if(!localStorage.getItem('tut_done')){startTutorial();}else{startGame();}return;}
       if(k==='cont'){loadGame();return;}
       if(k==='how'){startIntro();return;}
       if(k==='tut'){startTutorial();return;}
