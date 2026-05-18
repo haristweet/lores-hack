@@ -484,6 +484,9 @@ function drawLobbyCanvas(dt){
   if(cfg.slots[0]==='GAMEPAD'){
     lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,botY+24,52,rh,false);
   }
+
+  // — version (bottom-right corner) —
+  pixText('v1.0.0',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
