@@ -22,7 +22,7 @@ let last=performance.now();
       drawAttractOverlay();
       if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
     }else if(paused){drawPause();_ovlPadNav();}
-    else if(gameOverState){drawGameOver();_ovlPadNav();}
+    else if(gameOverState){_goT+=dt;drawGameOver();if(_goT>1.5)_ovlPadNav();}
     else if(gameWon){endingT+=dt;drawWin();_ovlPadNav();}
   }
   requestAnimationFrame(loop);

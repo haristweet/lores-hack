@@ -59,7 +59,7 @@ addEventListener('keydown',e=>{
   }
   if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
   if(e.code==='Tab'&&running&&!paused&&!gameOverState&&!gameWon){callCPU();e.preventDefault();return;}
-  if((e.code==='Escape'||e.code==='KeyR')&&gameOverState){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
+  if((e.code==='Escape'||e.code==='KeyR')&&gameOverState&&_goT>1.5){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}
   if(debug&&running){
@@ -140,6 +140,6 @@ cv.addEventListener('click',e=>{
   }
   if(lobbyEl.style.display!=='none'){lobbyHandleClick();return;}
   if(paused){pauseHandleClick();return;}
-  if(gameOverState){goHandleClick();return;}
+  if(gameOverState&&_goT>1.5){goHandleClick();return;}
   if(gameWon){winHandleClick();return;}
 });

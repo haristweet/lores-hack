@@ -937,7 +937,7 @@ function _saveBest(){
 }
 function gameOver(){
   PSG.stop();clearSave();
-  gameOverState=true;
+  gameOverState=true;_goT=0;
   const newRecord=!attractDemo&&_saveBest();
   gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }

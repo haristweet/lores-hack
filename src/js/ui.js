@@ -780,9 +780,16 @@ function drawGameOver(){
   ctx.fillStyle='#f44';ctx.fillRect(40,best>0?82:66,W-80,1);
   const bw=60,bx=Math.floor(W/2-bw/2);
   const btnY=best>0?88:72;
-  Object.keys(goBtns).forEach(k=>delete goBtns[k]);
-  goBtnPri('retry','RETRY',bx,btnY,bw,13,'#f88');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
+  if(_goT>1.5){
+    Object.keys(goBtns).forEach(k=>delete goBtns[k]);
+    goBtnPri('retry','LOBBY',bx,btnY,bw,13,'#f88');
+    pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
+  }else{
+    const pa=0.4+Math.sin(performance.now()/180)*0.4;
+    ctx.save();ctx.globalAlpha=pa;
+    pixText('...',Math.floor((W-12)/2),btnY+4,'#f88');
+    ctx.restore();
+  }
 }
 function goHandleClick(){
   for(const[k,b] of Object.entries(goBtns)){

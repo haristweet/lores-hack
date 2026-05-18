@@ -132,7 +132,7 @@ addEventListener('keydown',e=>{
   }
   if(e.code==='Escape'&&running&&!gameWon){setPause(!paused);e.preventDefault();return;}
   if(e.code==='Tab'&&running&&!paused&&!gameOverState&&!gameWon){callCPU();e.preventDefault();return;}
-  if((e.code==='Escape'||e.code==='KeyR')&&gameOverState){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
+  if((e.code==='Escape'||e.code==='KeyR')&&gameOverState&&_goT>1.5){gameOverState=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if((e.code==='Escape'||e.code==='KeyR')&&gameWon){gameWon=false;lobbyEl.style.display='flex';renderLobby();e.preventDefault();return;}
   if(e.code==='F1'){debug=!debug;e.preventDefault();return;}
   if(debug&&running){
@@ -213,7 +213,7 @@ cv.addEventListener('click',e=>{
   }
   if(lobbyEl.style.display!=='none'){lobbyHandleClick();return;}
   if(paused){pauseHandleClick();return;}
-  if(gameOverState){goHandleClick();return;}
+  if(gameOverState&&_goT>1.5){goHandleClick();return;}
   if(gameWon){winHandleClick();return;}
 });
 
@@ -805,7 +805,7 @@ function hasLoS(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,n=Math.ceil(Math.hypot(dx,d
 //  GAME STATE
 // ═══════════════════════════════════════════════
 let players=[],enemies=[],bullets=[],ebullets=[],particles=[],pickups=[],messages=[];
-let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false;
+let stage=1,totalKills=0,running=false,gameWon=false,gameOverState=false,gameOverMsg='',winMsg='',callCooldown=0,callAggroTimer=0,_prevSel=false,_goT=0;
 let attractDemo=false,attractDemoT=0;
 let spawnT=0,camX=0,camY=0,shake=0,time=0;
 let monsterHouse=false,monsterHouseCleared=false,mhSpawnPending=0;
@@ -1887,7 +1887,7 @@ function _saveBest(){
 }
 function gameOver(){
   PSG.stop();clearSave();
-  gameOverState=true;
+  gameOverState=true;_goT=0;
   const newRecord=!attractDemo&&_saveBest();
   gameOverMsg='DEPTH:'+stage+'  KILLS:'+totalKills+(newRecord?' *NEW BEST*':'');
 }
@@ -4284,9 +4284,16 @@ function drawGameOver(){
   ctx.fillStyle='#f44';ctx.fillRect(40,best>0?82:66,W-80,1);
   const bw=60,bx=Math.floor(W/2-bw/2);
   const btnY=best>0?88:72;
-  Object.keys(goBtns).forEach(k=>delete goBtns[k]);
-  goBtnPri('retry','RETRY',bx,btnY,bw,13,'#f88');
-  pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
+  if(_goT>1.5){
+    Object.keys(goBtns).forEach(k=>delete goBtns[k]);
+    goBtnPri('retry','LOBBY',bx,btnY,bw,13,'#f88');
+    pixText('ESC : LOBBY',Math.floor((W-44)/2),btnY+22,'#445');
+  }else{
+    const pa=0.4+Math.sin(performance.now()/180)*0.4;
+    ctx.save();ctx.globalAlpha=pa;
+    pixText('...',Math.floor((W-12)/2),btnY+4,'#f88');
+    ctx.restore();
+  }
 }
 function goHandleClick(){
   for(const[k,b] of Object.entries(goBtns)){
@@ -4400,7 +4407,7 @@ let last=performance.now();
       drawAttractOverlay();
       if(attractDemoT>40||gameOverState||gameWon){gameOverState=false;gameWon=false;startAttractDemo();}
     }else if(paused){drawPause();_ovlPadNav();}
-    else if(gameOverState){drawGameOver();_ovlPadNav();}
+    else if(gameOverState){_goT+=dt;drawGameOver();if(_goT>1.5)_ovlPadNav();}
     else if(gameWon){endingT+=dt;drawWin();_ovlPadNav();}
   }
   requestAnimationFrame(loop);
