@@ -496,6 +496,7 @@ function drawHUD(){
       if(driverActive){pixText('DRV',bx,H-22+6,'#ffd700');bx+=16;}
       if(overdriveActive){pixText('OVD',bx,H-22+6,'#f80');bx+=16;}
       if(vertidriveActive){pixText('VTD',bx,H-22+6,'#f0f');bx+=16;}
+      if(chargedriveActive){pixText('CHD',bx,H-22+6,'#c8f');bx+=16;}
       if(callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',bx,H-22+6,'#446');}
     }
   }

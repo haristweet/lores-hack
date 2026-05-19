@@ -42,6 +42,9 @@ const JP={
   'LASER EXPIRED':         'LASERが消えた',
   'PIERCE SHOTS ACTIVE!':  '貫通弾発動中',
   'BARRIER FOUND!':        'バリアを入手！',
+  'CHARGEDRIVE FOUND!':    'チャージドライブ入手！',
+  'MAX CHARGE BREAKS WALLS!': 'フルチャージで壁を破壊！',
+  'CHARGEDRIVE STILL ACTIVE!': 'チャージドライブ継続中',
 
   // ── Player death / revive ──
   'P2 TURNED':             'P2がやられた！',

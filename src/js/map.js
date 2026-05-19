@@ -20,7 +20,7 @@ function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
-let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false,laserActive=false;
+let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false,laserActive=false,chargedriveActive=false;
 
 // ── Flow field for enemy navigation ──────────
 const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
@@ -137,7 +137,7 @@ function genMap(){
   }
   // cold sleep pods: every 10 floors, one pod
   pods=[];
-  if(stage%10===0){
+  if(stage>1&&(stage-1)%10===0){
     let pg=0;while(pg++<200){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){pods.push({x:tx*TILE+8,y:ty*TILE+8,t:0,used:false});break;}}
   }
   // DEPTH 100: screw

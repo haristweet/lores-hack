@@ -178,20 +178,29 @@ function update(dt){
           if(!overdriveActive)pool.push('overdrive');
           if(!vertidriveActive)pool.push('vertidrive');
           if(!laserActive)pool.push('laser');
+          if(!chargedriveActive)pool.push('chargedrive');
           {const _hp=humanPlayer();if(!_hp||_hp.shields.length<4)pool.push('barrier');}
-          const _fbHp=humanPlayer();const _fbPool=['driver','overdrive','vertidrive','laser'];if(!_fbHp||_fbHp.shields.length<4)_fbPool.push('barrier');
+          const _fbHp=humanPlayer();const _fbPool=['driver','overdrive','vertidrive','laser','chargedrive'];if(!_fbHp||_fbHp.shields.length<4)_fbPool.push('barrier');
           const pick=pool.length?pool[rndi(0,pool.length)]:_fbPool[rndi(0,_fbPool.length)];
           if(pick==='driver'){driverActive=true;flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');}
           else if(pick==='overdrive'){overdriveActive=true;flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');}
           else if(pick==='laser'){laserActive=true;flash('LASER FOUND!','#0ff');flash('PIERCE SHOTS ACTIVE!','#0ff');}
           else if(pick==='barrier'){const _hp=humanPlayer();if(_hp){_hp.shields.push({hp:3,maxHp:3});flash('BARRIER FOUND!','#4ff');flash('SHIELD ORB x'+_hp.shields.length,'#4ff');}}
+          else if(pick==='chargedrive'){chargedriveActive=true;flash('CHARGEDRIVE FOUND!','#c8f');flash('MAX CHARGE BREAKS WALLS!','#c8f');}
           else{vertidriveActive=true;flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');}
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
           SE.driver();secretWallPos=null;
         }else{
           spark(b.x,b.y,'#ff8',2,50);
         }
-      }else{spark(b.x,b.y,'#ff8',4,80);}
+      }else{
+        spark(b.x,b.y,'#ff8',4,80);
+        // CHARGEDRIVE: max charge shot breaks walls
+        if(chargedriveActive&&b.charge&&b.power>=1&&bTx>0&&bTx<MAPW-1&&bTy>0&&bTy<MAPH-1&&map[bTy*MAPW+bTx]===1){
+          map[bTy*MAPW+bTx]=0;
+          spark(bTx*TILE+8,bTy*TILE+8,'#c8f',12,100);
+        }
+      }
       bullets.splice(i,1);continue;
     }
     let hit=false;
@@ -245,6 +254,7 @@ function update(dt){
               if(laserActive){laserActive=false;flash('LASER EXPIRED','#888');}
               if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
               if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
+              if(chargedriveActive){flash('CHARGEDRIVE STILL ACTIVE!','#c8f');}
               if(!attractDemo)PSG.play(stage); // revert to zone BGM
               // restore any devoured cores (partial refund)
               const refund=Math.min(coresNeeded-coresCollected,2);

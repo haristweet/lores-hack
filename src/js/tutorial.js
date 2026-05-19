@@ -64,7 +64,7 @@ function startTutorial(){
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];
   messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;paused=false;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   callCooldown=0;callAggroTimer=0;
 
   players=[];
@@ -176,7 +176,7 @@ function updateTutorial(dt){
 function endTutorial(){
   tutorialActive=false;
   running=false;gameOverState=false;gameWon=false;bulletTime=null;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   secretWallPos=null;secretWallHits=0;
   lobbyEl.style.display='flex';
   renderLobby();PSG.title();

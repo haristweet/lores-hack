@@ -44,7 +44,7 @@ function startGame(){
   runTimer=0;runTimerActive=true;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
-  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
@@ -73,7 +73,7 @@ function endIntro(){
 // ── Attract Demo ──────────────────────────────
 function startAttractDemo(){
   attractDemo=true; attractDemoT=0;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   const godRun=Math.random()<0.01; // 1% chance: full-power showcase
   const demoStage=godRun?rndi(70,80):rndi(1,80); // D80+ is for players to discover
   players=[];
@@ -103,7 +103,7 @@ function startAttractDemo(){
 function stopAttractDemo(){
   attractDemo=false; attractDemoT=0;
   running=false; gameOverState=false; gameWon=false; bulletTime=null;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   lobbyIdleT=0;
   lobbyEl.style.display='flex';
   renderLobby();PSG.title();
