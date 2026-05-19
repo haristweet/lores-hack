@@ -540,14 +540,6 @@ function drawHUD(){
   if(exitOpen&&stage!==MAX_DEPTH)pixText('REACH EXIT >>',W/2-(13*4)/2,H-28,'#ff0');
   if(stage===MAX_DEPTH&&exitOpen)pixText('FIND THE SCREW!',W/2-(15*4)/2,H-28,'#ff0');
 
-  // Controls hint (first 7 seconds of a floor)
-  if(time<7){
-    const fa=time<5?1:Math.max(0,(7-time)/2);
-    ctx.globalAlpha=fa*.7;
-    const hints=['WASD=MOVE  CLICK=FIRE  SPACE=DASH  Q=PARRY','TAB=CALL CPU  HOW TO PLAY: LOBBY'];
-    hints.forEach((h,i)=>pixText(h,(W-h.length*4)>>1,H-45+i*8,'#89a'));
-    ctx.globalAlpha=1;
-  }
 
   // ── Debug overlay ─────────────────────────
   if(!debug||!running)return;
@@ -598,7 +590,7 @@ const FONT={
   'X':'101;101;010;101;101','Y':'101;101;010;010;010','Z':'111;001;010;100;111',
   ' ':'000;000;000;000;000','/':'001;001;010;100;100','!':'010;010;010;000;010',
   '+':'000;010;111;010;000','-':'000;000;111;000;000','.':'000;000;000;000;010',
-  ':':'000;010;000;010;000','>':'100;010;001;010;100','?':'111;001;010;000;010',
+  ':':'000;010;000;010;000','>':'100;010;001;010;100','<':'001;010;100;010;001','?':'111;001;010;000;010',
 };
 function pixText(str,x,y,c='#fff'){
   ctx.fillStyle=c;str=(''+str).toUpperCase();
