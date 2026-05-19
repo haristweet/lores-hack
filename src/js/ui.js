@@ -468,15 +468,11 @@ function drawLobbyCanvas(dt){
   lbBtn('kbm','KB+M',ctX+36,95,24,rh,cfg.slots[0]==='KB+M');
   lbBtn('pad','GAMEPAD',ctX+62,95,32,rh,cfg.slots[0]==='GAMEPAD');
 
-  // — pad status —
-  const ps=padStatus.slice(0,36);
-  pixText(ps,Math.round((W-ps.length*4)/2),110,'#2a4a3a');
-
   // — skin selector —
   const skStr='SKIN: '+SKINS[activeSkin].name;
-  lbBtn('skinL','<',110,112,10,9,false);
-  pixText(skStr,Math.round((W-skStr.length*4)/2),116,skinUnlocked(activeSkin)?'#0ff':'#445');
-  lbBtn('skinR','>',200,112,10,9,false);
+  lbBtn('skinL','<',110,108,10,9,false);
+  pixText(skStr,Math.round((W-skStr.length*4)/2),112,skinUnlocked(activeSkin)?'#0ff':'#445');
+  lbBtn('skinR','>',200,108,10,9,false);
 
   // — primary buttons (fixed positions) —
   const bw=70,bx=Math.round((W-bw)/2);
@@ -498,7 +494,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.0.7',W-25,H-8,'#234');
+  pixText('v1.0.8',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
