@@ -28,21 +28,21 @@ function genTutorialMap(){
   map=new Uint8Array(MAPW*MAPH);map.fill(1);
   fog=new Uint8Array(MAPW*MAPH);fog.fill(1); // fully revealed
 
-  // 6 rooms, each 9 tiles wide × 10 tall, at rows y=5..14
-  const roomRanges=[[2,10],[12,20],[22,30],[32,40],[42,50],[52,60]];
+  // 5 rooms: MOVE / SHOOT+CHARGE / DASH / CALL / WEAPON
+  const roomRanges=[[2,10],[12,20],[22,30],[32,40],[42,50]];
   for(const [x0,x1] of roomRanges)
     for(let y=5;y<=14;y++)
       for(let x=x0;x<=x1;x++)
         map[y*MAPW+x]=0;
 
-  // DASH room (room 3: x=22-30): pillars, leave y=9-10 open
+  // DASH room (x=22-30): pillars, leave y=9-10 open
   for(let x=24;x<=27;x++){
     for(let y=5;y<=8;y++) map[y*MAPW+x]=1;
     for(let y=11;y<=14;y++) map[y*MAPW+x]=1;
   }
 
-  // Secret wall tile in room 6 (x=56, y=9-10) — re-wall after carve
-  map[9*MAPW+56]=1;map[10*MAPW+56]=1;
+  // Secret wall tile in WEAPON room (x=46, y=9-10) — re-wall after carve
+  map[9*MAPW+46]=1;map[10*MAPW+46]=1;
 
   // Floor variation
   for(let i=0;i<map.length;i++)
@@ -91,7 +91,7 @@ function startTutorial(){
   enemies.push(dummy);
 
   // Secret wall pre-hit 22/25 → 3 shots needed
-  secretWallPos={tx:56,ty:9};
+  secretWallPos={tx:46,ty:9};
   secretWallHits=22;
   _tutSecretSet=true;
 
@@ -252,7 +252,7 @@ function drawTutorialOverlay(){
 
   // ── Golden highlight box around secret wall ──
   if(tutStep===5){
-    const wallPixX=56*TILE+8,wallPixY=9*TILE+8;
+    const wallPixX=46*TILE+8,wallPixY=9*TILE+8;
     const sx=wallPixX-(camX-W/2),sy_=wallPixY-(camY-H/2);
     const blink=(performance.now()/300|0)%2===0;
     if(blink&&sx>0&&sx<W&&sy_>0&&sy_<H){

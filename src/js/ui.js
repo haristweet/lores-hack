@@ -498,7 +498,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.0.6',W-25,H-8,'#234');
+  pixText('v1.0.7',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
