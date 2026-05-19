@@ -330,6 +330,9 @@ function _lobbyPadNav(){
   if(dL)ci=Math.max(ci-1,0);
   if(dD){ri=Math.min(ri+1,grid.length-1);ci=Math.min(ci,grid[ri].length-1);}
   if(dU){ri=Math.max(ri-1,0);ci=Math.min(ci,grid[ri].length-1);}
+  // Snap to already-selected item when entering cpu or control row
+  if(grid[ri][0]==='cpu0')ci=Math.min(cfg.cpus,grid[ri].length-1);
+  else if(grid[ri][0]==='kbm')ci=cfg.slots[0]==='GAMEPAD'?1:0;
   lobbyPadFocus=grid[ri][ci];
   // Toggle-style buttons update immediately on focus
   if(lobbyPadFocus.startsWith('cpu'))cfg.cpus=+lobbyPadFocus[3];
@@ -485,7 +488,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.0.2',W-25,H-8,'#234');
+  pixText('v1.0.3',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
