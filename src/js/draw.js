@@ -527,9 +527,9 @@ function drawHUD(){
         ctx.font='bold 9px sans-serif';
         ctx.textAlign='center';
         ctx.fillStyle='#000';
-        ctx.fillText(m.jp,W/2+1,H-13+1);
+        ctx.fillText(m.jp,W/2+1,H-26+1);
         ctx.fillStyle=m.c;
-        ctx.fillText(m.jp,W/2,H-13);
+        ctx.fillText(m.jp,W/2,H-26);
         ctx.restore();
       }
       break; // show only the newest one
