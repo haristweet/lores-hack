@@ -487,14 +487,15 @@ function drawLobbyCanvas(dt){
   }
 
   // — HOW TO PLAY + TUTORIAL (side by side, fixed) / PAD CONFIG —
-  lbBtn('how','HOW TO PLAY',106,158,52,rh,false);
-  lbBtn('tut','TUTORIAL',162,158,52,rh,false);
+  const howY=sv?165:158;
+  lbBtn('how','HOW TO PLAY',106,howY,52,rh,false);
+  lbBtn('tut','TUTORIAL',162,howY,52,rh,false);
   if(cfg.slots[0]==='GAMEPAD'){
-    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,169,52,rh,false);
+    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,howY+11,52,rh,false);
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.1.3',W-25,H-8,'#234');
+  pixText('v1.1.4',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
