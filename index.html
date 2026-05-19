@@ -547,7 +547,7 @@ function wallPal(){return WALL_PALETTES[Math.min(9,Math.floor((stage-1)/10))];}
 let map,fog,rooms_=[];
 let cores=[],exits=[],pods=[],screwObj=null;
 let exitOpen=false,coresNeeded=0,coresCollected=0;
-let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false,laserActive=false;
+let secretWallPos=null,secretWallHits=0,driverActive=false,overdriveActive=false,vertidriveActive=false,laserActive=false,chargedriveActive=false;
 
 // ── Flow field for enemy navigation ──────────
 const flowField=new Float32Array(MAPW*MAPH*2); // [dx,dy] per tile
@@ -664,7 +664,7 @@ function genMap(){
   }
   // cold sleep pods: every 10 floors, one pod
   pods=[];
-  if(stage%10===0){
+  if(stage>1&&(stage-1)%10===0){
     let pg=0;while(pg++<200){const r=rs[rndi(1,rs.length)];const tx=r.x+rndi(0,r.w),ty=r.y+rndi(0,r.h);const t=map[ty*MAPW+tx];if(t===0||t===2||t===3){pods.push({x:tx*TILE+8,y:ty*TILE+8,t:0,used:false});break;}}
   }
   // DEPTH 100: screw
@@ -845,6 +845,9 @@ const JP={
   'LASER EXPIRED':         'LASERが消えた',
   'PIERCE SHOTS ACTIVE!':  '貫通弾発動中',
   'BARRIER FOUND!':        'バリアを入手！',
+  'CHARGEDRIVE FOUND!':    'チャージドライブ入手！',
+  'MAX CHARGE BREAKS WALLS!': 'フルチャージで壁を破壊！',
+  'CHARGEDRIVE STILL ACTIVE!': 'チャージドライブ継続中',
 
   // ── Player death / revive ──
   'P2 TURNED':             'P2がやられた！',
@@ -1360,20 +1363,29 @@ function update(dt){
           if(!overdriveActive)pool.push('overdrive');
           if(!vertidriveActive)pool.push('vertidrive');
           if(!laserActive)pool.push('laser');
+          if(!chargedriveActive)pool.push('chargedrive');
           {const _hp=humanPlayer();if(!_hp||_hp.shields.length<4)pool.push('barrier');}
-          const _fbHp=humanPlayer();const _fbPool=['driver','overdrive','vertidrive','laser'];if(!_fbHp||_fbHp.shields.length<4)_fbPool.push('barrier');
+          const _fbHp=humanPlayer();const _fbPool=['driver','overdrive','vertidrive','laser','chargedrive'];if(!_fbHp||_fbHp.shields.length<4)_fbPool.push('barrier');
           const pick=pool.length?pool[rndi(0,pool.length)]:_fbPool[rndi(0,_fbPool.length)];
           if(pick==='driver'){driverActive=true;flash('DRIVER FOUND!','#ffd700');flash('3-WAY SHOT ACTIVE!','#ffd700');}
           else if(pick==='overdrive'){overdriveActive=true;flash('OVERDRIVE FOUND!','#f80');flash('DASH RECHARGE UP!','#f80');}
           else if(pick==='laser'){laserActive=true;flash('LASER FOUND!','#0ff');flash('PIERCE SHOTS ACTIVE!','#0ff');}
           else if(pick==='barrier'){const _hp=humanPlayer();if(_hp){_hp.shields.push({hp:3,maxHp:3});flash('BARRIER FOUND!','#4ff');flash('SHIELD ORB x'+_hp.shields.length,'#4ff');}}
+          else if(pick==='chargedrive'){chargedriveActive=true;flash('CHARGEDRIVE FOUND!','#c8f');flash('MAX CHARGE BREAKS WALLS!','#c8f');}
           else{vertidriveActive=true;flash('VERTIDRIVE FOUND!','#f0f');flash('BACK SHOT ACTIVE!','#f0f');}
           spark(bTx*TILE+8,bTy*TILE+8,'#ffd700',24,140);
           SE.driver();secretWallPos=null;
         }else{
           spark(b.x,b.y,'#ff8',2,50);
         }
-      }else{spark(b.x,b.y,'#ff8',4,80);}
+      }else{
+        spark(b.x,b.y,'#ff8',4,80);
+        // CHARGEDRIVE: max charge shot breaks walls
+        if(chargedriveActive&&b.charge&&b.power>=1&&bTx>0&&bTx<MAPW-1&&bTy>0&&bTy<MAPH-1&&map[bTy*MAPW+bTx]===1){
+          map[bTy*MAPW+bTx]=0;
+          spark(bTx*TILE+8,bTy*TILE+8,'#c8f',12,100);
+        }
+      }
       bullets.splice(i,1);continue;
     }
     let hit=false;
@@ -1427,6 +1439,7 @@ function update(dt){
               if(laserActive){laserActive=false;flash('LASER EXPIRED','#888');}
               if(overdriveActive){flash('OVERDRIVE STILL ACTIVE!','#f80');}
               if(vertidriveActive){flash('VERTIDRIVE STILL ACTIVE!','#f0f');}
+              if(chargedriveActive){flash('CHARGEDRIVE STILL ACTIVE!','#c8f');}
               if(!attractDemo)PSG.play(stage); // revert to zone BGM
               // restore any devoured cores (partial refund)
               const refund=Math.min(coresNeeded-coresCollected,2);
@@ -2650,6 +2663,7 @@ function drawHUD(){
       if(driverActive){pixText('DRV',bx,H-22+6,'#ffd700');bx+=16;}
       if(overdriveActive){pixText('OVD',bx,H-22+6,'#f80');bx+=16;}
       if(vertidriveActive){pixText('VTD',bx,H-22+6,'#f0f');bx+=16;}
+      if(chargedriveActive){pixText('CHD',bx,H-22+6,'#c8f');bx+=16;}
       if(callCooldown>0){pixText('CALL:'+Math.ceil(callCooldown)+'s',bx,H-22+6,'#446');}
     }
   }
@@ -3336,7 +3350,7 @@ function startGame(){
   runTimer=0;runTimerActive=true;
   monsterHouse=false;monsterHouseCleared=false;mhSpawnPending=0;
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
-  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  bulletTime=null;driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   paused=false;
   running=true;PSG.play(1);
   cv.classList.toggle('cur',!players.some(p=>p.isHuman&&p.controller.type==='KB+M'));
@@ -3365,7 +3379,7 @@ function endIntro(){
 // ── Attract Demo ──────────────────────────────
 function startAttractDemo(){
   attractDemo=true; attractDemoT=0;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   const godRun=Math.random()<0.01; // 1% chance: full-power showcase
   const demoStage=godRun?rndi(70,80):rndi(1,80); // D80+ is for players to discover
   players=[];
@@ -3395,7 +3409,7 @@ function startAttractDemo(){
 function stopAttractDemo(){
   attractDemo=false; attractDemoT=0;
   running=false; gameOverState=false; gameWon=false; bulletTime=null;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   lobbyIdleT=0;
   lobbyEl.style.display='flex';
   renderLobby();PSG.title();
@@ -4284,7 +4298,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.1.1',W-25,H-8,'#234');
+  pixText('v1.1.3',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
@@ -4760,7 +4774,7 @@ function startTutorial(){
   bullets=[];ebullets=[];enemies=[];particles=[];pickups=[];
   messages=[];gatekeepers=[];poisonPuddles=[];npcs=[];
   bulletTime=null;paused=false;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   callCooldown=0;callAggroTimer=0;
 
   players=[];
@@ -4872,7 +4886,7 @@ function updateTutorial(dt){
 function endTutorial(){
   tutorialActive=false;
   running=false;gameOverState=false;gameWon=false;bulletTime=null;
-  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;
+  driverActive=false;overdriveActive=false;vertidriveActive=false;laserActive=false;chargedriveActive=false;
   secretWallPos=null;secretWallHits=0;
   lobbyEl.style.display='flex';
   renderLobby();PSG.title();
