@@ -7,6 +7,7 @@ const SECTIONS = [
   'controllers',
   'map',
   'i18n',
+  'skins',
   'entities',
   'update',
   'draw',

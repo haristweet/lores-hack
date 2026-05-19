@@ -234,17 +234,8 @@ function drawPlayer(p){
   if(p.iframe>0&&((time*30)|0)%2===0)bc='#fff';
   if(p._dcpFlash>0){ctx.fillStyle='#fff';ctx.globalAlpha=0.85;ctx.fillRect(x-4,y-6,8,10);ctx.globalAlpha=1;bc='#fff';}
   const pers=p.controller?.personality;
-  // Body — bodyguard is 1px wider
-  const bw=pers==='bodyguard'?5:4;
-  ctx.fillStyle=bc;ctx.fillRect(x-Math.floor(bw/2),y-3,bw,6);
-  // Head — berserker is 1px wider
-  const hw=pers==='berserker'?5:4;
-  ctx.fillStyle=p.pal.head;ctx.fillRect(x-Math.floor(hw/2),y-5,hw,3);
-  ctx.fillStyle='#000';ctx.fillRect(x-1,y-4,1,1);ctx.fillRect(x,y-4,1,1);
-  // Berserker: angry brow pixel
-  if(pers==='berserker'){ctx.fillStyle='#000';ctx.fillRect(x-2,y-5,1,1);ctx.fillRect(x+1,y-5,1,1);}
-  const moving=(p.vx*p.vx+p.vy*p.vy)>2,bob=moving?((time*16+p.idx*3)|0)%2:0;
-  ctx.fillStyle=p.pal.dark;ctx.fillRect(x-Math.floor(bw/2),y+3,1,2-bob);ctx.fillRect(x+Math.floor(bw/2)-1,y+3,1,1+bob);
+  const moving=(p.vx*p.vx+p.vy*p.vy)>2;
+  _drawSkin(ctx,p,x,y,bc,moving,time);
   const gx=x+Math.cos(a)*3,gy=y+Math.sin(a)*3;
   // Gun length — sniper longer, berserker shorter
   const gLen=pers==='sniper'?8:pers==='berserker'?3:5;

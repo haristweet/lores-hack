@@ -319,12 +319,13 @@ function _lobbyPadNav(){
   const grid=[
     ['cpu0','cpu1','cpu2','cpu3'],
     ['kbm','pad'],
+    ['skinL','skinR'],
     ['start'],
     ...(hasCont?[['cont']]:[]),
-    ['how'],
+    ['how','tut'],
     ...(cfg.slots[0]==='GAMEPAD'?[['padcfg']]:[]),
   ];
-  let ri=2,ci=0;
+  let ri=3,ci=0;
   for(let r=0;r<grid.length;r++){const c=grid[r].indexOf(lobbyPadFocus);if(c>=0){ri=r;ci=c;break;}}
   if(dR)ci=Math.min(ci+1,grid[ri].length-1);
   if(dL)ci=Math.max(ci-1,0);
@@ -343,6 +344,9 @@ function _lobbyPadNav(){
     if(k==='start')startGame();
     else if(k==='cont')loadGame();
     else if(k==='how')startIntro();
+    else if(k==='tut')startTutorial();
+    else if(k==='skinL')skinNext(-1);
+    else if(k==='skinR')skinNext(1);
     else if(k==='padcfg'){padConfigActive=true;padCfgFocus=0;padCfgWaiting=false;_padCfgPrev={};}
   }
 }
@@ -468,27 +472,33 @@ function drawLobbyCanvas(dt){
   const ps=padStatus.slice(0,36);
   pixText(ps,Math.round((W-ps.length*4)/2),110,'#2a4a3a');
 
+  // — skin selector —
+  const skStr='SKIN: '+SKINS[activeSkin].name;
+  lbBtn('skinL','<',110,112,10,9,false);
+  pixText(skStr,Math.round((W-skStr.length*4)/2),116,skinUnlocked(activeSkin)?'#0ff':'#445');
+  lbBtn('skinR','>',200,112,10,9,false);
+
   // — primary buttons (fixed positions) —
   const bw=70,bx=Math.round((W-bw)/2);
-  lbBtnPri('start','START',bx,119,bw,13,'#0ff');
+  lbBtnPri('start','START',bx,124,bw,13,'#0ff');
 
   const sv=hasSave();
   if(sv){
-    lbBtnPri('cont','CONTINUE',bx,134,bw,13,'#0c9');
+    lbBtnPri('cont','CONTINUE',bx,139,bw,13,'#0c9');
     const sl=getSaveLabel().replace('\u21a9 ','');
     const slT=sl.length>28?sl.slice(0,27)+'.':sl;
-    pixText(slT,Math.round((W-slT.length*4)/2),149,'#3a7');
+    pixText(slT,Math.round((W-slT.length*4)/2),154,'#3a7');
   }
 
   // — HOW TO PLAY + TUTORIAL (side by side, fixed) / PAD CONFIG —
-  lbBtn('how','HOW TO PLAY',106,154,52,rh,false);
-  lbBtn('tut','TUTORIAL',162,154,52,rh,false);
+  lbBtn('how','HOW TO PLAY',106,158,52,rh,false);
+  lbBtn('tut','TUTORIAL',162,158,52,rh,false);
   if(cfg.slots[0]==='GAMEPAD'){
-    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,166,52,rh,false);
+    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,169,52,rh,false);
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.0.5',W-25,H-8,'#234');
+  pixText('v1.0.6',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
@@ -502,6 +512,8 @@ function lobbyHandleClick(){
       if(k==='cont'){loadGame();return;}
       if(k==='how'){startIntro();return;}
       if(k==='tut'){startTutorial();return;}
+      if(k==='skinL'){skinNext(-1);return;}
+      if(k==='skinR'){skinNext(1);return;}
       if(k==='padcfg'){padConfigActive=true;padCfgFocus=0;padCfgWaiting=false;_padCfgPrev={};return;}
     }
   }

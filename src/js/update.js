@@ -961,6 +961,7 @@ function gameCleared(){
   runTimerActive=false;
   if(!attractDemo){
     _saveBest();
+    localStorage.setItem('lores_cleared','1');
     const prevBest=+(localStorage.getItem('lores_best_time')||0);
     if(prevBest===0||runTimer<prevBest)localStorage.setItem('lores_best_time',runTimer.toFixed(2));
   }
