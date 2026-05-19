@@ -116,7 +116,7 @@ function chance(p){return Math.random()<p;}
 function spark(x,y,c,n=6,sp=40){for(let i=0;i<n;i++){const a=rnd(0,Math.PI*2),s=rnd(sp*.3,sp);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rnd(.18,.5),c});}}
 function blood(x,y){spark(x,y,'#c22',8,60);}
 function smoke(x,y){for(let i=0;i<5;i++)particles.push({x,y,vx:rnd(-8,8),vy:rnd(-25,-5),life:rnd(.4,.9),c:'#445',sm:true});}
-function flash(msg,c='#ff0'){messages.push({t:0,msg:(''+msg).toUpperCase(),c});}
+function flash(msg,c='#ff0'){const s=(''+msg).toUpperCase();messages.push({t:0,msg:s,c,jp:jpSub(s)});}
 function moveObj(o,dt){
   const nx=o.x+o.vx*dt; if(!hitsWall(nx,o.y,o.r))o.x=nx;
   const ny=o.y+o.vy*dt; if(!hitsWall(o.x,ny,o.r))o.y=ny;

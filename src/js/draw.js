@@ -525,6 +525,27 @@ function drawHUD(){
   }
   ctx.globalAlpha=1;
 
+  // Japanese subtitle (most recent message with translation)
+  for(let i=0;i<maxMsg;i++){
+    const m=messages[i];
+    if(m.jp){
+      const a=m.t<1.5?0.72:Math.max(0,(2.2-m.t)/.7)*0.72;
+      if(a>0){
+        ctx.save();
+        ctx.globalAlpha=a;
+        ctx.font='bold 9px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillStyle='#000';
+        ctx.fillText(m.jp,W/2+1,H-13+1);
+        ctx.fillStyle=m.c;
+        ctx.fillText(m.jp,W/2,H-13);
+        ctx.restore();
+      }
+      break; // show only the newest one
+    }
+  }
+
+
   if(exitOpen&&stage!==MAX_DEPTH)pixText('REACH EXIT >>',W/2-(13*4)/2,H-28,'#ff0');
   if(stage===MAX_DEPTH&&exitOpen)pixText('FIND THE SCREW!',W/2-(15*4)/2,H-28,'#ff0');
 
