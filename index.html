@@ -846,6 +846,14 @@ const JP={
   'PIERCE SHOTS ACTIVE!':  '貫通弾発動中',
   'BARRIER FOUND!':        'バリアを入手！',
 
+  // ── Player death / revive ──
+  'P2 TURNED':             'P2がやられた！',
+  'P3 TURNED':             'P3がやられた！',
+  'P4 TURNED':             'P4がやられた！',
+  'P2 REVIVED':            'P2が復活！',
+  'P3 REVIVED':            'P3が復活！',
+  'P4 REVIVED':            'P4が復活！',
+
   // ── Player states ──
   'DASH PARRY!':           'ダッシュパリィ！',
   'DASH RECHARGE UP!':     'ダッシュ回復速度アップ！',
@@ -4276,7 +4284,7 @@ function drawLobbyCanvas(dt){
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.1.0',W-25,H-8,'#234');
+  pixText('v1.1.1',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
