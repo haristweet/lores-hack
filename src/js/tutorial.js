@@ -13,14 +13,13 @@ let _dvdX=60,_dvdY=80,_dvdVx=70,_dvdVy=55,_dvdColorIdx=0;
 const _DVD_W=32,_DVD_H=6; // "TUTORIAL" 8chars×4px wide, ~6px tall
 
 // step → gate x (null = no gate, share previous room)
-const _TUT_GATE_XS=[11,null,21,31,41,51];
+const _TUT_GATE_XS=[11,null,21,31,41];
 
 const _TUT_STEPS=[
   {label:'MOVE',   key:'WASD / ARROW KEYS',              sub:'Walk around the room'},
   {label:'SHOOT',  key:'AIM+CLICK / RIGHT STICK',        sub:'Defeat the enemy!'},
   {label:'CHARGE', key:'HOLD RIGHT CLICK or E / L2+AIM', sub:'Hold to charge, release to fire!'},
   {label:'DASH',   key:'SPACE or F / R2 + direction',    sub:'Dash through the gap!'},
-  {label:'PARRY',  key:'DASH into enemy bullet',         sub:'Deflect the shot!'},
   {label:'CALL',   key:'TAB / SELECT',                   sub:'Call your CPU allies!'},
   {label:'WEAPON', key:'Shoot the golden wall',          sub:'3 hits to reveal a weapon!'},
 ];
@@ -91,12 +90,6 @@ function startTutorial(){
   dummy.hp=3;dummy._tutDummy=true;
   enemies.push(dummy);
 
-  // Stationary turret (shooter) in room 4 — very high HP so it can't be killed
-  const turret=makeEnemy('shooter',36*TILE+8,9*TILE+8);
-  turret.spd=0;turret._tutTurret=true;
-  turret.hp=turret.maxHp=999;
-  enemies.push(turret);
-
   // Secret wall pre-hit 22/25 → 3 shots needed
   secretWallPos={tx:56,ty:9};
   secretWallHits=22;
@@ -121,7 +114,7 @@ function _tutAdvance(){
   if(hp)spark(hp.x,hp.y,'#0f0',12,90);
   tutStep++;tutT=0;
   _tutPrevCallCd=callCooldown; // sync so new TAB press is needed for CALL step
-  if(tutStep>=7){
+  if(tutStep>=6){
     localStorage.setItem('tut_done','1');
     flash('TUTORIAL COMPLETE!','#ff0');
     if(hp)spark(hp.x,hp.y,'#ff0',24,130);
@@ -134,7 +127,7 @@ function updateTutorial(dt){
   // Safety net: prevent game-over interrupting tutorial
   if(!running||gameOverState){running=true;gameOverState=false;_goT=0;}
 
-  if(tutStep>=7){
+  if(tutStep>=6){
     _tutCompleteT-=dt;
     if(_tutCompleteT<=0)endTutorial();
     return;
@@ -170,14 +163,11 @@ function updateTutorial(dt){
     case 3: // DASH
       if(hp.dashT>0&&!_tutDashed){_tutDashed=true;_tutAdvance();}
       break;
-    case 4: // PARRY
-      if(_hasDashParried)_tutAdvance();
-      break;
-    case 5: // CALL THEM
+    case 4: // CALL THEM
       if(_tutPrevCallCd<=0&&callCooldown>0)_tutAdvance();
       _tutPrevCallCd=callCooldown;
       break;
-    case 6: // SECRET WALL — cleared when secretWallPos becomes null
+    case 5: // SECRET WALL — cleared when secretWallPos becomes null
       if(_tutSecretSet&&!secretWallPos)_tutAdvance();
       break;
   }
@@ -194,7 +184,7 @@ function endTutorial(){
 
 function drawTutorialOverlay(){
   // Complete screen
-  if(tutStep>=7){
+  if(tutStep>=6){
     ctx.save();
     ctx.fillStyle='rgba(0,0,0,0.6)';
     ctx.fillRect(0,H/2-18,W,36);
@@ -220,10 +210,10 @@ function drawTutorialOverlay(){
   ctx.fillStyle='rgba(0,0,20,0.85)';
   ctx.fillRect(0,0,W,22);
 
-  // Progress dots (7 steps)
-  const dotTotalW=7*9-2;
+  // Progress dots (6 steps)
+  const dotTotalW=6*9-2;
   const dotX0=Math.floor((W-dotTotalW)/2);
-  for(let i=0;i<7;i++){
+  for(let i=0;i<6;i++){
     ctx.fillStyle=i<tutStep?'#0f0':i===tutStep?'#ff0':'#224';
     ctx.fillRect(dotX0+i*9,3,7,4);
   }
@@ -261,7 +251,7 @@ function drawTutorialOverlay(){
   }
 
   // ── Golden highlight box around secret wall ──
-  if(tutStep===6){
+  if(tutStep===5){
     const wallPixX=56*TILE+8,wallPixY=9*TILE+8;
     const sx=wallPixX-(camX-W/2),sy_=wallPixY-(camY-H/2);
     const blink=(performance.now()/300|0)%2===0;

@@ -465,28 +465,27 @@ function drawLobbyCanvas(dt){
   const ps=padStatus.slice(0,36);
   pixText(ps,Math.round((W-ps.length*4)/2),110,'#2a4a3a');
 
-  // — primary buttons —
+  // — primary buttons (fixed positions) —
   const bw=70,bx=Math.round((W-bw)/2);
-  let nY=119;
-  lbBtnPri('start','START',bx,nY,bw,13,'#0ff'); nY+=15;
+  lbBtnPri('start','START',bx,119,bw,13,'#0ff');
 
   const sv=hasSave();
   if(sv){
-    lbBtnPri('cont','CONTINUE',bx,nY,bw,13,'#0c9'); nY+=15;
+    lbBtnPri('cont','CONTINUE',bx,134,bw,13,'#0c9');
     const sl=getSaveLabel().replace('\u21a9 ','');
-    pixText(sl,Math.round((W-sl.length*4)/2),nY+1,'#3a7'); nY+=9;
+    const slT=sl.length>28?sl.slice(0,27)+'.':sl;
+    pixText(slT,Math.round((W-slT.length*4)/2),149,'#3a7');
   }
 
-  // — HOW TO PLAY / TUTORIAL / PAD CONFIG —
-  const botY=Math.min(nY+4,149);
-  lbBtn('how','HOW TO PLAY',Math.round(W/2)-26,botY,52,rh,false);
-  lbBtn('tut','TUTORIAL',Math.round(W/2)-26,botY+12,52,rh,false);
+  // — HOW TO PLAY + TUTORIAL (side by side, fixed) / PAD CONFIG —
+  lbBtn('how','HOW TO PLAY',106,154,52,rh,false);
+  lbBtn('tut','TUTORIAL',162,154,52,rh,false);
   if(cfg.slots[0]==='GAMEPAD'){
-    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,botY+24,52,rh,false);
+    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,166,52,rh,false);
   }
 
   // — version (bottom-right corner) —
-  pixText('v1.0.1',W-25,H-8,'#234');
+  pixText('v1.0.2',W-25,H-8,'#234');
 }
 
 function lobbyHandleClick(){
