@@ -913,9 +913,9 @@ function nextStage(){
     if(!attractDemo)PSG.mhouse(stage);
     setTimeout(()=>{
       if(!running)return;
-      const count=Math.min(40,Math.round(20+stage*.2));
+      const count=Math.min(80,Math.round(40+stage*.4));
       mhSpawnPending=count;
-      for(let i=0;i<count;i++)setTimeout(()=>{mhSpawnPending--;if(running&&!monsterHouseCleared)spawnMH();},200+i*120);
+      for(let i=0;i<count;i++)setTimeout(()=>{mhSpawnPending--;if(running&&!monsterHouseCleared)spawnMH();},200+i*60);
     },400);
   }
   // Spawn boss on multiples of 10 and D99
