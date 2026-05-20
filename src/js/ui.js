@@ -282,6 +282,7 @@ let lobbyT=0,lobbyIdleT=0,padStatus='NO GAMEPAD DETECTED';
 let lobbyPadFocus='start',_lobbyPadPrev={};
 let _ovlPadFocus='',_ovlPadPrev={};
 const lobbyBtns={};
+let _tickerX=W,_tickerStr='';
 
 // standard chip button (active=selected state)
 function lbBtn(key,label,x,y,w,h,active){
@@ -443,59 +444,69 @@ function drawLobbyCanvas(dt){
   // — title (flicker) —
   const f=0.86+Math.sin(lobbyT*13.1)*0.08+Math.sin(lobbyT*7.3)*0.05;
   const fch=Math.round(255*Math.min(1,f)).toString(16).padStart(2,'0');
-  pixHuge('DEPTH 100',Math.round((W-9*16)/2),30,`#00${fch}${fch}`);
-  const sub='THE SCREW AWAITS AT THE BOTTOM';
-  pixText(sub,Math.round((W-sub.length*4)/2),64,'#4a7');
+  pixHuge('DEPTH 100',Math.round((W-9*16)/2),14,`#00${fch}${fch}`);
   // best depth badge
   const bestD=+(localStorage.getItem('lores_best')||0);
   const bestT=+(localStorage.getItem('lores_best_time')||0);
   if(bestD>0||bestT>0){
     const bs=(bestD>0?'BEST D:'+bestD:'')+(bestD>0&&bestT>0?' ':'' )+(bestT>0?'TIME:'+_fmtTime(bestT):'');
-    pixText(bs,Math.round((W-bs.length*4)/2),70,'#08f');
+    pixText(bs,Math.round((W-bs.length*4)/2),46,'#08f');
   }
   const la=(0.22+Math.sin(lobbyT*2.1)*0.08).toFixed(2);
-  ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,77,116,1);
+  ctx.fillStyle=`rgba(0,200,255,${la})`;ctx.fillRect(W/2-58,54,116,1);
 
-  // — CPU ALLIES row (centered: label40 + gap8 + 4×chip14 + 3×gap2 = 110) —
+  // — CPU ALLIES row —
   const rh=11,cw=14;
   const cpuX=Math.round((W-110)/2);
-  pixText('CPU ALLIES',cpuX,85,'#7ab');
-  for(let i=0;i<4;i++)lbBtn('cpu'+i,String(i),cpuX+48+i*16,82,cw,rh,cfg.cpus===i);
+  pixText('CPU ALLIES',cpuX,69,'#7ab');
+  for(let i=0;i<4;i++)lbBtn('cpu'+i,String(i),cpuX+48+i*16,66,cw,rh,cfg.cpus===i);
 
-  // — CONTROL row (centered: label28 + gap8 + 24 + gap2 + 32 = 94) —
+  // — CONTROL row —
   const ctX=Math.round((W-94)/2);
-  pixText('CONTROL',ctX,98,'#7ab');
-  lbBtn('kbm','KB+M',ctX+36,95,24,rh,cfg.slots[0]==='KB+M');
-  lbBtn('pad','GAMEPAD',ctX+62,95,32,rh,cfg.slots[0]==='GAMEPAD');
+  pixText('CONTROL',ctX,82,'#7ab');
+  lbBtn('kbm','KB+M',ctX+36,79,24,rh,cfg.slots[0]==='KB+M');
+  lbBtn('pad','GAMEPAD',ctX+62,79,32,rh,cfg.slots[0]==='GAMEPAD');
 
   // — skin selector —
   const skStr='SKIN: '+SKINS[activeSkin].name;
-  lbBtn('skinL','<',110,108,10,9,false);
-  pixText(skStr,Math.round((W-skStr.length*4)/2),112,skinUnlocked(activeSkin)?'#0ff':'#445');
-  lbBtn('skinR','>',200,108,10,9,false);
+  lbBtn('skinL','<',110,92,10,9,false);
+  pixText(skStr,Math.round((W-skStr.length*4)/2),96,skinUnlocked(activeSkin)?'#0ff':'#445');
+  lbBtn('skinR','>',200,92,10,9,false);
 
-  // — primary buttons (fixed positions) —
+  // — primary buttons —
   const bw=70,bx=Math.round((W-bw)/2);
-  lbBtnPri('start','START',bx,124,bw,13,'#0ff');
+  lbBtnPri('start','START',bx,108,bw,13,'#0ff');
 
   const sv=hasSave();
-  if(sv){
-    lbBtnPri('cont','CONTINUE',bx,139,bw,13,'#0c9');
-    const sl=getSaveLabel().replace('\u21a9 ','');
-    const slT=sl.length>28?sl.slice(0,27)+'.':sl;
-    pixText(slT,Math.round((W-slT.length*4)/2),154,'#3a7');
-  }
+  if(sv){lbBtnPri('cont','CONTINUE',bx,123,bw,13,'#0c9');}
 
-  // — HOW TO PLAY + TUTORIAL (side by side, fixed) / PAD CONFIG —
-  const howY=sv?165:158;
+  // — HOW TO PLAY + TUTORIAL / PAD CONFIG —
+  const howY=sv?138:124;
   lbBtn('how','HOW TO PLAY',106,howY,52,rh,false);
   lbBtn('tut','TUTORIAL',162,howY,52,rh,false);
   if(cfg.slots[0]==='GAMEPAD'){
-    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,howY+11,52,rh,false);
+    lbBtn('padcfg','PAD CONFIG',Math.round(W/2)-26,howY+13,52,rh,false);
   }
 
-  // — version (bottom-right corner) —
-  pixText('v1.1.4',W-25,H-8,'#234');
+  // — scrolling ticker at bottom —
+  if(sv){
+    const sl=getSaveLabel().replace('\u21a9 ','');
+    _tickerStr='  '+sl+'    ★    '+sl+'    ★    ';
+  }else{
+    const bd=bestD>0?'BEST D:'+bestD+'    ★    ':'';
+    _tickerStr='  '+bd+'THE SCREW AWAITS AT THE BOTTOM    ★    '+bd+'THE SCREW AWAITS AT THE BOTTOM    ★    ';
+  }
+  const tickW=_tickerStr.length*4;
+  _tickerX-=dt*38;
+  if(_tickerX+tickW<0)_tickerX=W;
+  ctx.fillStyle='#020010';ctx.fillRect(0,H-14,W,14);
+  ctx.fillStyle='rgba(0,180,255,0.25)';ctx.fillRect(0,H-14,W,1);
+  ctx.save();ctx.beginPath();ctx.rect(0,H-13,W,12);ctx.clip();
+  pixText(_tickerStr,Math.round(_tickerX),H-8,'#4a7');
+  ctx.restore();
+
+  // — version (above ticker) —
+  pixText('v1.1.5',W-25,H-18,'#234');
 }
 
 function lobbyHandleClick(){
