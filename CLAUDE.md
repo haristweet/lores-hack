@@ -31,10 +31,16 @@ AI運用5原則
 ## パワーアップ（秘密の壁を25回撃つと出現）
 | 名前 | 効果 | 永続？ |
 |------|------|--------|
-| DRIVER | 3方向ショット | ✅ ボス撃破後も永続（最近変更） |
+| DRIVER | 3方向ショット | ✅ ボス撃破後も永続 |
 | OVERDRIVE | ダッシュ連射速度UP | ✅ 永続 |
 | VERTIDRIVE | 後方にも弾が出る | ✅ 永続 |
 | LASER | 貫通弾・射程UP | ❌ ボス撃破で消える |
+| CHARGEDRIVE | フルチャージショットで壁を破壊できる | ✅ 永続 |
+
+## コールドスリープPOD（仲間復活）
+- ボスフロア（10の倍数）の**次のフロア**（11, 21, 31...）に出現
+- ボス戦で死んだ仲間をここで復活させる想定
+- プレイヤーが触れると死亡中の仲間が1人復活
 
 ## CPU仲間（固定パーソナリティ）
 - P2: BODYGUARD — プレイヤーに寄り添う
@@ -47,10 +53,43 @@ AI運用5原則
 - MAX_DEPTH: 100
 - ボスフロア: 10の倍数 + depth 99
 
+## ロビー画面（タイトル画面）仕様
+- 320×180px キャンバス描画
+- タイトル "DEPTH 100" を上部に表示
+- セーブデータがある場合: CONTINUE / NEW GAME ボタン
+- セーブデータがない場合: START ボタン
+- HOW TO PLAY / TUTORIAL ボタン
+- 一番下14pxにスクロールティッカー（横スクロール文字）
+  - セーブあり: `DEPTH xx / LVx / KILLS xxx` をループ表示
+  - セーブなし: `BEST D:xx    ★    THE SCREW AWAITS AT THE BOTTOM` をループ表示
+- 現バージョン: v1.1.5（ui.js に記載）
+
 ## ビルド＆デプロイ手順
 1. `node build.js` でビルド確認
 2. `git add -A && git commit -m "..."` 
 3. `git push` でGitHub Pagesへ自動デプロイ
+
+## claude.ai / スマホからの引き継ぎ用メモ
+このファイルを読み込ませることで、どのセッションでもプロジェクトの現状を把握できます。
+
+### ゲームの現状（2026-05）
+- depth 1〜100のローグライクアクション。ブラウザで動く。
+- プレイヤー + CPU仲間3人（BODYGUARD / SNIPER / BERSERKER）でフロアを進む
+- 秘密の壁を25回撃つとパワーアップ出現（DRIVER / OVERDRIVE / VERTIDRIVE / LASER / CHARGEDRIVE）
+- 10の倍数フロアにボス。ボス撃破で次フロアへ。
+- ボス後フロアにコールドスリープPOD（仲間復活）
+- depth 100が最終ボス（THE SCREW）
+- セーブ/ロード: localStorage（`lores-hack-v1`キー）
+
+### 技術スタック
+- 純粋なHTML/CSS/JS（フレームワークなし）
+- `src/js/*.js` → `node build.js` → `index.html` 1ファイルに結合
+- GitHub Pages でホスト: https://haristweet.github.io/lores-hack/
+
+### 相談するときのコツ
+- 実装を依頼するときは「Claude Codeで実装して」とPC版で続ける
+- アイデア出し・設計相談はここ（claude.ai）でOK
+- コードを見せたいときは `src/js/` の該当ファイルをコピペ
 
 ## プロジェクト固有ルール
 - **commit & push はユーザー確認不要**。実装完了後そのまま実行する。
