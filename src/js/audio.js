@@ -27,6 +27,8 @@ let cfg={humans:1,cpus:0,slots:['KB+M']};
 
 function renderLobby(){
   if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
+  _lobbyPadPrev={};
+  lobbyPadFocus='start';
 }
 
 function pollPads(){

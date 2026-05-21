@@ -313,7 +313,7 @@ function _lobbyPadNav(){
   const dR=edge('dR',(gp.buttons[15]?.pressed)||ax>0.5);
   const dU=edge('dU',(gp.buttons[12]?.pressed)||ay<-0.5);
   const dD=edge('dD',(gp.buttons[13]?.pressed)||ay>0.5);
-  const ok=edge('A',gp.buttons[0]?.pressed);
+  const ok=edge('A',gp.buttons[0]?.pressed||gp.buttons[9]?.pressed);
   if(!(dL||dR||dU||dD||ok))return;
   lobbyIdleT=0;
   const hasCont=!!hasSave();
@@ -506,7 +506,7 @@ function drawLobbyCanvas(dt){
   ctx.restore();
 
   // — version (above ticker) —
-  pixText('v1.1.5',W-25,H-18,'#234');
+  pixText('v1.1.6',W-25,H-18,'#234');
 }
 
 function lobbyHandleClick(){
@@ -892,6 +892,7 @@ function _ovlPadNav(){
   const dD=edge('D',(gp.buttons[13]?.pressed)||ay>.5);
   const ok=edge('A',gp.buttons[0]?.pressed);
   const back=edge('B',gp.buttons[1]?.pressed);
+  const start=edge('start',gp.buttons[9]?.pressed);
   if(paused){
     const order=['resume','squit','quit'];
     if(!order.includes(_ovlPadFocus))_ovlPadFocus='resume';
@@ -899,7 +900,7 @@ function _ovlPadNav(){
     if(dU)i=Math.max(0,i-1);
     if(dD)i=Math.min(order.length-1,i+1);
     _ovlPadFocus=order[i];
-    if(back){setPause(false);_ovlPadFocus='';_ovlPadPrev={};}
+    if(back||start){setPause(false);_ovlPadFocus='';_ovlPadPrev={};}
     else if(ok){
       if(_ovlPadFocus==='resume'){setPause(false);}
       else if(_ovlPadFocus==='squit'){saveGame();setPause(false);running=false;PSG.stop();lobbyEl.style.display='flex';renderLobby();PSG.title();}
@@ -908,10 +909,10 @@ function _ovlPadNav(){
     }
   }else if(gameOverState){
     _ovlPadFocus='retry';
-    if(ok||back){gameOverState=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
+    if(ok||back||start){gameOverState=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
   }else if(gameWon){
     _ovlPadFocus='again';
-    if(ok||back){gameWon=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
+    if(ok||back||start){gameWon=false;lobbyEl.style.display='flex';renderLobby();PSG.title();_ovlPadFocus='';_ovlPadPrev={};}
   }
 }
 
