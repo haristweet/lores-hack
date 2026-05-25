@@ -66,8 +66,15 @@ AI運用5原則
 
 ## ビルド＆デプロイ手順
 1. `node build.js` でビルド確認
-2. `git add -A && git commit -m "..."` 
-3. `git push` でGitHub Pagesへ自動デプロイ
+2. 構文チェック: `node -e "const fs=require('fs'),vm=require('vm'),h=fs.readFileSync('index.html','utf8'),m=h.match(/<script>([\s\S]*?)<\/script>/);new vm.Script(m[1]);console.log('Syntax OK');"`
+3. 初期化順チェック: 新変数・関数を追加した場合、`build.js` の `SECTIONS` 順で「宣言より前に参照していないか」を必ず確認する（特にファイルをまたぐ参照）
+4. `git add ... && git commit -m "..."` 
+5. `git push` でGitHub Pagesへ自動デプロイ
+
+## デバッグ必須ルール
+- **コミット前に必ずデバッグを行うこと**（起動しないバグは絶対に出してはならない）
+- ビルド成功・構文OK・初期化順OK の3つが揃ってからコミットする
+- 新しいJSファイルや変数を追加した場合は、`build.js` の結合順（SECTIONS配列）を考慮し、宣言前参照（TDZ）が発生しないか確認する
 
 ## claude.ai / スマホからの引き継ぎ用メモ
 このファイルを読み込ませることで、どのセッションでもプロジェクトの現状を把握できます。
