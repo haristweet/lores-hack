@@ -507,7 +507,7 @@ function drawLobbyCanvas(dt){
   ctx.restore();
 
   // — version (above ticker) —
-  pixText('v1.1.6',W-25,H-18,'#234');
+  pixText('v1.1.7',W-25,H-18,'#234');
 }
 
 function lobbyHandleClick(){

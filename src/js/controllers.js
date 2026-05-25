@@ -56,6 +56,7 @@ class CPUController{
     this._rouletteDisplay=null;
     this._target=null;this._rT=0;this._strT=Math.random()*10;
     this._mx=0;this._my=0;this._aim=0;this._fire=false;this._dash=false;
+    this._sPX=null;this._sPY=null;this._stuckF=0;
   }
   get effPers(){return this.personality==='moody'?this._sub:this.personality;}
   get ability(){return PERS_ABILITY[this.effPers]||'?';}
@@ -189,7 +190,20 @@ class CPUController{
     }
     this._dash=false;
   }
-  move(){return{x:this._mx,y:this._my};}
+  move(p){
+    if(p&&this._sPX!==null){
+      const moved=Math.hypot(p.x-this._sPX,p.y-this._sPY);
+      if(moved<0.4)this._stuckF++;else this._stuckF=0;
+    }
+    if(p){this._sPX=p.x;this._sPY=p.y;}
+    let mx=this._mx,my=this._my;
+    if(this._stuckF>10&&(Math.abs(mx)>0.01||Math.abs(my)>0.01)){
+      const base=Math.atan2(my||0.001,mx||0.001);
+      const rot=((this._stuckF/12|0)%8)*(Math.PI/4);
+      mx=Math.cos(base+rot);my=Math.sin(base+rot);
+    }
+    return{x:mx,y:my};
+  }
   aim(){return this._aim;}
   fire(){return this._fire;}
   dash(){return this._dash;}
