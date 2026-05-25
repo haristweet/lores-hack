@@ -25,10 +25,10 @@ const ZONE_NAMES=['D01-20','D21-40','D41-60','D61-80','D81-100'];
 // ═══════════════════════════════════════════════
 let cfg={humans:1,cpus:0,slots:['KB+M']};
 
+let _lobbyPadResetPending=false;
 function renderLobby(){
   if(!['KB+M','GAMEPAD'].includes(cfg.slots[0]))cfg.slots[0]='KB+M';
-  _lobbyPadPrev={};
-  lobbyPadFocus='start';
+  _lobbyPadResetPending=true;
 }
 
 function pollPads(){
