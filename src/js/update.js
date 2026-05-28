@@ -163,9 +163,13 @@ function update(dt){
     b.trail.push({x:b.x,y:b.y});if(b.trail.length>5)b.trail.shift();
     b.x+=b.vx*eff;b.y+=b.vy*eff;b.life-=eff;
     if(b.life<=0||solid(b.x,b.y)){
-      // Secret wall hit?
+      // Secret wall hit? Check current pos and trail (catches tunneling + range-expire cases)
       const bTx=(b.x/TILE)|0,bTy=(b.y/TILE)|0;
-      if(secretWallPos&&bTx===secretWallPos.tx&&bTy===secretWallPos.ty){
+      const hitSecret=secretWallPos&&(
+        (bTx===secretWallPos.tx&&bTy===secretWallPos.ty)||
+        b.trail.some(t=>(t.x/TILE|0)===secretWallPos.tx&&(t.y/TILE|0)===secretWallPos.ty)
+      );
+      if(hitSecret){
         secretWallHits++;
         SE.clang();
         spark(b.x,b.y,'#ffd700',6,70);
